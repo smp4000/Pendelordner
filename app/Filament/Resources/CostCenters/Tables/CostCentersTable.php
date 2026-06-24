@@ -5,11 +5,10 @@ namespace App\Filament\Resources\CostCenters\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class CostCentersTable
@@ -17,35 +16,16 @@ class CostCentersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('sort_order')
             ->columns([
-                TextColumn::make('business.name')
-                    ->searchable(),
-                TextColumn::make('number')
-                    ->searchable(),
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('color')
-                    ->searchable(),
-                IconColumn::make('active')
-                    ->boolean(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                ColorColumn::make('color')->label('')->width('1%'),
+                TextColumn::make('number')->label('Nummer')->placeholder('—'),
+                TextColumn::make('name')->label('Name')->searchable(),
+                TextColumn::make('business.name')->label('Betrieb')->badge()->placeholder('—'),
+                IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([
-                TrashedFilter::make(),
+                TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -53,8 +33,6 @@ class CostCentersTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

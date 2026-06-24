@@ -5,11 +5,10 @@ namespace App\Filament\Resources\Suppliers\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class SuppliersTable
@@ -17,58 +16,19 @@ class SuppliersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('name')
             ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('display_name')
-                    ->searchable(),
-                TextColumn::make('defaultCategory.name')
-                    ->searchable(),
-                TextColumn::make('defaultCostCenter.name')
-                    ->searchable(),
-                TextColumn::make('defaultBusiness.name')
-                    ->searchable(),
-                TextColumn::make('iban')
-                    ->searchable(),
-                TextColumn::make('bic')
-                    ->searchable(),
-                TextColumn::make('vat_id')
-                    ->searchable(),
-                TextColumn::make('tax_number')
-                    ->searchable(),
-                TextColumn::make('creditor_number')
-                    ->searchable(),
-                TextColumn::make('debtor_number')
-                    ->searchable(),
-                TextColumn::make('skr03_account')
-                    ->searchable(),
-                TextColumn::make('skr04_account')
-                    ->searchable(),
-                TextColumn::make('tax_key')
-                    ->searchable(),
-                TextColumn::make('street')
-                    ->searchable(),
-                TextColumn::make('postal_code')
-                    ->searchable(),
-                TextColumn::make('city')
-                    ->searchable(),
-                IconColumn::make('active')
-                    ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('name')->label('Name')->searchable(),
+                TextColumn::make('defaultCategory.name')->label('Kategorie')->badge()->color('gray')->placeholder('—'),
+                TextColumn::make('defaultCostCenter.name')->label('Kostenstelle')->placeholder('—')->toggleable(),
+                TextColumn::make('iban')->label('IBAN')->searchable()->placeholder('—')->toggleable(),
+                TextColumn::make('creditor_number')->label('Kreditor-Nr.')->placeholder('—')->toggleable(),
+                IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([
-                TrashedFilter::make(),
+                SelectFilter::make('default_category_id')->label('Kategorie')
+                    ->relationship('defaultCategory', 'name')->preload(),
+                TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -76,8 +36,6 @@ class SuppliersTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

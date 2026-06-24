@@ -6,6 +6,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class SupplierForm
@@ -14,48 +15,48 @@ class SupplierForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('display_name')
-                    ->default(null),
-                Select::make('default_category_id')
-                    ->relationship('defaultCategory', 'name')
-                    ->default(null),
-                Select::make('default_cost_center_id')
-                    ->relationship('defaultCostCenter', 'name')
-                    ->default(null),
-                Select::make('default_business_id')
-                    ->relationship('defaultBusiness', 'name')
-                    ->default(null),
-                TextInput::make('iban')
-                    ->default(null),
-                TextInput::make('bic')
-                    ->default(null),
-                TextInput::make('vat_id')
-                    ->default(null),
-                TextInput::make('tax_number')
-                    ->default(null),
-                TextInput::make('creditor_number')
-                    ->default(null),
-                TextInput::make('debtor_number')
-                    ->default(null),
-                TextInput::make('skr03_account')
-                    ->default(null),
-                TextInput::make('skr04_account')
-                    ->default(null),
-                TextInput::make('tax_key')
-                    ->default(null),
-                TextInput::make('street')
-                    ->default(null),
-                TextInput::make('postal_code')
-                    ->default(null),
-                TextInput::make('city')
-                    ->default(null),
-                Toggle::make('active')
-                    ->required(),
-                Textarea::make('note')
-                    ->default(null)
-                    ->columnSpanFull(),
+                Section::make('Lieferant')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('name')->label('Name')->required(),
+                        TextInput::make('display_name')->label('Anzeigename'),
+                        TextInput::make('iban')->label('IBAN'),
+                        TextInput::make('bic')->label('BIC'),
+                        TextInput::make('vat_id')->label('USt-IdNr.'),
+                        TextInput::make('tax_number')->label('Steuernummer'),
+                    ]),
+
+                Section::make('Standard-Zuordnung')
+                    ->description('Wird bei der Erfassung automatisch vorgeschlagen.')
+                    ->columns(2)
+                    ->schema([
+                        Select::make('default_category_id')->label('Kategorie')
+                            ->relationship('defaultCategory', 'name')->searchable()->preload(),
+                        Select::make('default_cost_center_id')->label('Kostenstelle')
+                            ->relationship('defaultCostCenter', 'name')->searchable()->preload(),
+                        Select::make('default_business_id')->label('Betrieb')
+                            ->relationship('defaultBusiness', 'name')->searchable()->preload(),
+                    ]),
+
+                Section::make('Kontierung & DATEV')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('skr03_account')->label('SKR03-Konto'),
+                        TextInput::make('skr04_account')->label('SKR04-Konto'),
+                        TextInput::make('tax_key')->label('Steuerschlüssel'),
+                        TextInput::make('creditor_number')->label('Kreditor-Nr.'),
+                        TextInput::make('debtor_number')->label('Debitor-Nr.'),
+                    ]),
+
+                Section::make('Anschrift & Sonstiges')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('street')->label('Straße'),
+                        TextInput::make('postal_code')->label('PLZ'),
+                        TextInput::make('city')->label('Ort'),
+                        Toggle::make('active')->label('Aktiv')->default(true)->inline(false),
+                        Textarea::make('note')->label('Notiz')->rows(2)->columnSpanFull(),
+                    ]),
             ]);
     }
 }

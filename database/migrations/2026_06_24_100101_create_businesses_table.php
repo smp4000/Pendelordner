@@ -20,6 +20,9 @@ return new class extends Migration
             $table->string('street')->nullable();         // Straße
             $table->string('postal_code', 10)->nullable();// PLZ
             $table->string('city')->nullable();           // Ort
+            $table->string('phone')->nullable();          // Telefon
+            $table->string('fax')->nullable();            // Fax
+            $table->string('email')->nullable();          // E-Mail
             $table->string('tax_number')->nullable();     // Steuernummer
             $table->string('vat_id')->nullable();         // USt-IdNr.
             $table->string('color', 9)->nullable();       // Farbe für UI
@@ -28,6 +31,11 @@ return new class extends Migration
             $table->text('note')->nullable();             // Notiz
             $table->timestamps();
             $table->softDeletes();
+
+            // E-Mail darf bei mehreren Betrieben gleich sein (z. B. beide
+            // Tankstellen desselben Inhabers) – Eindeutigkeit nur zusammen mit
+            // der id. Dadurch kein Alleinstellungs-Constraint auf der E-Mail.
+            $table->unique(['email', 'id']);
         });
     }
 

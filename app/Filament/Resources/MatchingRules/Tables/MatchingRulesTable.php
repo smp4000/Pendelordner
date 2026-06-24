@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class MatchingRulesTable
@@ -14,44 +15,25 @@ class MatchingRulesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('priority', 'desc')
             ->columns([
-                TextColumn::make('pattern')
-                    ->searchable(),
-                TextColumn::make('pattern_type')
-                    ->searchable(),
-                TextColumn::make('supplier.name')
-                    ->searchable(),
-                TextColumn::make('category.name')
-                    ->searchable(),
-                TextColumn::make('costCenter.name')
-                    ->searchable(),
-                TextColumn::make('business.name')
-                    ->searchable(),
-                TextColumn::make('skr03_account')
-                    ->searchable(),
-                TextColumn::make('skr04_account')
-                    ->searchable(),
-                TextColumn::make('tax_key')
-                    ->searchable(),
-                TextColumn::make('priority')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('hit_count')
-                    ->numeric()
-                    ->sortable(),
-                IconColumn::make('active')
-                    ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('pattern')->label('Muster')->searchable()->weight('bold'),
+                TextColumn::make('pattern_type')->label('Typ')->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'counterparty' => 'Empfänger',
+                        'purpose' => 'Verwendungszweck',
+                        'iban' => 'IBAN',
+                        default => 'Beliebig',
+                    }),
+                TextColumn::make('supplier.name')->label('Lieferant')->placeholder('—'),
+                TextColumn::make('category.name')->label('Kategorie')->badge()->color('gray')->placeholder('—'),
+                TextColumn::make('costCenter.name')->label('Kostenstelle')->placeholder('—')->toggleable(),
+                TextColumn::make('hit_count')->label('Treffer')->badge()->color('success')->alignCenter(),
+                TextColumn::make('priority')->label('Priorität')->alignCenter()->sortable(),
+                IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([
-                //
+                TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
                 EditAction::make(),

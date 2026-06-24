@@ -15,29 +15,53 @@ class MasterDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // ---- Betriebe ------------------------------------------------------
+        // ---- Betriebe (2 Tankstellen, gleicher Inhaber Christian Welle) ----
+        // Beide teilen dieselbe E-Mail – erlaubt durch das zusammengesetzte
+        // Unique (email, id) auf der Tabelle.
         $businesses = [
-            ['name' => 'Aral Tankstelle Petersberg', 'short_name' => 'Aral Petersberg', 'type' => 'gas_station', 'city' => 'Petersberg', 'color' => '#1e6cff', 'sort_order' => 1],
-            ['name' => 'Tankstelle 2', 'short_name' => 'Tankstelle 2', 'type' => 'gas_station', 'color' => '#00a3ff', 'sort_order' => 2],
-            ['name' => 'Kfz-Werkstatt', 'short_name' => 'Werkstatt', 'type' => 'workshop', 'color' => '#f59e0b', 'sort_order' => 3],
-            ['name' => 'Sachverständigenbüro', 'short_name' => 'SV-Büro', 'type' => 'expert_office', 'color' => '#10b981', 'sort_order' => 4],
+            [
+                'name' => 'Aral Tankstelle Christian Welle',
+                'short_name' => 'Aral Fulda',
+                'type' => 'gas_station',
+                'street' => 'Schlitzer Str. 105',
+                'postal_code' => '36039',
+                'city' => 'Fulda',
+                'phone' => '066151681',
+                'fax' => '066158723',
+                'email' => 'sv.welle@aral-welle.de',
+                'color' => '#1e6cff',
+                'sort_order' => 1,
+            ],
+            [
+                'name' => 'Aral Tankstelle Christian Welle',
+                'short_name' => 'Aral Petersberg',
+                'type' => 'gas_station',
+                'street' => 'Petersberger Str. 101',
+                'postal_code' => '36100',
+                'city' => 'Petersberg',
+                'phone' => '066165535',
+                'fax' => '066158723',
+                'email' => 'sv.welle@aral-welle.de',
+                'color' => '#00a3ff',
+                'sort_order' => 2,
+            ],
         ];
         foreach ($businesses as $b) {
-            Business::firstOrCreate(['name' => $b['name']], $b);
+            // Schlüssel auf Name + Straße, da beide Betriebe denselben Namen tragen.
+            Business::firstOrCreate(
+                ['name' => $b['name'], 'street' => $b['street']],
+                $b
+            );
         }
 
-        $aral = Business::where('short_name', 'Aral Petersberg')->first();
-        $workshop = Business::where('type', 'workshop')->first();
-        $expert = Business::where('type', 'expert_office')->first();
-
-        // ---- Kostenstellen -------------------------------------------------
+        // ---- Kostenstellen (betriebsübergreifend) --------------------------
         $costCenters = [
-            ['number' => '100', 'name' => 'Tankstelle', 'business_id' => $aral?->id, 'color' => '#1e6cff', 'sort_order' => 1],
-            ['number' => '110', 'name' => 'Shop', 'business_id' => $aral?->id, 'color' => '#8b5cf6', 'sort_order' => 2],
-            ['number' => '120', 'name' => 'Lotto', 'business_id' => $aral?->id, 'color' => '#ec4899', 'sort_order' => 3],
-            ['number' => '130', 'name' => 'Waschanlage', 'business_id' => $aral?->id, 'color' => '#06b6d4', 'sort_order' => 4],
-            ['number' => '200', 'name' => 'Werkstatt', 'business_id' => $workshop?->id, 'color' => '#f59e0b', 'sort_order' => 5],
-            ['number' => '300', 'name' => 'Sachverständigenbüro', 'business_id' => $expert?->id, 'color' => '#10b981', 'sort_order' => 6],
+            ['number' => '100', 'name' => 'Tankstelle', 'color' => '#1e6cff', 'sort_order' => 1],
+            ['number' => '110', 'name' => 'Shop', 'color' => '#8b5cf6', 'sort_order' => 2],
+            ['number' => '120', 'name' => 'Lotto', 'color' => '#ec4899', 'sort_order' => 3],
+            ['number' => '130', 'name' => 'Waschanlage', 'color' => '#06b6d4', 'sort_order' => 4],
+            ['number' => '200', 'name' => 'Werkstatt', 'color' => '#f59e0b', 'sort_order' => 5],
+            ['number' => '300', 'name' => 'Sachverständigenbüro', 'color' => '#10b981', 'sort_order' => 6],
         ];
         foreach ($costCenters as $c) {
             CostCenter::firstOrCreate(['name' => $c['name']], $c);

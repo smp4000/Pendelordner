@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MatchingRules\Schemas;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class MatchingRuleForm
@@ -13,39 +14,43 @@ class MatchingRuleForm
     {
         return $schema
             ->components([
-                TextInput::make('pattern')
-                    ->required(),
-                TextInput::make('pattern_type')
-                    ->required()
-                    ->default('counterparty'),
-                Select::make('supplier_id')
-                    ->relationship('supplier', 'name')
-                    ->default(null),
-                Select::make('category_id')
-                    ->relationship('category', 'name')
-                    ->default(null),
-                Select::make('cost_center_id')
-                    ->relationship('costCenter', 'name')
-                    ->default(null),
-                Select::make('business_id')
-                    ->relationship('business', 'name')
-                    ->default(null),
-                TextInput::make('skr03_account')
-                    ->default(null),
-                TextInput::make('skr04_account')
-                    ->default(null),
-                TextInput::make('tax_key')
-                    ->default(null),
-                TextInput::make('priority')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('hit_count')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Toggle::make('active')
-                    ->required(),
+                Section::make('Regel')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('pattern')->label('Muster')->required()
+                            ->helperText('Suchbegriff, z. B. "HBW", "PAPPERT", "TELEKOM"'),
+                        Select::make('pattern_type')->label('Muster-Typ')
+                            ->options([
+                                'counterparty' => 'Empfänger/Auftraggeber',
+                                'purpose' => 'Verwendungszweck',
+                                'iban' => 'IBAN',
+                                'any' => 'Beliebig',
+                            ])
+                            ->default('counterparty')->required(),
+                        TextInput::make('priority')->label('Priorität')->numeric()->default(0),
+                        Toggle::make('active')->label('Aktiv')->default(true)->inline(false),
+                    ]),
+
+                Section::make('Zuordnung')
+                    ->columns(2)
+                    ->schema([
+                        Select::make('supplier_id')->label('Lieferant')
+                            ->relationship('supplier', 'name')->searchable()->preload(),
+                        Select::make('category_id')->label('Kategorie')
+                            ->relationship('category', 'name')->searchable()->preload(),
+                        Select::make('cost_center_id')->label('Kostenstelle')
+                            ->relationship('costCenter', 'name')->searchable()->preload(),
+                        Select::make('business_id')->label('Betrieb')
+                            ->relationship('business', 'name')->searchable()->preload(),
+                    ]),
+
+                Section::make('Kontierung')
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('skr03_account')->label('SKR03-Konto'),
+                        TextInput::make('skr04_account')->label('SKR04-Konto'),
+                        TextInput::make('tax_key')->label('Steuerschlüssel'),
+                    ]),
             ]);
     }
 }

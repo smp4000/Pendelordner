@@ -11,26 +11,54 @@ class PanelSmokeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_panel_seiten_rendern_fuer_angemeldeten_benutzer(): void
+    public function test_panel_listen_rendern(): void
     {
-        $this->seed(DatabaseSeeder::class);
-        $user = User::firstOrFail();
+        $user = $this->preparedUser();
 
         $pages = [
             '/admin',                    // Dashboard
-            '/admin/bank-transactions',  // Modul 2 (Custom-Tabelle, Filter, Ampel)
+            '/admin/bank-transactions',  // Modul 2
             '/admin/receipts',           // Modul 3
             '/admin/businesses',         // Modul 7
             '/admin/categories',         // Modul 8
             '/admin/cost-centers',       // Modul 9
             '/admin/suppliers',          // Modul 4
             '/admin/bank-accounts',      // Modul 1
+            '/admin/matching-rules',     // Modul 4
+            '/admin/fints-connections',  // Modul 1
         ];
 
         foreach ($pages as $url) {
-            $this->actingAs($user)
-                ->get($url)
-                ->assertSuccessful();
+            $this->actingAs($user)->get($url)->assertSuccessful();
         }
+    }
+
+    public function test_formulare_rendern(): void
+    {
+        $user = $this->preparedUser();
+
+        // Create-Seiten rendern die Formulare (ColorPicker, Passwortfeld, Sektionen).
+        $forms = [
+            '/admin/businesses/create',
+            '/admin/bank-accounts/create',
+            '/admin/categories/create',
+            '/admin/cost-centers/create',
+            '/admin/suppliers/create',
+            '/admin/matching-rules/create',
+            '/admin/fints-connections/create',
+            '/admin/receipts/create',
+            '/admin/bank-transactions/create',
+        ];
+
+        foreach ($forms as $url) {
+            $this->actingAs($user)->get($url)->assertSuccessful();
+        }
+    }
+
+    private function preparedUser(): User
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        return User::firstOrFail();
     }
 }

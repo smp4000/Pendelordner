@@ -5,11 +5,9 @@ namespace App\Filament\Resources\BankAccounts\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class BankAccountsTable
@@ -18,54 +16,17 @@ class BankAccountsTable
     {
         return $table
             ->columns([
-                TextColumn::make('business.name')
-                    ->searchable(),
-                TextColumn::make('fintsConnection.id')
-                    ->searchable(),
-                TextColumn::make('label')
-                    ->searchable(),
-                TextColumn::make('bank_name')
-                    ->searchable(),
-                TextColumn::make('iban')
-                    ->searchable(),
-                TextColumn::make('bic')
-                    ->searchable(),
-                TextColumn::make('account_number')
-                    ->searchable(),
-                TextColumn::make('bank_code')
-                    ->searchable(),
-                TextColumn::make('currency')
-                    ->searchable(),
-                TextColumn::make('balance')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('balance_date')
-                    ->dateTime()
-                    ->sortable(),
-                IconColumn::make('fints_enabled')
-                    ->boolean(),
-                IconColumn::make('active')
-                    ->boolean(),
-                TextColumn::make('last_fetched_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('color')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('label')->label('Bezeichnung')->searchable(),
+                TextColumn::make('bank_name')->label('Bank')->placeholder('—')->toggleable(),
+                TextColumn::make('iban')->label('IBAN')->searchable()->placeholder('—'),
+                TextColumn::make('business.name')->label('Betrieb')->badge()->placeholder('—'),
+                TextColumn::make('balance')->label('Saldo')->money('EUR')->alignEnd()->placeholder('—'),
+                IconColumn::make('fints_enabled')->label('FinTS')->boolean()->alignCenter(),
+                IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([
-                TrashedFilter::make(),
+                TernaryFilter::make('fints_enabled')->label('FinTS aktiv'),
+                TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -73,8 +34,6 @@ class BankAccountsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

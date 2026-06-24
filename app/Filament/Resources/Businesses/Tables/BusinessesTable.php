@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\Businesses\Tables;
 
+use App\Enums\BusinessType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class BusinessesTable
@@ -17,46 +17,19 @@ class BusinessesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('sort_order')
             ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('short_name')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->badge()
-                    ->searchable(),
-                TextColumn::make('street')
-                    ->searchable(),
-                TextColumn::make('postal_code')
-                    ->searchable(),
-                TextColumn::make('city')
-                    ->searchable(),
-                TextColumn::make('tax_number')
-                    ->searchable(),
-                TextColumn::make('vat_id')
-                    ->searchable(),
-                TextColumn::make('color')
-                    ->searchable(),
-                IconColumn::make('active')
-                    ->boolean(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('short_name')->label('Kurzname')->searchable()->placeholder('—'),
+                TextColumn::make('name')->label('Name')->searchable(),
+                TextColumn::make('type')->label('Betriebsart')->badge(),
+                TextColumn::make('city')->label('Ort')->searchable()->placeholder('—'),
+                TextColumn::make('phone')->label('Telefon')->placeholder('—')->toggleable(),
+                TextColumn::make('email')->label('E-Mail')->placeholder('—')->toggleable(),
+                IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([
-                TrashedFilter::make(),
+                SelectFilter::make('type')->label('Betriebsart')->options(BusinessType::class),
+                TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -64,8 +37,6 @@ class BusinessesTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

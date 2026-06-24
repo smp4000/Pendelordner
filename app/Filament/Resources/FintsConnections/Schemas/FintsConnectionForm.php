@@ -2,10 +2,9 @@
 
 namespace App\Filament\Resources\FintsConnections\Schemas;
 
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class FintsConnectionForm
@@ -14,36 +13,36 @@ class FintsConnectionForm
     {
         return $schema
             ->components([
-                TextInput::make('label')
-                    ->required(),
-                TextInput::make('bank_code')
-                    ->required(),
-                TextInput::make('fints_url')
-                    ->url()
-                    ->required(),
-                TextInput::make('hbci_version')
-                    ->required()
-                    ->default('300'),
-                TextInput::make('username')
-                    ->required(),
-                Textarea::make('pin')
-                    ->default(null)
-                    ->columnSpanFull(),
-                TextInput::make('tan_method')
-                    ->default(null),
-                TextInput::make('tan_medium')
-                    ->default(null),
-                TextInput::make('product_id')
-                    ->default(null),
-                TextInput::make('product_version')
-                    ->required()
-                    ->default('1.0'),
-                Toggle::make('active')
-                    ->required(),
-                DateTimePicker::make('last_fetched_at'),
-                Textarea::make('last_message')
-                    ->default(null)
-                    ->columnSpanFull(),
+                Section::make('Bankzugang')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('label')->label('Bezeichnung')->required()
+                            ->placeholder('z. B. VR Bank Fulda'),
+                        TextInput::make('bank_code')->label('Bankleitzahl (BLZ)')->required(),
+                        TextInput::make('fints_url')->label('FinTS-URL')->url()->columnSpanFull(),
+                        TextInput::make('hbci_version')->label('HBCI-Version')->default('300'),
+                    ]),
+
+                Section::make('Anmeldung')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('username')->label('Benutzerkennung')->required(),
+                        TextInput::make('pin')->label('PIN')
+                            ->password()->revealable()
+                            // Leeres Feld beim Bearbeiten überschreibt die gespeicherte PIN nicht.
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->helperText('Wird verschlüsselt gespeichert.'),
+                        TextInput::make('tan_method')->label('TAN-Verfahren'),
+                        TextInput::make('tan_medium')->label('TAN-Medium'),
+                    ]),
+
+                Section::make('Produktregistrierung & Status')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('product_id')->label('Produkt-ID (FinTS-Registrierung)'),
+                        TextInput::make('product_version')->label('Produktversion')->default('1.0'),
+                        Toggle::make('active')->label('Aktiv')->default(true)->inline(false),
+                    ]),
             ]);
     }
 }
