@@ -103,6 +103,24 @@ class BankTransaction extends Model
         return abs($this->difference) < 0.01 && $this->receipts->isNotEmpty();
     }
 
+    /**
+     * Dublettenhash (Modul 1) aus Referenz + Datum + Betrag + Verwendungszweck
+     * + Empfänger. Normalisiert (trim/lowercase), damit Whitespace/Groß-Klein
+     * keine Scheinunterschiede erzeugt.
+     */
+    public static function makeDedupHash(array $data): string
+    {
+        $parts = [
+            trim((string) ($data['bank_reference'] ?? '')),
+            (string) ($data['booking_date'] ?? ''),
+            number_format((float) ($data['amount'] ?? 0), 2, '.', ''),
+            mb_strtolower(trim((string) ($data['purpose'] ?? ''))),
+            mb_strtolower(trim((string) ($data['counterparty'] ?? ''))),
+        ];
+
+        return hash('sha256', implode('|', $parts));
+    }
+
     // ---- Status-Workflow ---------------------------------------------------
 
     /** Status anhand der aktuellen Belegzuordnung neu berechnen. */
