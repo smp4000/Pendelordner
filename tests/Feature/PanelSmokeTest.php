@@ -26,6 +26,7 @@ class PanelSmokeTest extends TestCase
             '/admin/bank-accounts',      // Modul 1
             '/admin/matching-rules',     // Modul 4
             '/admin/fints-connections',  // Modul 1
+            '/admin/steuerberater-bericht', // Modul 12 (Berichts-Seite)
         ];
 
         foreach ($pages as $url) {

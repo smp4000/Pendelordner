@@ -31,6 +31,14 @@ class SupplierResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Lieferanten';
 
+    protected static ?string $recordTitleAttribute = 'name';
+
+    /** Globale Suche (Modul 11). */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'display_name', 'iban', 'vat_id', 'creditor_number'];
+    }
+
     public static function form(Schema $schema): Schema
     {
         return SupplierForm::configure($schema);

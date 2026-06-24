@@ -34,6 +34,20 @@ class BankTransactionResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'counterparty';
 
+    /** Globale Suche (Modul 11). */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['counterparty', 'purpose', 'bank_reference', 'counterparty_iban'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Betrag' => number_format((float) $record->amount, 2, ',', '.') . ' €',
+            'Datum' => $record->booking_date?->format('d.m.Y'),
+        ];
+    }
+
     public static function form(Schema $schema): Schema
     {
         return BankTransactionForm::configure($schema);

@@ -31,6 +31,22 @@ class ReceiptResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Belege';
 
+    protected static ?string $recordTitleAttribute = 'invoice_number';
+
+    /** Globale Suche (Modul 11) – inkl. OCR-Volltext. */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['invoice_number', 'receipt_number', 'iban', 'ocr_text'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Lieferant' => $record->supplier?->name,
+            'Betrag' => $record->gross_amount ? number_format((float) $record->gross_amount, 2, ',', '.') . ' €' : null,
+        ];
+    }
+
     public static function form(Schema $schema): Schema
     {
         return ReceiptForm::configure($schema);
