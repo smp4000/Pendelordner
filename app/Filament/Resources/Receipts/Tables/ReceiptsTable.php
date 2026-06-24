@@ -5,9 +5,13 @@ namespace App\Filament\Resources\Receipts\Tables;
 use App\Enums\OcrStatus;
 use App\Enums\ReceiptStatus;
 use App\Enums\ReceiptType;
+use App\Models\Receipt;
+use App\Services\Ocr\OcrService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -57,6 +61,19 @@ class ReceiptsTable
                     ),
             ])
             ->recordActions([
+                Action::make('ocr')
+                    ->label('OCR')
+                    ->icon('heroicon-o-document-magnifying-glass')
+                    ->color('gray')
+                    ->visible(fn (Receipt $record): bool => filled($record->file_path))
+                    ->action(function (Receipt $record): void {
+                        (new OcrService())->process($record);
+                        Notification::make()
+                            ->title('OCR ausgeführt')
+                            ->body('Status: ' . $record->ocr_status->getLabel())
+                            ->success()
+                            ->send();
+                    }),
                 EditAction::make(),
             ])
             ->toolbarActions([

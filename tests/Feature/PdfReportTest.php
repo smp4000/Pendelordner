@@ -1,0 +1,68 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\ImportSource;
+use App\Models\BankAccount;
+use App\Models\Business;
+use App\Models\Receipt;
+use App\Services\Bank\BankImportService;
+use App\Services\Bank\Parsers\CsvBankParser;
+use App\Services\Pdf\PdfReportService;
+use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
+use Database\Seeders\MasterDataSeeder;
+use Database\Seeders\SupplierSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class PdfReportTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_steuerberater_bericht_wird_erzeugt_und_belege_angehaengt(): void
+    {
+        Storage::fake('belege');
+        Storage::fake('local');
+        $this->seed(MasterDataSeeder::class);
+        $this->seed(SupplierSeeder::class);
+
+        $account = BankAccount::create([
+            'label' => 'Testkonto',
+            'business_id' => Business::first()->id,
+            'currency' => 'EUR',
+        ]);
+
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
+            . "08.01.2026;HBW Sinsheim;Blumen;-63,70\n"
+            . "09.01.2026;Telekom Deutschland GmbH;Telefon;-89,95\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+
+        // PDF-Beleg erzeugen und an den ersten Umsatz hängen
+        $pdfContent = DomPdf::loadHTML('<h1>Rechnung HBW Sinsheim</h1><p>Blumen 63,70 EUR</p>')->output();
+        Storage::disk('belege')->put('2026/01/rechnung-hbw.pdf', $pdfContent);
+
+        $receipt = Receipt::create([
+            'type' => 'incoming_invoice',
+            'invoice_number' => '2026-1001',
+            'gross_amount' => 63.70,
+            'invoice_date' => '2026-01-07',
+            'file_path' => '2026/01/rechnung-hbw.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $transaction = $account->bankTransactions()->where('counterparty', 'HBW Sinsheim')->first();
+        $transaction->receipts()->attach($receipt->id, ['amount' => 63.70]);
+
+        $path = (new PdfReportService())->generateMonthlyReport(Carbon::parse('2026-01-15'));
+
+        Storage::disk('local')->assertExists($path);
+        $content = Storage::disk('local')->get($path);
+        $this->assertStringStartsWith('%PDF', $content);
+        // Vorspann (>=3 Seiten) + Trennseite + 1 Belegseite -> Dokument nicht trivial klein
+        $this->assertGreaterThan(3000, strlen($content));
+    }
+}

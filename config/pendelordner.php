@@ -57,4 +57,18 @@ return [
         'standard_kontenrahmen' => 'skr03',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | FinTS (Bankanbindung, Modul 1)
+    |--------------------------------------------------------------------------
+    | Produktregistrierung bei der Deutschen Kreditwirtschaft. Pro Zugang in der
+    | DB überschreibbar.
+    */
+    'fints' => [
+        'product_id' => env('FINTS_PRODUCT_REGISTRATION', 'PENDELORDNER'),
+        'product_version' => env('FINTS_PRODUCT_VERSION', '1.0'),
+        // Standard-Abrufzeitraum in Tagen.
+        'default_days' => 90,
+    ],
+
 ];
