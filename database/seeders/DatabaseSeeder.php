@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // Admin-Benutzer für das Filament-Panel (lokaler Betrieb).
         User::firstOrCreate(
-            ['email' => 'admin@pendelordner.local'],
+            ['email' => 'admin@admin.com'],
             [
                 'name' => 'Administrator',
                 'password' => Hash::make('password'),
