@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // Belegarchiv (Modul 3): Dateien unter storage/app/belege/JAHR/MONAT/TAG.
+        // Über den symbolischen Link (php artisan storage:link) im Browser erreichbar.
+        'belege' => [
+            'driver' => 'local',
+            'root' => storage_path('app/belege'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/belege',
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
