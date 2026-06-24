@@ -1,172 +1,173 @@
 # ER-Diagramm – Digitaler Pendelordner
 
-Entity-Relationship-Modell der Datenbank. Auf GitHub wird das Mermaid-Diagramm
-direkt gerendert.
+Entity-Relationship-Modell der Datenbank. Tabellen-/Spaltennamen sind englisch
+(Laravel-Standard), die Oberfläche und Kommentare sind deutsch. Auf GitHub wird
+das Mermaid-Diagramm direkt gerendert.
 
 ```mermaid
 erDiagram
-    BETRIEBE ||--o{ BANKKONTEN : hat
-    BETRIEBE ||--o{ KOSTENSTELLEN : hat
-    BETRIEBE ||--o{ BANKUMSAETZE : zugeordnet
-    BETRIEBE ||--o{ BELEGE : zugeordnet
-    BETRIEBE ||--o{ DATEV_EXPORTE : fuer
+    BUSINESSES ||--o{ BANK_ACCOUNTS : has
+    BUSINESSES ||--o{ COST_CENTERS : has
+    BUSINESSES ||--o{ BANK_TRANSACTIONS : tagged
+    BUSINESSES ||--o{ RECEIPTS : tagged
+    BUSINESSES ||--o{ DATEV_EXPORTS : for
 
-    FINTS_ZUGAENGE ||--o{ BANKKONTEN : versorgt
-    BANKKONTEN ||--o{ BANKUMSAETZE : enthaelt
-    BANKKONTEN ||--o{ IMPORT_PROTOKOLLE : protokolliert
-    IMPORT_PROTOKOLLE ||--o{ BANKUMSAETZE : importiert
+    FINTS_CONNECTIONS ||--o{ BANK_ACCOUNTS : supplies
+    BANK_ACCOUNTS ||--o{ BANK_TRANSACTIONS : contains
+    BANK_ACCOUNTS ||--o{ IMPORT_LOGS : logs
+    IMPORT_LOGS ||--o{ BANK_TRANSACTIONS : imports
 
-    KATEGORIEN ||--o{ KATEGORIEN : parent
-    KATEGORIEN ||--o{ BANKUMSAETZE : klassifiziert
-    KATEGORIEN ||--o{ BELEGE : klassifiziert
-    KATEGORIEN ||--o{ LIEFERANTEN : standard
-    KATEGORIEN ||--o{ ZUORDNUNGS_REGELN : ziel
+    CATEGORIES ||--o{ CATEGORIES : parent
+    CATEGORIES ||--o{ BANK_TRANSACTIONS : classifies
+    CATEGORIES ||--o{ RECEIPTS : classifies
+    CATEGORIES ||--o{ SUPPLIERS : default
+    CATEGORIES ||--o{ MATCHING_RULES : target
 
-    KOSTENSTELLEN ||--o{ BANKUMSAETZE : bucht
-    KOSTENSTELLEN ||--o{ BELEGE : bucht
-    KOSTENSTELLEN ||--o{ KONTIERUNGEN : kost1
+    COST_CENTERS ||--o{ BANK_TRANSACTIONS : books
+    COST_CENTERS ||--o{ RECEIPTS : books
+    COST_CENTERS ||--o{ ACCOUNT_ASSIGNMENTS : kost1
 
-    LIEFERANTEN ||--o{ BANKUMSAETZE : zahlungsempfaenger
-    LIEFERANTEN ||--o{ BELEGE : aussteller
-    LIEFERANTEN ||--o{ ZUORDNUNGS_REGELN : betrifft
+    SUPPLIERS ||--o{ BANK_TRANSACTIONS : payee
+    SUPPLIERS ||--o{ RECEIPTS : issuer
+    SUPPLIERS ||--o{ MATCHING_RULES : about
 
-    BANKUMSAETZE ||--o{ BELEG_BANKUMSATZ : "n:m (Teilbetrag)"
-    BELEGE ||--o{ BELEG_BANKUMSATZ : "n:m (Teilbetrag)"
+    BANK_TRANSACTIONS ||--o{ BANK_TRANSACTION_RECEIPT : "n:m (partial amount)"
+    RECEIPTS ||--o{ BANK_TRANSACTION_RECEIPT : "n:m (partial amount)"
 
-    BANKUMSAETZE ||--o{ BANKUMSATZ_KOSTENSTELLE : verteilung
-    KOSTENSTELLEN ||--o{ BANKUMSATZ_KOSTENSTELLE : verteilung
-    BELEGE ||--o{ BELEG_KOSTENSTELLE : verteilung
-    KOSTENSTELLEN ||--o{ BELEG_KOSTENSTELLE : verteilung
+    BANK_TRANSACTIONS ||--o{ BANK_TRANSACTION_COST_CENTER : split
+    COST_CENTERS ||--o{ BANK_TRANSACTION_COST_CENTER : split
+    RECEIPTS ||--o{ COST_CENTER_RECEIPT : split
+    COST_CENTERS ||--o{ COST_CENTER_RECEIPT : split
 
-    BANKUMSAETZE ||--o{ KONTIERUNGEN : "polymorph"
-    BELEGE ||--o{ KONTIERUNGEN : "polymorph"
-    DATEV_EXPORTE ||--o{ KONTIERUNGEN : buendelt
+    BANK_TRANSACTIONS ||--o{ ACCOUNT_ASSIGNMENTS : "polymorph"
+    RECEIPTS ||--o{ ACCOUNT_ASSIGNMENTS : "polymorph"
+    DATEV_EXPORTS ||--o{ ACCOUNT_ASSIGNMENTS : bundles
 
-    BETRIEBE {
+    BUSINESSES {
         id bigint PK
         name string
-        typ enum "tankstelle|werkstatt|sachverstaendigenbuero|shop|sonstige"
-        farbe string
-        aktiv bool
+        type enum "gas_station|workshop|expert_office|shop|other"
+        color string
+        active bool
     }
-    FINTS_ZUGAENGE {
+    FINTS_CONNECTIONS {
         id bigint PK
-        bezeichnung string
+        label string
         bank_code string "BLZ"
         fints_url string
-        benutzerkennung string
+        username string
         pin text "encrypted"
-        tan_verfahren string
+        tan_method string
     }
-    BANKKONTEN {
+    BANK_ACCOUNTS {
         id bigint PK
-        betrieb_id bigint FK
-        fints_zugang_id bigint FK
-        bezeichnung string
+        business_id bigint FK
+        fints_connection_id bigint FK
+        label string
         iban string
         bic string
-        saldo decimal
-        fints_aktiv bool
+        balance decimal
+        fints_enabled bool
     }
-    IMPORT_PROTOKOLLE {
+    IMPORT_LOGS {
         id bigint PK
-        bankkonto_id bigint FK
-        quelle enum "fints|mt940|camt|csv|manuell"
-        anzahl_neu int
-        anzahl_dubletten int
+        bank_account_id bigint FK
+        source enum "fints|mt940|camt|csv|manual"
+        new_count int
+        duplicate_count int
         status string
     }
-    BANKUMSAETZE {
+    BANK_TRANSACTIONS {
         id bigint PK
-        bankkonto_id bigint FK
-        betrieb_id bigint FK
-        kategorie_id bigint FK
-        kostenstelle_id bigint FK
-        lieferant_id bigint FK
-        buchungsdatum date
-        valutadatum date
-        empfaenger string
-        verwendungszweck text
-        betrag decimal
-        status enum "offen|teilweise|vollstaendig|geprueft"
-        dedup_hash string "UNIQUE je Konto"
+        bank_account_id bigint FK
+        business_id bigint FK
+        category_id bigint FK
+        cost_center_id bigint FK
+        supplier_id bigint FK
+        booking_date date
+        value_date date
+        counterparty string
+        purpose text
+        amount decimal
+        status enum "open|partially|fully|reviewed"
+        dedup_hash string "UNIQUE per account"
     }
-    BELEGE {
+    RECEIPTS {
         id bigint PK
-        betrieb_id bigint FK
-        lieferant_id bigint FK
-        kategorie_id bigint FK
-        kostenstelle_id bigint FK
-        typ enum "rechnungseingang|rechnungsausgang|kasse|sonstige"
-        rechnungsnummer string
-        rechnungsdatum date
-        betrag_brutto decimal
-        steuerbetrag decimal
-        datei_pfad string
+        business_id bigint FK
+        supplier_id bigint FK
+        category_id bigint FK
+        cost_center_id bigint FK
+        type enum "incoming_invoice|outgoing_invoice|cash|other"
+        invoice_number string
+        invoice_date date
+        gross_amount decimal
+        tax_amount decimal
+        file_path string
         ocr_text longtext
         ocr_status enum
         status enum
     }
-    BELEG_BANKUMSATZ {
+    BANK_TRANSACTION_RECEIPT {
         id bigint PK
-        bankumsatz_id bigint FK
-        beleg_id bigint FK
-        betrag decimal "zugeordneter Anteil"
-        zuordnungs_art enum
-        trefferquote decimal
+        bank_transaction_id bigint FK
+        receipt_id bigint FK
+        amount decimal "allocated share"
+        match_type enum
+        match_score decimal
     }
-    ZUORDNUNGS_REGELN {
+    MATCHING_RULES {
         id bigint PK
-        muster string "z.B. HBW"
-        muster_typ enum "empfaenger|verwendungszweck|iban"
-        lieferant_id bigint FK
-        kategorie_id bigint FK
-        kostenstelle_id bigint FK
-        treffer_anzahl int "Lernzaehler"
-        prioritaet int
+        pattern string "e.g. HBW"
+        pattern_type enum "counterparty|purpose|iban"
+        supplier_id bigint FK
+        category_id bigint FK
+        cost_center_id bigint FK
+        hit_count int "learning counter"
+        priority int
     }
-    KONTIERUNGEN {
+    ACCOUNT_ASSIGNMENTS {
         id bigint PK
-        kontierbar_type string "polymorph"
-        kontierbar_id bigint
-        kontenrahmen enum "skr03|skr04"
-        konto string
-        gegenkonto string
-        steuerschluessel string
-        kostenstelle_id bigint FK
+        assignable_type string "polymorph"
+        assignable_id bigint
+        chart_of_accounts enum "skr03|skr04"
+        account string
+        contra_account string
+        tax_key string
+        cost_center_id bigint FK
         datev_export_id bigint FK
     }
-    DATEV_EXPORTE {
+    DATEV_EXPORTS {
         id bigint PK
-        betrieb_id bigint FK
-        bezeichnung string
-        von_datum date
-        bis_datum date
-        kontenrahmen enum
-        berater_nummer string
-        mandant_nummer string
+        business_id bigint FK
+        label string
+        from_date date
+        to_date date
+        chart_of_accounts enum
+        consultant_number string
+        client_number string
     }
-    KATEGORIEN {
+    CATEGORIES {
         id bigint PK
         parent_id bigint FK
         name string
-        skr03_konto string
-        skr04_konto string
-        steuerschluessel string
+        skr03_account string
+        skr04_account string
+        tax_key string
     }
-    KOSTENSTELLEN {
+    COST_CENTERS {
         id bigint PK
-        betrieb_id bigint FK
-        nummer string "KOST1"
+        business_id bigint FK
+        number string "KOST1"
         name string
     }
-    LIEFERANTEN {
+    SUPPLIERS {
         id bigint PK
         name string
-        standard_kategorie_id bigint FK
-        standard_kostenstelle_id bigint FK
+        default_category_id bigint FK
+        default_cost_center_id bigint FK
         iban string
-        kreditor_nummer string
+        creditor_number string
     }
 ```
 
@@ -174,8 +175,8 @@ erDiagram
 
 | Beziehung | Typ | Bedeutung |
 |-----------|-----|-----------|
-| Bankumsatz ↔ Beleg | n:m (`beleg_bankumsatz`) | Ein Umsatz kann mehrere Belege enthalten; ein Beleg kann auf mehrere Umsätze aufgeteilt werden. Pivot-Feld `betrag` hält den Teilbetrag (Modul 5). |
-| FinTS-Zugang → Bankkonten | 1:n | Ein Online-Banking-Login versorgt mehrere Konten. |
-| Zuordnungsregel → Lieferant/Kategorie/Kostenstelle | n:1 | Lernfähige Auto-Zuordnung (Modul 4). |
-| Kontierung → Bankumsatz/Beleg | polymorph | SKR03/04-Buchungsvorbereitung (Modul 13). |
-| Bankumsatz/Beleg ↔ Kostenstelle | n:m (Pivot) | Vorbereitete Mehrfach-Kostenstellen-Verteilung (Modul 9). |
+| `bank_transactions` ↔ `receipts` | n:m (`bank_transaction_receipt`) | Ein Umsatz kann mehrere Belege enthalten; ein Beleg kann auf mehrere Umsätze aufgeteilt werden. Pivot-Feld `amount` hält den Teilbetrag (Modul 5). |
+| `fints_connections` → `bank_accounts` | 1:n | Ein Online-Banking-Login versorgt mehrere Konten. |
+| `matching_rules` → supplier/category/cost_center | n:1 | Lernfähige Auto-Zuordnung (Modul 4). |
+| `account_assignments` → transaction/receipt | polymorph | SKR03/04-Buchungsvorbereitung (Modul 13). |
+| transaction/receipt ↔ `cost_centers` | n:m (Pivot) | Vorbereitete Mehrfach-Kostenstellen-Verteilung (Modul 9). |

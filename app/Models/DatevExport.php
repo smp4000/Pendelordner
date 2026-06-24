@@ -2,35 +2,31 @@
 
 namespace App\Models;
 
-use App\Enums\Kontenrahmen;
+use App\Enums\ChartOfAccounts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * DATEV-Export-Kopf (Modul 14 – nur Vorbereitung).
- */
+/** DATEV-Export-Kopf (Modul 14 – nur Vorbereitung). */
 class DatevExport extends Model
 {
-    protected $table = 'datev_exporte';
-
     protected $guarded = [];
 
     protected $casts = [
-        'von_datum' => 'date',
-        'bis_datum' => 'date',
-        'kontenrahmen' => Kontenrahmen::class,
-        'sachkontenlaenge' => 'integer',
-        'anzahl_buchungen' => 'integer',
+        'from_date' => 'date',
+        'to_date' => 'date',
+        'chart_of_accounts' => ChartOfAccounts::class,
+        'account_length' => 'integer',
+        'entry_count' => 'integer',
     ];
 
-    public function betrieb(): BelongsTo
+    public function business(): BelongsTo
     {
-        return $this->belongsTo(Betrieb::class);
+        return $this->belongsTo(Business::class);
     }
 
-    public function kontierungen(): HasMany
+    public function accountAssignments(): HasMany
     {
-        return $this->hasMany(Kontierung::class);
+        return $this->hasMany(AccountAssignment::class);
     }
 }

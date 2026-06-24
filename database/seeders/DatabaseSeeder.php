@@ -23,8 +23,8 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
-            StammdatenSeeder::class,
-            LieferantenSeeder::class,
+            MasterDataSeeder::class,
+            SupplierSeeder::class,
         ]);
     }
 }

@@ -90,15 +90,19 @@ Siehe [docs/Projektstruktur.md](docs/Projektstruktur.md). Wichtigste Pfade:
 
 ```
 app/
-  Enums/                 Status-/Typ-Enums (mit Filament-Labels/Farben)
-  Models/                Eloquent-Models (deutsche Tabellen)
-  Filament/Resources/    Panel-Resources je Entität
+  Enums/                 Status-/Typ-Enums (engl. Code, deutsche Labels/Farben)
+  Models/                Eloquent-Models (engl. Tabellen, deutsche Kommentare)
+  Filament/Resources/    Panel-Resources je Entität (deutsche UI)
   Services/              OCR, Matching, Import, FinTS, PDF (in Arbeit)
 config/pendelordner.php  OCR-, Matching- und Kontierungs-Konfiguration
 database/migrations/     16 Tabellen
-database/seeders/        Stammdaten (Betriebe, Kategorien, Lieferanten, Regeln)
+database/seeders/        Stammdaten (Businesses, Categories, Suppliers, Rules)
 docs/                    ER-Diagramm, Installation, Roadmap, Struktur
 ```
+
+> **Benennung:** Schema und Code englisch (Laravel-Standard), Oberfläche
+> deutsch (Filament-Labels), Kommentare deutsch. Glossar Deutsch↔Code in
+> [docs/Projektstruktur.md](docs/Projektstruktur.md).
 
 ---
 

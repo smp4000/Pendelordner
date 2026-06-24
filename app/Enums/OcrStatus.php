@@ -7,28 +7,28 @@ use Filament\Support\Contracts\HasLabel;
 
 enum OcrStatus: string implements HasLabel, HasColor
 {
-    case Ausstehend = 'ausstehend';
-    case Verarbeitet = 'verarbeitet';
-    case Fehler = 'fehler';
-    case Uebersprungen = 'uebersprungen';
+    case Pending = 'pending';
+    case Processed = 'processed';
+    case Failed = 'failed';
+    case Skipped = 'skipped';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Ausstehend => 'Ausstehend',
-            self::Verarbeitet => 'Verarbeitet',
-            self::Fehler => 'Fehler',
-            self::Uebersprungen => 'Übersprungen',
+            self::Pending => 'Ausstehend',
+            self::Processed => 'Verarbeitet',
+            self::Failed => 'Fehler',
+            self::Skipped => 'Übersprungen',
         };
     }
 
     public function getColor(): string
     {
         return match ($this) {
-            self::Ausstehend => 'warning',
-            self::Verarbeitet => 'success',
-            self::Fehler => 'danger',
-            self::Uebersprungen => 'gray',
+            self::Pending => 'warning',
+            self::Processed => 'success',
+            self::Failed => 'danger',
+            self::Skipped => 'gray',
         };
     }
 }

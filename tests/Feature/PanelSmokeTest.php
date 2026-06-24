@@ -16,18 +16,18 @@ class PanelSmokeTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $user = User::firstOrFail();
 
-        $seiten = [
-            '/admin',                 // Dashboard
-            '/admin/bankumsatzs',     // Modul 2 (Custom-Tabelle, Filter, Ampel)
-            '/admin/belegs',          // Modul 3
-            '/admin/betriebs',        // Modul 7
-            '/admin/kategories',      // Modul 8
-            '/admin/kostenstelles',   // Modul 9
-            '/admin/lieferants',      // Modul 4
-            '/admin/bankkontos',      // Modul 1
+        $pages = [
+            '/admin',                    // Dashboard
+            '/admin/bank-transactions',  // Modul 2 (Custom-Tabelle, Filter, Ampel)
+            '/admin/receipts',           // Modul 3
+            '/admin/businesses',         // Modul 7
+            '/admin/categories',         // Modul 8
+            '/admin/cost-centers',       // Modul 9
+            '/admin/suppliers',          // Modul 4
+            '/admin/bank-accounts',      // Modul 1
         ];
 
-        foreach ($seiten as $url) {
+        foreach ($pages as $url) {
             $this->actingAs($user)
                 ->get($url)
                 ->assertSuccessful();
