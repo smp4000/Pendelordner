@@ -106,7 +106,14 @@ class Receipt extends Model
 
     public function getIsPdfAttribute(): bool
     {
-        return $this->mime_type === 'application/pdf';
+        return $this->mime_type === 'application/pdf'
+            || ($this->file_path && str_ends_with(strtolower($this->file_path), '.pdf'));
+    }
+
+    /** URL zur Inline-Vorschau der Belegdatei (Modul 6). */
+    public function getPreviewUrlAttribute(): ?string
+    {
+        return $this->file_path ? route('beleg.datei', $this) : null;
     }
 
     // ---- Scopes ------------------------------------------------------------

@@ -8,12 +8,12 @@ use Tests\TestCase;
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * Die Startseite leitet auf das Filament-Panel um.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_die_startseite_leitet_zum_panel(): void
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertRedirect('/admin');
     }
 }
