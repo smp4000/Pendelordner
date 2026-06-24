@@ -12,41 +12,40 @@
 - Beleg↔Umsatz-Zuordnung mit Teilbeträgen (Relation Manager)
 - Render-Smoke-Test (grün)
 
-## 🔧 Phase 2 – Services & Belegfluss (in Arbeit)
+## ✅ Phase 2 – Services & Belegfluss (abgeschlossen)
 
 - **OcrService**: PDF-Text via `smalot/pdfparser`, sonst Tesseract; Erkennung
-  von Lieferant, Rechnungsnummer, Datum, Beträgen, Steuer, IBAN
+  von Rechnungsnummer, Datum, Beträgen, Steuer, IBAN (ReceiptParser)
 - **BankImportService**: MT940-, CAMT.053- und CSV-Import mit Dublettenprüfung
-  (`dedup_hash` aus Referenz + Datum + Betrag + Verwendungszweck)
-- **FinTSService**: Live-Abruf über `nemiah/php-fints` (PIN/TAN), Speicherung
-  ohne Dubletten, Import-Protokoll
+  (`dedup_hash`) und automatischer Vorkontierung über die Regeln
+- **FinTSService**: Live-Abruf über `nemiah/php-fints`, Mapping ins Importformat,
+  TAN-Behandlung (fortsetzbare Exception)
 - **MatchingEngine**: gewichteter Score aus Betrag, Lieferant, Datum, IBAN;
-  Vorschläge ab Schwellwert; Regeln lernen (`treffer_anzahl`)
-- Queue-Jobs für OCR/Import, damit Uploads nicht blockieren
+  Vorschläge ab Schwellwert; Regeln lernen (`hit_count`)
+- UI: Import-/FinTS-Aktionen am Bankkonto, OCR-Aktion + Auto-OCR beim Beleg
 
-## 🔜 Phase 3 – Ansichten & Auswertungen
+## ✅ Phase 3 – Ansichten & Auswertungen (abgeschlossen)
 
-- **Kontoumsatzdetails** (Modul 6): 3-Spalten-Ansicht (Umsatzdetails | Belege |
-  PDF-Vorschau) inkl. Checkboxen „geprüft“ / „vollständig bezahlt“
-- **Dashboard-Widgets** (Modul 10): neue Umsätze, Umsätze ohne Beleg, Belege
-  ohne Zahlung, offene Zuordnungen, Top-Lieferanten, Kosten Monat/Jahr
-- **Auswertungen/Charts** (Chart.js): Kosten je Tankstelle/Kostenstelle/
-  Kategorie/Lieferant/Bankkonto, Monats-/Jahresvergleich, Kostenentwicklung
-- **Globale Suche** (Modul 11): Lieferant, Rechnungsnummer, Betrag, IBAN,
-  Verwendungszweck, OCR-Text, Kategorie, Kostenstelle
+- **Kontoumsatzdetails** (Modul 6): 3-Spalten-Ansicht (Umsatzdetails | Belege +
+  Vorschläge | PDF-Vorschau) inkl. „geprüft“ und Ein-Klick-Zuordnung
+- **Dashboard-Widgets** (Modul 10): Kennzahlen, Monatsvergleich, Kosten je
+  Kategorie, Top-Lieferanten (Chart.js)
+- **PDF-Bericht** (Modul 12): Seite „Steuerberater-Bericht“ + PdfReportService
+  (DomPDF + FPDI), Belege in exakter Umsatzreihenfolge angehängt
+- **Globale Suche** (Modul 11): Bankumsatz, Beleg (inkl. OCR-Text), Lieferant
 
-## 🔜 Phase 4 – PDF & Buchhaltung
+## 🔜 Phase 4 – Buchhaltung & Komfort
 
-- **PdfReportService** (Modul 12): Steuerberater-Monatsbericht – Deckblatt,
-  Zusammenfassung, chronologische Umsatzliste, danach je Umsatz die
-  zugehörigen Belege in exakt der Umsatzreihenfolge
 - **Kontierung** (Modul 13): SKR03/04-Buchungssätze aus Regeln/Kategorien
-  vorbelegen
+  konkret erzeugen und in `account_assignments` ablegen (Datenmodell steht)
 - **DATEV-Export** (Modul 14): EXTF-Buchungsstapel-CSV, Debitoren/Kreditoren
+- **Auswertungen vertiefen**: Kosten je Tankstelle/Kostenstelle/Bankkonto,
+  Jahresvergleich, Kostenentwicklung als eigene Auswertungsseite
+- Queue-Jobs für OCR/Import (Server-Betrieb)
+- FinTS-Scheduler (automatischer Abruf), TAN-Eingabe-Flow in der UI
+- Mehrfach-Kostenstellen-Verteilung in der UI aktivieren
 
 ## 🔮 Später
 
-- FinTS-Zeitplan (automatischer Abruf per Scheduler)
 - Mandantenfähigkeit & Benutzerrechte (für Server-Betrieb)
-- Mehrfach-Kostenstellen-Verteilung in der UI aktivieren
 - Tankstellen 2..n im Echtbetrieb

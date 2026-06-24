@@ -9,9 +9,10 @@ abzuheften, bildet die Anwendung den kompletten Ablauf digital ab:
 Bankumsätze abrufen → Belege erfassen (OCR) → automatisch zuordnen →
 auswerten → Pendelordner-PDF für den Steuerberater erzeugen.
 
-> Status: **Fundament fertig** (lauffähiges Filament-Panel mit komplettem
-> Datenmodell). Services (OCR, Matching, FinTS, PDF) und Auswertungen folgen –
-> siehe [Roadmap](docs/Roadmap.md).
+> Status: **Module 1–12 funktionsfähig** (Bankimport + FinTS, OCR-Belegarchiv,
+> lernfähige Zuordnung, 3-Spalten-Kontoumsatzdetails, Dashboard/Charts,
+> Steuerberater-PDF, globale Suche). Kontierung/DATEV (13/14) als Datenmodell
+> vorbereitet. Testsuite grün. Details in der [Roadmap](docs/Roadmap.md).
 
 ---
 
@@ -67,18 +68,18 @@ Ausführliche Anleitung: [docs/Installation.md](docs/Installation.md)
 
 | Modul | Inhalt | Status |
 |------:|--------|--------|
-| 1 | Bankanbindung (FinTS + Import, Dublettenprüfung) | Datenmodell ✅, Service ⏳ |
+| 1 | Bankanbindung (FinTS + Import MT940/CAMT/CSV, Dublettenprüfung) | ✅ |
 | 2 | Bankumsätze (Lexware-Tabelle, Status-Ampel, Filter) | ✅ |
-| 3 | Belegarchiv (Upload, OCR) | Upload ✅, OCR ⏳ |
-| 4 | Automatische Zuordnung (lernfähig) | Datenmodell ✅, Engine ⏳ |
+| 3 | Belegarchiv (Upload, OCR via Tesseract/pdfparser) | ✅ |
+| 4 | Automatische Zuordnung (lernfähige Matching-Engine) | ✅ |
 | 5 | Mehrere Belege pro Umsatz (Teilbeträge) | ✅ |
-| 6 | Kontenumsatzdetails (3-Spalten + Vorschau) | ⏳ |
+| 6 | Kontenumsatzdetails (3-Spalten + PDF-Vorschau) | ✅ |
 | 7 | Betriebe / Tankstellen | ✅ |
 | 8 | Kategorien | ✅ |
 | 9 | Kostenstellen (Mehrfach vorbereitet) | ✅ |
-| 10 | Auswertungen / Dashboard / Charts | ⏳ |
-| 11 | Globale Suche | ⏳ |
-| 12 | PDF-Bericht (Steuerberater-Pendelordner) | ⏳ |
+| 10 | Auswertungen / Dashboard / Charts | ✅ |
+| 11 | Globale Suche | ✅ |
+| 12 | PDF-Bericht (Steuerberater-Pendelordner) | ✅ |
 | 13 | Kontierung SKR03/04 (Vorbereitung) | Datenmodell ✅ |
 | 14 | DATEV-Export (nur Datenmodell) | Datenmodell ✅ |
 
