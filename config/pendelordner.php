@@ -32,7 +32,9 @@ return [
     */
     'matching' => [
         // Vorschlag ab dieser Trefferquote (%) anzeigen.
-        'vorschlag_ab' => 60,
+        // 50 = ein exakter Betragstreffer genügt bereits als Vorschlag
+        // (Betrag hat Gewicht 50); Datum/Lieferant/IBAN erhöhen das Ranking.
+        'vorschlag_ab' => 50,
         // Ab dieser Trefferquote (%) automatisch als bestätigt vormerken.
         'auto_ab' => 95,
         // Toleranz für Betragsabgleich in Euro.
