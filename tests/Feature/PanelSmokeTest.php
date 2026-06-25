@@ -31,6 +31,7 @@ class PanelSmokeTest extends TestCase
             '/admin/account-assignments',   // Modul 13 (Kontierungen)
             '/admin/datev-export-seite',    // Modul 14 (DATEV-Export)
             '/admin/auswertungen',          // Modul 10 (Auswertungen)
+            '/admin/fints-konten',          // Modul 1 (FinTS-Konten interaktiv)
         ];
 
         foreach ($pages as $url) {

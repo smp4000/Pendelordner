@@ -81,7 +81,20 @@ Betrieb genügt aber `php artisan serve`.
 ## 6. Automatischer Bankabruf (FinTS, Modul 1)
 
 Voraussetzung: Pro Bank ein **FinTS-Zugang** anlegen (Panel → Bank → FinTS-Zugänge)
-und beim **Bankkonto** „FinTS aktiv" setzen sowie den Zugang zuordnen.
+mit BLZ, FinTS-URL, Benutzerkennung, PIN und (bei VR-Bank) TAN-Verfahren.
+
+**Empfohlen für VR-Bank & Co. (Konten automatisch ermitteln):**
+Panel → Bank → **„FinTS-Konten abrufen"**:
+1. FinTS-Zugang wählen → **„Konten abrufen"**.
+2. Falls die Bank eine **TAN** verlangt, erscheint ein Eingabefeld – TAN
+   eingeben und bestätigen.
+3. Die gefundenen Konten auswählen und **speichern** (legt die Bankkonten an,
+   „FinTS aktiv" wird automatisch gesetzt).
+4. Pro Konto **„Umsätze abrufen"** (auch hier ggf. TAN). Danach läuft der
+   tägliche automatische Abruf für diese Konten.
+
+Alternativ Bankkonto manuell anlegen und beim Konto „FinTS aktiv" setzen sowie
+den Zugang zuordnen.
 
 Manuell abrufen geht jederzeit über den Button **„FinTS abrufen"** am Bankkonto
 oder per Befehl:

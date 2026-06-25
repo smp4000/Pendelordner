@@ -8,23 +8,25 @@ use App\Models\FintsConnection;
 use App\Models\ImportLog;
 use Fhp\Action\GetSEPAAccounts;
 use Fhp\Action\GetStatementOfAccount;
+use Fhp\BaseAction;
 use Fhp\FinTs;
+use Fhp\Model\SEPAAccount;
+use Fhp\Model\StatementOfAccount\StatementOfAccount;
 use Fhp\Model\StatementOfAccount\Transaction;
 use Fhp\Options\Credentials;
 use Fhp\Options\FinTsOptions;
 use Illuminate\Support\Carbon;
 
 /**
- * FinTS-/HBCI-Direktabruf (Modul 1) über nemiah/php-fints.
+ * FinTS-/HBCI-Anbindung (Modul 1) über nemiah/php-fints.
  *
- * Baut aus einem FintsConnection-Datensatz die Verbindung auf, ruft die Umsätze
- * eines Kontos für einen Zeitraum ab und übergibt sie an den BankImportService
- * (inkl. Dublettenprüfung). Verlangt die Bank eine TAN, wird eine
- * {@see FinTsTanRequiredException} geworfen.
+ * Unterstützt zwei Abläufe:
+ *  - discoverAccounts(): listet die Konten eines Zugangs (zum Auswählen/Speichern)
+ *  - fetchAccount():     ruft die Umsätze eines Kontos ab und importiert sie
  *
- * Hinweis: Live-Abruf benötigt echte Bankzugangsdaten und kann daher nicht
- * automatisiert getestet werden. Der TAN-Fortsetzungs-Flow ist als
- * Ausbaustufe vorgesehen.
+ * Verlangt die Bank eine TAN (typisch bei VR-Banken), wird eine
+ * {@see FinTsTanRequiredException} mit dem vollständigen Fortsetzungszustand
+ * geworfen; nach TAN-Eingabe setzt {@see resumeWithTan()} den Vorgang fort.
  */
 class FinTsService
 {
@@ -32,6 +34,33 @@ class FinTsService
         private readonly BankImportService $importer = new BankImportService(),
     ) {}
 
+    // ===================================================================
+    //  Einstiegspunkte
+    // ===================================================================
+
+    /**
+     * Konten eines FinTS-Zugangs ermitteln.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function discoverAccounts(FintsConnection $connection): array
+    {
+        $fints = $this->makeClient($connection);
+        $this->selectTanMode($fints, $connection);
+
+        $ctx = ['connection_id' => $connection->id];
+
+        $login = $fints->login();
+        if ($login->needsTan()) {
+            throw $this->tan($fints, $login, 'discover', 'login', $ctx);
+        }
+
+        return $this->mapAccounts($this->stepAccounts($fints, 'discover', $ctx));
+    }
+
+    /**
+     * Umsätze eines Kontos abrufen und importieren.
+     */
     public function fetchAccount(BankAccount $account, ?Carbon $from = null, ?Carbon $to = null): ImportLog
     {
         $connection = $account->fintsConnection;
@@ -39,30 +68,116 @@ class FinTsService
             throw new \RuntimeException('Für dieses Konto ist kein FinTS-Zugang hinterlegt.');
         }
 
+        $from ??= Carbon::now()->subDays((int) config('pendelordner.fints.default_days', 90));
+        $to ??= Carbon::now();
+
+        $ctx = [
+            'connection_id' => $connection->id,
+            'account_id' => $account->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+        ];
+
         $fints = $this->makeClient($connection);
         $this->selectTanMode($fints, $connection);
 
         $login = $fints->login();
-        $this->guardTan($fints, $login);
+        if ($login->needsTan()) {
+            throw $this->tan($fints, $login, 'fetch', 'login', $ctx);
+        }
 
-        // SEPA-Konten ermitteln und passendes Konto per IBAN wählen
-        $getAccounts = GetSEPAAccounts::create();
-        $fints->execute($getAccounts);
-        $this->guardTan($fints, $getAccounts);
+        $sepaAccounts = $this->stepAccounts($fints, 'fetch', $ctx);
 
-        $sepaAccount = $this->findAccount($getAccounts->getAccounts(), $account);
+        return $this->stepStatement($fints, $account, $sepaAccounts, $from, $to, $ctx);
+    }
 
-        // Umsätze abrufen (Standard: letzte 90 Tage)
-        $from ??= Carbon::now()->subDays(90);
-        $to ??= Carbon::now();
+    /**
+     * Setzt einen durch TAN unterbrochenen Vorgang fort.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>  ['type' => 'accounts', 'accounts' => [...]] | ['type' => 'log', 'log' => ImportLog]
+     */
+    public function resumeWithTan(string $flow, string $stage, array $context, string $persist, string $serializedAction, string $tan): array
+    {
+        $connection = FintsConnection::findOrFail($context['connection_id']);
+        $fints = $this->makeClient($connection, $persist);
 
-        $statement = GetStatementOfAccount::create($sepaAccount, $from->toDateTime(), $to->toDateTime());
+        /** @var BaseAction $action */
+        $action = unserialize($serializedAction);
+        $fints->submitTan($action, $tan);
+
+        // Manche Verfahren verlangen eine weitere (z. B. entkoppelte) Bestätigung.
+        if ($action->needsTan()) {
+            throw $this->tan($fints, $action, $flow, $stage, $context);
+        }
+
+        if ($flow === 'discover') {
+            $sepa = $stage === 'login'
+                ? $this->stepAccounts($fints, 'discover', $context)
+                : $action->getAccounts();
+
+            return ['type' => 'accounts', 'accounts' => $this->mapAccounts($sepa)];
+        }
+
+        // flow === 'fetch'
+        $account = BankAccount::findOrFail($context['account_id']);
+        $from = Carbon::parse($context['from']);
+        $to = Carbon::parse($context['to']);
+
+        if ($stage === 'statement') {
+            return ['type' => 'log', 'log' => $this->importStatement($account, $action->getStatement())];
+        }
+
+        $sepa = $stage === 'login'
+            ? $this->stepAccounts($fints, 'fetch', $context)
+            : $action->getAccounts();
+
+        return ['type' => 'log', 'log' => $this->stepStatement($fints, $account, $sepa, $from, $to, $context)];
+    }
+
+    // ===================================================================
+    //  Einzelschritte
+    // ===================================================================
+
+    /**
+     * @param  array<string, mixed>  $ctx
+     * @return array<int, SEPAAccount>
+     */
+    private function stepAccounts(FinTs $fints, string $flow, array $ctx): array
+    {
+        $get = GetSEPAAccounts::create();
+        $fints->execute($get);
+
+        if ($get->needsTan()) {
+            throw $this->tan($fints, $get, $flow, 'accounts', $ctx);
+        }
+
+        return $get->getAccounts();
+    }
+
+    /**
+     * @param  array<int, SEPAAccount>  $sepaAccounts
+     * @param  array<string, mixed>  $ctx
+     */
+    private function stepStatement(FinTs $fints, BankAccount $account, array $sepaAccounts, Carbon $from, Carbon $to, array $ctx): ImportLog
+    {
+        $sepa = $this->findAccount($sepaAccounts, $account);
+
+        $statement = GetStatementOfAccount::create($sepa, $from->toDateTime(), $to->toDateTime());
         $fints->execute($statement);
-        $this->guardTan($fints, $statement);
 
-        $rows = $this->mapTransactions($statement->getStatement());
+        if ($statement->needsTan()) {
+            throw $this->tan($fints, $statement, 'fetch', 'statement', $ctx);
+        }
 
-        $connection->forceFill([
+        return $this->importStatement($account, $statement->getStatement());
+    }
+
+    private function importStatement(BankAccount $account, StatementOfAccount $soa): ImportLog
+    {
+        $rows = $this->mapTransactions($soa);
+
+        $account->fintsConnection?->forceFill([
             'last_fetched_at' => now(),
             'last_message' => sprintf('%d Umsätze abgerufen.', count($rows)),
         ])->saveQuietly();
@@ -70,7 +185,11 @@ class FinTsService
         return $this->importer->import($account, $rows, ImportSource::Fints);
     }
 
-    private function makeClient(FintsConnection $connection): FinTs
+    // ===================================================================
+    //  Hilfsfunktionen
+    // ===================================================================
+
+    private function makeClient(FintsConnection $connection, ?string $persist = null): FinTs
     {
         $options = new FinTsOptions();
         $options->url = $connection->fints_url;
@@ -80,7 +199,7 @@ class FinTsService
 
         $credentials = Credentials::create($connection->username, (string) $connection->pin);
 
-        return FinTs::new($options, $credentials);
+        return FinTs::new($options, $credentials, $persist);
     }
 
     private function selectTanMode(FinTs $fints, FintsConnection $connection): void
@@ -91,28 +210,27 @@ class FinTsService
     }
 
     /**
-     * Prüft, ob die Aktion eine TAN verlangt, und bricht in dem Fall mit einer
-     * fortsetzbaren Exception ab.
+     * @param  array<string, mixed>  $context
      */
-    private function guardTan(FinTs $fints, object $action): void
+    private function tan(FinTs $fints, BaseAction $action, string $flow, string $stage, array $context): FinTsTanRequiredException
     {
-        if (method_exists($action, 'needsTan') && $action->needsTan()) {
-            $tanRequest = $action->getTanRequest();
-            throw new FinTsTanRequiredException(
-                $fints->persist(),
-                $tanRequest?->getChallenge() ?? 'TAN erforderlich',
-            );
-        }
+        return new FinTsTanRequiredException(
+            persist: $fints->persist(),
+            serializedAction: serialize($action),
+            flow: $flow,
+            stage: $stage,
+            context: $context,
+            challenge: $action->getTanRequest()?->getChallenge() ?? 'Bitte TAN eingeben.',
+        );
     }
 
     /**
-     * @param  array<int, \Fhp\Model\SEPAAccount>  $accounts
+     * @param  array<int, SEPAAccount>  $accounts
      */
-    private function findAccount(array $accounts, BankAccount $account): \Fhp\Model\SEPAAccount
+    private function findAccount(array $accounts, BankAccount $account): SEPAAccount
     {
         foreach ($accounts as $sepa) {
-            if ($account->iban && method_exists($sepa, 'getIban')
-                && $this->normalizeIban($sepa->getIban()) === $this->normalizeIban($account->iban)) {
+            if ($account->iban && $this->normalizeIban($sepa->getIban()) === $this->normalizeIban($account->iban)) {
                 return $sepa;
             }
         }
@@ -125,9 +243,21 @@ class FinTsService
     }
 
     /**
+     * @param  array<int, SEPAAccount>  $accounts
      * @return array<int, array<string, mixed>>
      */
-    private function mapTransactions(\Fhp\Model\StatementOfAccount\StatementOfAccount $soa): array
+    private function mapAccounts(array $accounts): array
+    {
+        return array_map(fn (SEPAAccount $a) => [
+            'iban' => $a->getIban(),
+            'bic' => $a->getBic(),
+            'account_number' => $a->getAccountNumber(),
+            'bank_code' => $a->getBlz(),
+            'label' => trim(($a->getIban() ?: $a->getAccountNumber() ?: 'Konto')),
+        ], $accounts);
+    }
+
+    private function mapTransactions(StatementOfAccount $soa): array
     {
         $rows = [];
 
