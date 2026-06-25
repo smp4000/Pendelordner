@@ -200,16 +200,37 @@
                         <div style="margin-top:.8rem;padding:.7rem;border:1px solid rgba(14,165,233,.35);border-radius:.5rem;background:rgba(14,165,233,.06);">
                             <div style="font-weight:600;font-size:.85rem;margin-bottom:.2rem;">Betrag auf Kategorien aufteilen</div>
                             <p style="font-size:.78rem;opacity:.7;margin:0 0 .6rem;">
-                                Für die Gewinn- und Verlustrechnung: den Umsatzbetrag auf mehrere Kategorien
-                                aufteilen (z. B. Kosten, Lotto neutral, Provision).
+                                Für die Gewinn- und Verlustrechnung: den Umsatzbetrag auf mehrere Positionen
+                                aufteilen – je Position mit Kategorie, Sachkonto (Kontenrahmen) und Kostenstelle
+                                (z. B. Kosten, Lotto neutral, Provision).
                             </p>
 
+                            <div style="display:grid;grid-template-columns:1.3fr 1.7fr 1.2fr .8fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">
+                                <span>Kategorie</span>
+                                <span>Sachkonto (Kontenrahmen)</span>
+                                <span>Kostenstelle</span>
+                                <span>Betrag €</span>
+                                <span></span>
+                            </div>
+
                             @foreach ($splits as $i => $row)
-                                <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:1.6fr 1fr auto;gap:.4rem;align-items:center;margin-bottom:.4rem;">
+                                <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:1.3fr 1.7fr 1.2fr .8fr auto;gap:.4rem;align-items:center;margin-bottom:.4rem;">
                                     <x-filament::input.select wire:model="splits.{{ $i }}.category_id">
                                         <option value="">Kategorie wählen…</option>
                                         @foreach ($this->categories as $cat)
                                             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                        @endforeach
+                                    </x-filament::input.select>
+                                    <x-filament::input.select wire:model="splits.{{ $i }}.ledger_account_id">
+                                        <option value="">Sachkonto wählen…</option>
+                                        @foreach ($this->ledgerAccounts as $la)
+                                            <option value="{{ $la->id }}">{{ $la->number }} – {{ $la->name }}</option>
+                                        @endforeach
+                                    </x-filament::input.select>
+                                    <x-filament::input.select wire:model="splits.{{ $i }}.cost_center_id">
+                                        <option value="">Keine</option>
+                                        @foreach ($this->costCenters as $cc)
+                                            <option value="{{ $cc->id }}">{{ $cc->name }}</option>
                                         @endforeach
                                     </x-filament::input.select>
                                     <x-filament::input.wrapper>
@@ -384,13 +405,13 @@
                         @if ($receipt->is_pdf)
                             {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
                             <div wire:key="pdf-{{ $receipt->id }}" x-data="pdfViewer(@js($receipt->preview_url))" x-init="load()"
-                                style="height:80vh;overflow:auto;background:#525659;border-radius:.5rem;">
+                                style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
                                 {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
                                      bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
                                      bleiben und nicht weggemorpht werden. --}}
                                 <div wire:ignore x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
                                 <template x-if="error">
-                                    <div style="color:#fff;padding:1rem;text-align:center;">
+                                    <div style="color:#374151;padding:1rem;text-align:center;">
                                         Inline-Vorschau nicht möglich.
                                         <a :href="url" target="_blank" style="color:#9ae6b4;text-decoration:underline;">Im neuen Tab öffnen</a>
                                     </div>

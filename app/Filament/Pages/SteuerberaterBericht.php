@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Resources\BankTransactions\Tables\BankTransactionsTable;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Business;
 use App\Services\Pdf\PdfReportService;
 use BackedEnum;
@@ -13,12 +15,14 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use UnitEnum;
+use ZipArchive;
 
 /**
  * Erzeugt den Steuerberater-Pendelordner als PDF (Modul 12) für einen
@@ -49,6 +53,7 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
         $this->form->fill([
             'period' => 'this_month',
             'business_id' => null,
+            'bank_account_id' => null,
         ]);
     }
 
@@ -78,7 +83,17 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
                 Select::make('business_id')
                     ->label('Betrieb')
                     ->placeholder('Alle Betriebe')
-                    ->options(Business::orderBy('sort_order')->get()->pluck('display_label', 'id')),
+                    ->options(Business::orderBy('sort_order')->get()->pluck('display_label', 'id'))
+                    ->live()
+                    ->afterStateUpdated(fn (callable $set) => $set('bank_account_id', null)),
+                Select::make('bank_account_id')
+                    ->label('Bankkonto')
+                    ->placeholder('Alle Konten')
+                    ->options(fn (callable $get) => BankAccount::query()
+                        ->when($get('business_id'), fn ($q, $b) => $q->where('business_id', $b))
+                        ->orderBy('label')
+                        ->get()
+                        ->mapWithKeys(fn (BankAccount $a) => [$a->id => $a->display_name])),
                 DatePicker::make('from')->label('Von')->native(false)->displayFormat('d.m.Y')
                     ->visible(fn (callable $get) => $get('period') === 'custom')
                     ->required(fn (callable $get) => $get('period') === 'custom'),
@@ -96,21 +111,109 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
             ->icon('heroicon-o-arrow-down-tray')
             ->action(function () {
                 $state = $this->form->getState();
-
-                if (($state['period'] ?? null) === 'custom') {
-                    $from = Carbon::parse($state['from']);
-                    $to = Carbon::parse($state['until']);
-                } else {
-                    [$f, $t] = BankTransactionsTable::resolvePeriod($state['period'] ?? 'this_month');
-                    $from = Carbon::parse($f);
-                    $to = Carbon::parse($t);
-                }
+                [$from, $to] = $this->resolvePeriod($state);
 
                 $business = $state['business_id'] ? Business::find($state['business_id']) : null;
+                $account = $state['bank_account_id'] ? BankAccount::find($state['bank_account_id']) : null;
 
-                $path = (new PdfReportService())->generate($from, $to, $business);
+                $path = (new PdfReportService())->generate($from, $to, $business, $account);
 
                 return Storage::disk('local')->download($path);
             });
+    }
+
+    /**
+     * Erzeugt für jedes (zum Filter passende) Konto einen eigenen Bericht und
+     * bündelt sie als ZIP – getrennte Pendelordner je Bankkonto.
+     */
+    public function generatePerAccountAction(): Action
+    {
+        return Action::make('generatePerAccount')
+            ->label('Pro Konto je PDF (ZIP)')
+            ->icon('heroicon-o-archive-box-arrow-down')
+            ->color('gray')
+            ->action(function () {
+                $state = $this->form->getState();
+                [$from, $to] = $this->resolvePeriod($state);
+
+                $business = $state['business_id'] ? Business::find($state['business_id']) : null;
+
+                $accounts = BankAccount::query()
+                    ->when($business, fn ($q) => $q->where('business_id', $business->id))
+                    ->orderBy('label')
+                    ->get();
+
+                $service = new PdfReportService();
+                $disk = Storage::disk('local');
+
+                $entries = [];
+                foreach ($accounts as $account) {
+                    $hasTx = BankTransaction::query()
+                        ->where('bank_account_id', $account->id)
+                        ->when($business, fn ($q) => $q->where('business_id', $business->id))
+                        ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
+                        ->exists();
+
+                    if (! $hasTx) {
+                        continue; // Konten ohne Umsätze im Zeitraum überspringen
+                    }
+
+                    $path = $service->generate($from, $to, $business, $account);
+                    $entries[$this->zipEntryName($account)] = $path;
+                }
+
+                if (empty($entries)) {
+                    Notification::make()
+                        ->title('Keine Umsätze')
+                        ->body('Im gewählten Zeitraum/Betrieb gibt es auf keinem Konto Umsätze.')
+                        ->warning()->send();
+
+                    return null;
+                }
+
+                $zipRel = 'reports/Pendelordner_' . $from->format('Ymd') . '-' . $to->format('Ymd')
+                    . ($business ? '_b' . $business->id : '') . '_konten.zip';
+                $zipAbs = $disk->path($zipRel);
+
+                $zip = new ZipArchive();
+                if ($zip->open($zipAbs, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                    Notification::make()->title('ZIP konnte nicht erstellt werden')->danger()->send();
+
+                    return null;
+                }
+                foreach ($entries as $entryName => $path) {
+                    $zip->addFile($disk->path($path), $entryName);
+                }
+                $zip->close();
+
+                return $disk->download($zipRel);
+            });
+    }
+
+    /**
+     * Löst den gewählten Zeitraum (Preset oder individuell) zu [von, bis] auf.
+     *
+     * @param  array<string, mixed>  $state
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function resolvePeriod(array $state): array
+    {
+        if (($state['period'] ?? null) === 'custom') {
+            return [Carbon::parse($state['from']), Carbon::parse($state['until'])];
+        }
+
+        [$f, $t] = BankTransactionsTable::resolvePeriod($state['period'] ?? 'this_month');
+
+        return [Carbon::parse($f), Carbon::parse($t)];
+    }
+
+    /** Sicherer, lesbarer Dateiname je Konto innerhalb des ZIP. */
+    private function zipEntryName(BankAccount $account): string
+    {
+        $base = trim((string) $account->label) !== '' ? $account->label : ('Konto ' . $account->id);
+        $safe = preg_replace('/[^\p{L}\p{N}\-_ ]+/u', '', $base);
+        $safe = trim((string) preg_replace('/\s+/', ' ', (string) $safe)) ?: ('Konto ' . $account->id);
+
+        return $safe . '.pdf';
     }
 }

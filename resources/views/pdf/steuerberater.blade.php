@@ -35,6 +35,9 @@
 <div class="cover page-break">
     <h1>Pendelordner</h1>
     <h2>{{ $business?->name ?? 'Alle Betriebe' }}</h2>
+    @if (! empty($account))
+        <h2 style="font-size:16px;margin-top:4px;">Konto: {{ $account->label }}@if($account->iban) ({{ $account->iban }})@endif</h2>
+    @endif
     <div class="meta">
         Monatsbericht für den Steuerberater<br>
         <strong>{{ $periodLabel }}</strong><br><br>

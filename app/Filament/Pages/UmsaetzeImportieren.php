@@ -191,6 +191,8 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             $createdMap[$acc['key']] = BankAccount::create([
                 'label' => trim((string) $acc['name']),
                 'iban' => $d['iban'] ?? null,
+                'bic' => $d['bic'] ?? null,
+                'bank_name' => $d['bank_name'] ?? null,
                 'bank_code' => $d['bank_code'] ?? null,
                 'account_number' => $d['account_number'] ?? null,
                 'business_id' => Business::orderBy('sort_order')->value('id'),
@@ -335,6 +337,8 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
         $account = BankAccount::create([
             'label' => $detected['suggested'],
             'iban' => $detected['iban'] ?? null,
+            'bic' => $detected['bic'] ?? null,
+            'bank_name' => $detected['bank_name'] ?? null,
             'bank_code' => $detected['bank_code'] ?? null,
             'account_number' => $detected['account_number'] ?? null,
             'business_id' => Business::orderBy('sort_order')->value('id'),
@@ -393,6 +397,14 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             return BankAccount::where('iban', $m[1])->first();
         }
 
+        $owner = (new CsvBankParser())->detectOwnerAccount($content);
+        if ($owner && $owner['iban']) {
+            return BankAccount::where('iban', $owner['iban'])->first();
+        }
+        if ($owner && $owner['account_number']) {
+            return BankAccount::where('account_number', $owner['account_number'])->first();
+        }
+
         return null;
     }
 
@@ -417,7 +429,25 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
                 'bank_code' => substr($m[1], 4, 8),
                 'account_number' => null,
                 'iban' => $m[1],
+                'bic' => null,
+                'bank_name' => null,
                 'suggested' => 'Konto ' . $m[1],
+            ];
+        }
+
+        $owner = (new CsvBankParser())->detectOwnerAccount($content);
+        if ($owner && ($owner['iban'] || $owner['account_number'])) {
+            $suggested = trim((string) ($owner['name'] ?? '')) !== ''
+                ? $owner['name']
+                : 'Konto ' . ($owner['iban'] ?? $owner['account_number']);
+
+            return [
+                'bank_code' => null,
+                'account_number' => $owner['account_number'],
+                'iban' => $owner['iban'],
+                'bic' => $owner['bic'],
+                'bank_name' => $owner['bank_name'],
+                'suggested' => $suggested,
             ];
         }
 

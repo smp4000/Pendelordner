@@ -40,4 +40,9 @@ class AccountAssignment extends Model
     {
         return $this->belongsTo(DatevExport::class);
     }
+
+    public function ledgerAccount(): BelongsTo
+    {
+        return $this->belongsTo(LedgerAccount::class);
+    }
 }

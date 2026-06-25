@@ -2,6 +2,7 @@
 
 namespace App\Services\Pdf;
 
+use App\Models\BankAccount;
 use App\Models\BankTransaction;
 use App\Models\Business;
 use App\Models\Receipt;
@@ -41,17 +42,18 @@ class PdfReportService
      * Gibt den relativen Pfad zurück.
      */
     /** Bericht für einen ganzen Monat (Komfort-Wrapper). */
-    public function generateMonthlyReport(Carbon $month, ?Business $business = null): string
+    public function generateMonthlyReport(Carbon $month, ?Business $business = null, ?BankAccount $account = null): string
     {
-        return $this->generate($month->copy()->startOfMonth(), $month->copy()->endOfMonth(), $business);
+        return $this->generate($month->copy()->startOfMonth(), $month->copy()->endOfMonth(), $business, $account);
     }
 
     /** Bericht für einen beliebigen Zeitraum. */
-    public function generate(Carbon $from, Carbon $to, ?Business $business = null): string
+    public function generate(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): string
     {
         $transactions = BankTransaction::query()
             ->with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.category'])
             ->when($business, fn ($q) => $q->where('business_id', $business->id))
+            ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
             ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
             ->orderBy('booking_date')
             ->orderBy('id')
@@ -81,6 +83,7 @@ class PdfReportService
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
             'business' => $business,
+            'account' => $account,
             'periodLabel' => $this->periodLabel($from, $to),
             'generatedAt' => now()->format('d.m.Y'),
             'transactions' => $transactions,
@@ -99,7 +102,9 @@ class PdfReportService
             }
         }
 
-        $name = 'Pendelordner_' . $from->format('Ymd') . '-' . $to->format('Ymd') . ($business ? '_' . $business->id : '') . '.pdf';
+        $name = 'Pendelordner_' . $from->format('Ymd') . '-' . $to->format('Ymd')
+            . ($business ? '_b' . $business->id : '')
+            . ($account ? '_k' . $account->id : '') . '.pdf';
         $path = 'reports/' . $name;
         Storage::disk('local')->put($path, $pdf->Output('S'));
 

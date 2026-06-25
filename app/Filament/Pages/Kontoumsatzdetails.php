@@ -165,6 +165,8 @@ class Kontoumsatzdetails extends Page
         $this->splits = $t
             ? $t->accountAssignments->map(fn (\App\Models\AccountAssignment $a) => [
                 'category_id' => $a->category_id,
+                'cost_center_id' => $a->cost_center_id,
+                'ledger_account_id' => $a->ledger_account_id,
                 'amount' => $a->amount !== null ? number_format((float) $a->amount, 2, ',', '') : '',
                 'booking_text' => (string) ($a->booking_text ?? ''),
             ])->values()->all()
@@ -176,8 +178,11 @@ class Kontoumsatzdetails extends Page
     public function addSplit(): void
     {
         $rest = $this->splitRemaining;
+        $t = $this->selectedTransaction;
         $this->splits[] = [
             'category_id' => null,
+            'cost_center_id' => $t?->cost_center_id,
+            'ledger_account_id' => $t?->ledger_account_id,
             'amount' => $rest > 0.005 ? number_format($rest, 2, ',', '') : '',
             'booking_text' => '',
         ];
@@ -212,7 +217,10 @@ class Kontoumsatzdetails extends Page
         }
 
         $rows = array_values(array_filter($this->splits, function ($row) {
-            return ! empty($row['category_id']) || $this->parseAmount($row['amount'] ?? '') != 0.0;
+            return ! empty($row['category_id'])
+                || ! empty($row['cost_center_id'])
+                || ! empty($row['ledger_account_id'])
+                || $this->parseAmount($row['amount'] ?? '') != 0.0;
         }));
 
         if (empty($rows)) {
@@ -231,7 +239,8 @@ class Kontoumsatzdetails extends Page
             $t->accountAssignments()->create([
                 'chart_of_accounts' => $chart,
                 'category_id' => $row['category_id'] ?: null,
-                'cost_center_id' => $t->cost_center_id, // Kostenstelle vom Umsatz übernehmen
+                'cost_center_id' => $row['cost_center_id'] ?: null,
+                'ledger_account_id' => $row['ledger_account_id'] ?: null,
                 'amount' => $this->parseAmount($row['amount'] ?? ''),
                 'booking_text' => trim((string) ($row['booking_text'] ?? '')) ?: null,
                 'booking_date' => $t->booking_date,
@@ -407,6 +416,12 @@ class Kontoumsatzdetails extends Page
     public function getCostCentersProperty(): Collection
     {
         return CostCenter::where('active', true)->orderBy('name')->get();
+    }
+
+    /** Alle Sachkonten (Kontenrahmen) für die Auswahl je Split-Position. */
+    public function getLedgerAccountsProperty(): Collection
+    {
+        return LedgerAccount::orderBy('number')->get(['id', 'number', 'name']);
     }
 
     /** Treffer für die Sachkonto-Suche (Nummer oder Bezeichnung). */
