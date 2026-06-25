@@ -32,6 +32,8 @@ class FinTsErrorTranslator
         'account is locked' => 'Der Zugang ist gesperrt – bitte bei der Bank prüfen.',
         'unexpected response' => 'Unerwartete Antwort der Bank.',
         'no accounts' => 'Es wurden keine Konten gefunden.',
+        'product name required' => 'FinTS-Produktname/Registrierung fehlt (Feld „Produkt-ID" im Zugang oder Standard wird genutzt).',
+        'product registration' => 'FinTS-Produktregistrierung erforderlich.',
     ];
 
     public static function translate(Throwable|string $error): string

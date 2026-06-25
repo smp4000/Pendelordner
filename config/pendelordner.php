@@ -75,8 +75,9 @@ return [
     | DB überschreibbar.
     */
     'fints' => [
-        'product_id' => env('FINTS_PRODUCT_REGISTRATION', 'PENDELORDNER'),
-        'product_version' => env('FINTS_PRODUCT_VERSION', '1.0'),
+        // Leerer .env-Wert würde den Default überschreiben -> mit ?: absichern.
+        'product_id' => env('FINTS_PRODUCT_REGISTRATION') ?: 'PENDELORDNER',
+        'product_version' => env('FINTS_PRODUCT_VERSION') ?: '1.0',
         // Standard-Abrufzeitraum in Tagen.
         'default_days' => 90,
     ],

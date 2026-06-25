@@ -232,8 +232,11 @@ class FinTsService
         $options = new FinTsOptions();
         $options->url = $connection->fints_url;
         $options->bankCode = $connection->bank_code;
-        $options->productName = $connection->product_id ?: config('pendelordner.fints.product_id', 'PENDELORDNER');
-        $options->productVersion = $connection->product_version ?: '1.0';
+        // Produktname/-registrierung darf nie leer sein (Bibliothek verlangt ihn).
+        $options->productName = $connection->product_id
+            ?: (config('pendelordner.fints.product_id') ?: 'PENDELORDNER');
+        $options->productVersion = $connection->product_version
+            ?: (config('pendelordner.fints.product_version') ?: '1.0');
 
         // PIN: zur Laufzeit eingegebene PIN hat Vorrang vor der gespeicherten.
         $pin = $pinOverride !== null && $pinOverride !== '' ? $pinOverride : (string) $connection->pin;
