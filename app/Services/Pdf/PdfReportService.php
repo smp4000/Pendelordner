@@ -60,6 +60,19 @@ class PdfReportService
         $stats = $this->buildStats($transactions);
         $stats['appendedFiles'] = $this->countAppendableFiles($transactions);
 
+        // Fortlaufende Beleg-Nummern (chronologisch) vergeben: Umsatz->id => [receipt_id => Nr].
+        // Dieselbe Nummer steht in der Umsatzliste und wird auf den angehängten Beleg gestempelt.
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+        $receiptNumbers = [];
+        $counter = 0;
+        foreach ($transactions as $transaction) {
+            foreach ($transaction->receipts as $receipt) {
+                if ($receipt->file_path && $disk->exists($receipt->file_path)) {
+                    $receiptNumbers[$receipt->id] = ++$counter;
+                }
+            }
+        }
+
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
             'business' => $business,
@@ -67,24 +80,17 @@ class PdfReportService
             'generatedAt' => now()->format('d.m.Y'),
             'transactions' => $transactions,
             'stats' => $stats,
+            'receiptNumbers' => $receiptNumbers,
             'money' => $this->money,
         ])->setPaper('a4')->output();
         $this->importPdfString($pdf, $frontMatter);
 
-        // 4. Je Umsatz mit Belegen: Trennseite + Original-Belege
+        // 4. Belege chronologisch anhängen – ohne Trennseite, mit aufgedruckter Beleg-Nummer.
         foreach ($transactions as $transaction) {
-            if ($transaction->receipts->isEmpty()) {
-                continue;
-            }
-
-            $divider = DomPdf::loadView('pdf.umsatz-divider', [
-                't' => $transaction,
-                'money' => $this->money,
-            ])->setPaper('a4')->output();
-            $this->importPdfString($pdf, $divider);
-
             foreach ($transaction->receipts as $receipt) {
-                $this->appendReceipt($pdf, $receipt);
+                if (isset($receiptNumbers[$receipt->id])) {
+                    $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
+                }
             }
         }
 
@@ -125,8 +131,11 @@ class PdfReportService
             ->count());
     }
 
-    /** Importiert alle Seiten eines PDF-Strings in das Zieldokument. */
-    private function importPdfString(Fpdi $pdf, string $pdfContent): void
+    /**
+     * Importiert alle Seiten eines PDF-Strings in das Zieldokument.
+     * Ist $stampNumber gesetzt, wird die Beleg-Nummer auf die erste Seite gedruckt.
+     */
+    private function importPdfString(Fpdi $pdf, string $pdfContent, ?int $stampNumber = null): void
     {
         $pageCount = $pdf->setSourceFile(StreamReader::createByString($pdfContent));
         for ($page = 1; $page <= $pageCount; $page++) {
@@ -134,11 +143,33 @@ class PdfReportService
             $size = $pdf->getTemplateSize($template);
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($template);
+
+            if ($page === 1 && $stampNumber !== null) {
+                $this->stampNumber($pdf, $stampNumber, (float) $size['width']);
+            }
         }
     }
 
+    /** Druckt die fortlaufende Beleg-Nummer gut sichtbar oben rechts auf die aktuelle Seite. */
+    private function stampNumber(Fpdi $pdf, int $number, float $pageWidth): void
+    {
+        $label = 'Beleg ' . $number;
+        $boxW = 26.0;
+        $x = $pageWidth - $boxW - 6;
+        $y = 6.0;
+
+        $pdf->SetFillColor(5, 150, 105);   // Grün passend zum Bericht
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetFont('Helvetica', 'B', 11);
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($boxW, 8, $label, 0, 0, 'C', true);
+
+        // Zustand zurücksetzen, damit folgende Inhalte nicht beeinflusst werden
+        $pdf->SetTextColor(0, 0, 0);
+    }
+
     /** Hängt einen Original-Beleg an: PDF-Seiten importieren, Bilder einbetten. */
-    private function appendReceipt(Fpdi $pdf, Receipt $receipt): void
+    private function appendReceipt(Fpdi $pdf, Receipt $receipt, ?int $number = null): void
     {
         if (! $receipt->file_path) {
             return;
@@ -154,7 +185,7 @@ class PdfReportService
 
         try {
             if ($mime === 'application/pdf' || str_ends_with(strtolower($absolute), '.pdf')) {
-                $this->importPdfString($pdf, (string) file_get_contents($absolute));
+                $this->importPdfString($pdf, (string) file_get_contents($absolute), $number);
 
                 return;
             }
@@ -164,6 +195,9 @@ class PdfReportService
                 $pdf->AddPage();
                 // Bild auf A4-Breite (mit Rand) einpassen
                 $pdf->Image($absolute, 10, 10, 190);
+                if ($number !== null) {
+                    $this->stampNumber($pdf, $number, 210.0); // A4-Breite in mm
+                }
 
                 return;
             }
@@ -174,7 +208,7 @@ class PdfReportService
         // Nicht einbettbar (z. B. TIFF) – Hinweisseite
         $pdf->AddPage();
         $pdf->SetFont('Helvetica', '', 11);
-        $pdf->Cell(0, 10, 'Beleg ' . ($receipt->invoice_number ?: $receipt->id) . ' – Datei nicht einbettbar (' . $mime . ').');
+        $pdf->Cell(0, 10, 'Beleg ' . ($number ?? $receipt->invoice_number ?: $receipt->id) . ' – Datei nicht einbettbar (' . $mime . ').');
     }
 
     /** Lesbares Zeitraum-Label: ganzer Monat -> "Juni 2026", sonst "01.06.2026 – 30.06.2026". */

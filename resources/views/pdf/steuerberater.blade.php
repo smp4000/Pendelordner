@@ -22,6 +22,8 @@
         .summary .label { color: #6b7280; }
         .summary .value { text-align: right; font-weight: bold; }
         .receipts { color: #6b7280; font-size: 9px; }
+        .beleg-nr { display: inline-block; margin-top: 2px; background: #059669; color: #fff;
+                    font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -70,7 +72,16 @@
                 <td>
                     <strong>{{ $t->counterparty ?: '—' }}</strong>
                     @if ($t->purpose)<br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->purpose, 80) }}</span>@endif
-                    @if ($t->receipts->isNotEmpty())<br><span class="receipts">{{ $t->receipts->count() }} Beleg(e) angehängt</span>@endif
+                    @php
+                        $nums = $t->receipts
+                            ->map(fn ($r) => $receiptNumbers[$r->id] ?? null)
+                            ->filter()
+                            ->sort()
+                            ->values();
+                    @endphp
+                    @if ($nums->isNotEmpty())
+                        <br><span class="beleg-nr">Beleg {{ $nums->implode(', ') }}</span>
+                    @endif
                 </td>
                 <td>{{ $t->category?->name ?? '—' }}</td>
                 <td>{{ $t->costCenter?->name ?? '—' }}</td>
