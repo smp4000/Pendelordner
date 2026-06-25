@@ -4,10 +4,14 @@ namespace App\Filament\Resources\BankTransactions\Tables;
 
 use App\Enums\TransactionStatus;
 use App\Models\BankTransaction;
+use App\Services\Accounting\KontierungService;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Collection;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -160,6 +164,19 @@ class BankTransactionsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('kontieren')
+                        ->label('Kontieren')
+                        ->icon('heroicon-o-calculator')
+                        ->color('primary')
+                        ->action(function (Collection $records): void {
+                            $result = (new KontierungService())->bookMany($records);
+                            Notification::make()
+                                ->title('Kontierung erstellt')
+                                ->body("{$result['booked']} kontiert, {$result['skipped']} übersprungen (kein Konto).")
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

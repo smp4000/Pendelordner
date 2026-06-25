@@ -55,6 +55,16 @@ return [
     */
     'kontierung' => [
         'standard_kontenrahmen' => 'skr03',
+        // Standard-Geldkonten (Gegenkonto bei Bankbuchungen) je Kontenrahmen.
+        'geldkonten' => [
+            'skr03' => ['bank' => '1200', 'kasse' => '1000'],
+            'skr04' => ['bank' => '1800', 'kasse' => '1600'],
+        ],
+        // Sammelkonto, wenn keine Kategorie/kein Konto ermittelbar ist.
+        'sammelkonto' => [
+            'skr03' => '1590', // Verrechnungskonto / Klärung
+            'skr04' => '1370',
+        ],
     ],
 
     /*
