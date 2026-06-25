@@ -8,7 +8,6 @@ use App\Models\Receipt;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
-use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use Throwable;
 
@@ -18,11 +17,14 @@ use Throwable;
  * Aufbau exakt in Bankumsatz-Reihenfolge:
  *   1. Deckblatt
  *   2. Zusammenfassung
- *   3. Chronologische Umsatzliste
- *   4. Je Umsatz mit Belegen: eine Trennseite, gefolgt von den
- *      Original-Belegdateien (PDF-Seiten importiert, Bilder eingebettet).
+ *   3. Chronologische Umsatzliste (mit fortlaufender Beleg-Nummer)
+ *   4. Die Original-Belegdateien chronologisch angehängt (PDF-Seiten
+ *      importiert, Bilder eingebettet), jeweils mit aufgedruckter
+ *      Beleg-Nummer oben rechts.
  *
  * DomPDF rendert die generierten Seiten, FPDI fügt die Original-Belege an.
+ * Der Beleg-Stempel wird nur in den Bericht gezeichnet; die gespeicherte
+ * Original-Belegdatei bleibt unverändert.
  */
 class PdfReportService
 {
@@ -55,7 +57,7 @@ class PdfReportService
             ->orderBy('id')
             ->get();
 
-        $pdf = new Fpdi();
+        $pdf = new ReportPdf();
 
         $stats = $this->buildStats($transactions);
         $stats['appendedFiles'] = $this->countAppendableFiles($transactions);
@@ -135,7 +137,7 @@ class PdfReportService
      * Importiert alle Seiten eines PDF-Strings in das Zieldokument.
      * Ist $stampNumber gesetzt, wird die Beleg-Nummer auf die erste Seite gedruckt.
      */
-    private function importPdfString(Fpdi $pdf, string $pdfContent, ?int $stampNumber = null): void
+    private function importPdfString(ReportPdf $pdf, string $pdfContent, ?int $stampNumber = null): void
     {
         $pageCount = $pdf->setSourceFile(StreamReader::createByString($pdfContent));
         for ($page = 1; $page <= $pageCount; $page++) {
@@ -150,26 +152,36 @@ class PdfReportService
         }
     }
 
-    /** Druckt die fortlaufende Beleg-Nummer gut sichtbar oben rechts auf die aktuelle Seite. */
-    private function stampNumber(Fpdi $pdf, int $number, float $pageWidth): void
+    /**
+     * Druckt eine dezente, abgerundete Beleg-Nummer oben rechts auf die Seite.
+     * Wird nur in den Bericht gezeichnet – die Originaldatei bleibt unverändert.
+     */
+    private function stampNumber(ReportPdf $pdf, int $number, float $pageWidth): void
     {
         $label = 'Beleg ' . $number;
-        $boxW = 26.0;
-        $x = $pageWidth - $boxW - 6;
-        $y = 6.0;
 
-        $pdf->SetFillColor(5, 150, 105);   // Grün passend zum Bericht
+        $pdf->SetFont('Helvetica', 'B', 8);
+        $padX = 2.6;            // horizontaler Innenabstand
+        $h = 5.0;              // Höhe der Pille
+        $w = $pdf->GetStringWidth($label) + 2 * $padX;
+        $margin = 5.0;
+        $x = $pageWidth - $w - $margin;
+        $y = $margin;
+
+        // Abgerundete Pille (volle Rundung), dezentes Grün
+        $pdf->SetFillColor(5, 150, 105);
+        $pdf->roundedRect($x, $y, $w, $h, $h / 2, 'F');
+
         $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 11);
         $pdf->SetXY($x, $y);
-        $pdf->Cell($boxW, 8, $label, 0, 0, 'C', true);
+        $pdf->Cell($w, $h, $label, 0, 0, 'C');
 
         // Zustand zurücksetzen, damit folgende Inhalte nicht beeinflusst werden
         $pdf->SetTextColor(0, 0, 0);
     }
 
     /** Hängt einen Original-Beleg an: PDF-Seiten importieren, Bilder einbetten. */
-    private function appendReceipt(Fpdi $pdf, Receipt $receipt, ?int $number = null): void
+    private function appendReceipt(ReportPdf $pdf, Receipt $receipt, ?int $number = null): void
     {
         if (! $receipt->file_path) {
             return;
