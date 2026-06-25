@@ -3,69 +3,48 @@
         $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' €';
         $tx = $this->selectedTransaction;
         $receipt = $this->selectedReceipt;
-        $statusColor = fn ($s) => match ($s) {
-            \App\Enums\TransactionStatus::Open => '#ef4444',
-            \App\Enums\TransactionStatus::PartiallyAllocated => '#f59e0b',
-            default => '#10b981',
-        };
+        $navBtn = 'padding:.25rem .55rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;background:transparent;cursor:pointer;font-size:.9rem;line-height:1;';
         $rowBase = 'display:flex;justify-content:space-between;gap:.5rem;padding:.5rem .75rem;border-bottom:1px solid rgba(120,120,120,.15);cursor:pointer;';
         $tabBtn = fn ($active) => 'padding:.45rem .8rem;border:0;background:none;cursor:pointer;font-size:.85rem;border-bottom:2px solid '
             . ($active ? '#10b981;font-weight:600;color:#059669;' : 'transparent;opacity:.7;');
     @endphp
 
-    @php
-        $navBtn = 'padding:.25rem .5rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;background:transparent;cursor:pointer;font-size:.9rem;line-height:1;';
-    @endphp
-
-    {{-- Kompakte Navigation (Umsatz X von Y) --}}
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:.4rem;margin-bottom:.75rem;">
-        <button wire:click="goTo('first')" style="{{ $navBtn }}" title="Erster">&#124;&#9664;</button>
-        <button wire:click="goTo('prev')" style="{{ $navBtn }}" title="Zurück">&#9664;</button>
-        <span style="font-size:.85rem;min-width:9rem;text-align:center;">Umsatz <strong>{{ $this->position }}</strong> von {{ $this->total }}</span>
-        <button wire:click="goTo('next')" style="{{ $navBtn }}" title="Weiter">&#9654;</button>
-        <button wire:click="goTo('last')" style="{{ $navBtn }}" title="Letzter">&#9654;&#124;</button>
-    </div>
-
-    <div style="display:grid;grid-template-columns:2.5fr 5fr 4.5fr;gap:1rem;align-items:start;">
-
-        {{-- LINKS: offene Umsätze --}}
-        <x-filament::section style="padding:0;overflow:hidden;">
-            <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">
-                Offene Umsätze ({{ $this->openTransactions->count() }})
-            </div>
-            <div style="max-height:72vh;overflow-y:auto;">
-                @forelse ($this->openTransactions as $row)
-                    <div wire:click="selectTransaction({{ $row->id }})"
-                        style="{{ $rowBase }}flex-direction:column;border-left:4px solid {{ $statusColor($row->status) }};{{ $row->id === $this->selectedTransactionId ? 'background:rgba(16,185,129,.12);' : '' }}">
-                        <div style="display:flex;justify-content:space-between;width:100%;">
-                            <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;">{{ $row->counterparty ?: 'Unbekannt' }}</span>
-                            <span style="white-space:nowrap;color:{{ $row->amount < 0 ? '#dc2626' : '#059669' }};">{{ $money($row->amount) }}</span>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;width:100%;font-size:.75rem;opacity:.6;">
-                            <span>{{ $row->booking_date?->format('d.m.Y') }}</span>
-                            <span>{{ $row->receipts->count() }} Beleg(e)</span>
-                        </div>
-                    </div>
-                @empty
-                    <p style="padding:1rem;opacity:.6;">Keine offenen Umsätze 🎉</p>
-                @endforelse
-            </div>
+    @if (! $tx)
+        <x-filament::section>
+            <p style="text-align:center;opacity:.6;padding:2rem;">Keine offenen Umsätze 🎉</p>
         </x-filament::section>
+    @else
+        <div style="display:grid;grid-template-columns:2fr 3fr;gap:1rem;align-items:start;">
 
-        {{-- MITTE: Details + Tabs --}}
-        <div style="display:flex;flex-direction:column;gap:1rem;">
-            @if ($tx)
+            {{-- LINKS: Navigation + Details + Tabs --}}
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+
+                {{-- Kontokopf + Navigation --}}
+                <x-filament::section style="padding:.6rem .8rem;">
+                    <div style="font-size:.85rem;opacity:.75;">
+                        {{ $tx->bankAccount?->label }}
+                        @if ($tx->bankAccount?->iban)<br>{{ $tx->bankAccount->iban }}@endif
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.5rem;">
+                        <button wire:click="goTo('first')" style="{{ $navBtn }}" title="Erster">&#124;&#9664;</button>
+                        <button wire:click="goTo('prev')" style="{{ $navBtn }}" title="Zurück">&#9664;</button>
+                        <span style="font-size:.85rem;min-width:10rem;text-align:center;">Kontosatz <strong>{{ $this->position }}</strong> von {{ $this->total }}</span>
+                        <button wire:click="goTo('next')" style="{{ $navBtn }}" title="Weiter">&#9654;</button>
+                        <button wire:click="goTo('last')" style="{{ $navBtn }}" title="Letzter">&#9654;&#124;</button>
+                    </div>
+                </x-filament::section>
+
                 {{-- Umsatzdetails --}}
                 <x-filament::section>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
                         <div>
                             <div style="font-size:1.1rem;font-weight:600;">{{ $tx->counterparty ?: 'Bankumsatz' }}</div>
-                            <div style="font-size:.85rem;opacity:.6;">{{ $tx->booking_date?->format('d.m.Y') }} · {{ $tx->bankAccount?->label }}</div>
+                            <div style="font-size:.85rem;opacity:.6;">Buchungsdatum {{ $tx->booking_date?->format('d.m.Y') }}</div>
                         </div>
                         <div style="font-size:1.25rem;font-weight:700;white-space:nowrap;color:{{ $tx->amount < 0 ? '#dc2626' : '#059669' }};">{{ $money($tx->amount) }}</div>
                     </div>
                     @if ($tx->purpose)
-                        <p style="margin-top:.5rem;font-size:.8rem;opacity:.75;">{{ \Illuminate\Support\Str::limit($tx->purpose, 140) }}</p>
+                        <p style="margin-top:.5rem;font-size:.8rem;opacity:.75;">{{ \Illuminate\Support\Str::limit($tx->purpose, 160) }}</p>
                     @endif
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.6rem;font-size:.85rem;">
                         <div><span style="opacity:.6;">Kategorie:</span> {{ $tx->category?->name ?? '—' }}</div>
@@ -169,7 +148,7 @@
                                 <p style="padding:.75rem;font-size:.85rem;opacity:.6;">Keine Belege gefunden.</p>
                             @endforelse
 
-                        {{-- TAB: Beleg hochladen (Upload online) --}}
+                        {{-- TAB: Beleg hochladen --}}
                         @elseif ($activeTab === 'upload')
                             <div style="display:flex;gap:.25rem;margin-bottom:.75rem;flex-wrap:wrap;">
                                 @foreach (['incoming_invoice'=>'Rechnungseingang','outgoing_invoice'=>'Rechnungsausgang','cash'=>'Kasse','other'=>'Sonstige'] as $val => $lbl)
@@ -209,30 +188,26 @@
                         @endif
                     </div>
                 </x-filament::section>
-            @else
-                <x-filament::section>
-                    <p style="text-align:center;opacity:.6;padding:2rem;">Bitte links einen Umsatz auswählen.</p>
-                </x-filament::section>
-            @endif
-        </div>
-
-        {{-- RECHTS: Belegvorschau --}}
-        <x-filament::section style="padding:0;overflow:hidden;">
-            <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
-            <div style="padding:.5rem;">
-                @if ($receipt && $receipt->preview_url)
-                    @if ($receipt->is_pdf)
-                        <iframe src="{{ $receipt->preview_url }}" style="height:72vh;width:100%;border:0;border-radius:.5rem;"></iframe>
-                    @else
-                        <img src="{{ $receipt->preview_url }}" alt="Beleg" style="max-height:72vh;width:100%;object-fit:contain;border-radius:.5rem;">
-                    @endif
-                @else
-                    <div style="height:60vh;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
-                        Kein Beleg zur Vorschau ausgewählt
-                    </div>
-                @endif
             </div>
-        </x-filament::section>
 
-    </div>
+            {{-- RECHTS: Belegvorschau --}}
+            <x-filament::section style="padding:0;overflow:hidden;">
+                <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
+                <div style="padding:.5rem;">
+                    @if ($receipt && $receipt->preview_url)
+                        @if ($receipt->is_pdf)
+                            <iframe src="{{ $receipt->preview_url }}" style="height:80vh;width:100%;border:0;border-radius:.5rem;"></iframe>
+                        @else
+                            <img src="{{ $receipt->preview_url }}" alt="Beleg" style="max-height:80vh;width:100%;object-fit:contain;border-radius:.5rem;">
+                        @endif
+                    @else
+                        <div style="height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
+                            Kein Beleg zur Vorschau ausgewählt
+                        </div>
+                    @endif
+                </div>
+            </x-filament::section>
+
+        </div>
+    @endif
 </x-filament-panels::page>
