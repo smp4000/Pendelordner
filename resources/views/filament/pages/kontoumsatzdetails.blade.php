@@ -196,7 +196,17 @@
                 <div style="padding:.5rem;">
                     @if ($receipt && $receipt->preview_url)
                         @if ($receipt->is_pdf)
-                            <iframe src="{{ $receipt->preview_url }}" style="height:80vh;width:100%;border:0;border-radius:.5rem;"></iframe>
+                            {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
+                            <div wire:key="pdf-{{ $receipt->id }}" x-data="pdfViewer(@js($receipt->preview_url))" x-init="load()"
+                                style="height:80vh;overflow:auto;background:#525659;border-radius:.5rem;">
+                                <div x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
+                                <template x-if="error">
+                                    <div style="color:#fff;padding:1rem;text-align:center;">
+                                        Inline-Vorschau nicht möglich.
+                                        <a :href="url" target="_blank" style="color:#9ae6b4;text-decoration:underline;">Im neuen Tab öffnen</a>
+                                    </div>
+                                </template>
+                            </div>
                         @else
                             <img src="{{ $receipt->preview_url }}" alt="Beleg" style="max-height:80vh;width:100%;object-fit:contain;border-radius:.5rem;">
                         @endif
@@ -210,4 +220,58 @@
 
         </div>
     @endif
+
+    {{-- PDF.js für Inline-Belegvorschau (wird einmalig geladen) --}}
+    <script>
+        (function () {
+            if (window.__pdfViewerInit) return;
+            window.__pdfViewerInit = true;
+
+            var s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = function () {
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+            };
+            document.head.appendChild(s);
+
+            window.pdfViewer = function (url) {
+                return {
+                    url: url,
+                    error: false,
+                    async load() {
+                        try {
+                            let tries = 0;
+                            while (!window.pdfjsLib && tries < 120) {
+                                await new Promise(function (r) { setTimeout(r, 50); });
+                                tries++;
+                            }
+                            if (!window.pdfjsLib) { this.error = true; return; }
+
+                            const pdf = await window.pdfjsLib.getDocument(this.url).promise;
+                            const container = this.$refs.pages;
+                            container.innerHTML = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const viewport = page.getViewport({ scale: 1.4 });
+                                const canvas = document.createElement('canvas');
+                                canvas.width = viewport.width;
+                                canvas.height = viewport.height;
+                                canvas.style.maxWidth = '100%';
+                                canvas.style.background = '#fff';
+                                canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                                container.appendChild(canvas);
+                                await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            this.error = true;
+                        }
+                    },
+                };
+            };
+        })();
+    </script>
 </x-filament-panels::page>
