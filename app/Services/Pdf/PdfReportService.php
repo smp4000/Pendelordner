@@ -38,11 +38,15 @@ class PdfReportService
      * Erzeugt den Monatsbericht und legt ihn auf dem local-Disk ab.
      * Gibt den relativen Pfad zurück.
      */
+    /** Bericht für einen ganzen Monat (Komfort-Wrapper). */
     public function generateMonthlyReport(Carbon $month, ?Business $business = null): string
     {
-        $from = $month->copy()->startOfMonth();
-        $to = $month->copy()->endOfMonth();
+        return $this->generate($month->copy()->startOfMonth(), $month->copy()->endOfMonth(), $business);
+    }
 
+    /** Bericht für einen beliebigen Zeitraum. */
+    public function generate(Carbon $from, Carbon $to, ?Business $business = null): string
+    {
         $transactions = BankTransaction::query()
             ->with(['receipts', 'category', 'costCenter', 'supplier', 'bankAccount'])
             ->when($business, fn ($q) => $q->where('business_id', $business->id))
@@ -59,7 +63,7 @@ class PdfReportService
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
             'business' => $business,
-            'periodLabel' => $this->germanMonth($month),
+            'periodLabel' => $this->periodLabel($from, $to),
             'generatedAt' => now()->format('d.m.Y'),
             'transactions' => $transactions,
             'stats' => $stats,
@@ -84,7 +88,7 @@ class PdfReportService
             }
         }
 
-        $name = 'Pendelordner_' . $month->format('Y-m') . ($business ? '_' . $business->id : '') . '.pdf';
+        $name = 'Pendelordner_' . $from->format('Ymd') . '-' . $to->format('Ymd') . ($business ? '_' . $business->id : '') . '.pdf';
         $path = 'reports/' . $name;
         Storage::disk('local')->put($path, $pdf->Output('S'));
 
@@ -171,6 +175,17 @@ class PdfReportService
         $pdf->AddPage();
         $pdf->SetFont('Helvetica', '', 11);
         $pdf->Cell(0, 10, 'Beleg ' . ($receipt->invoice_number ?: $receipt->id) . ' – Datei nicht einbettbar (' . $mime . ').');
+    }
+
+    /** Lesbares Zeitraum-Label: ganzer Monat -> "Juni 2026", sonst "01.06.2026 – 30.06.2026". */
+    private function periodLabel(Carbon $from, Carbon $to): string
+    {
+        if ($from->isSameDay($from->copy()->startOfMonth())
+            && $to->isSameDay($from->copy()->endOfMonth())) {
+            return $this->germanMonth($from);
+        }
+
+        return $from->format('d.m.Y') . ' – ' . $to->format('d.m.Y');
     }
 
     private function germanMonth(Carbon $month): string

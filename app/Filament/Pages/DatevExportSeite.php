@@ -62,7 +62,7 @@ class DatevExportSeite extends Page implements HasActions, HasForms
                 DatePicker::make('to')->label('Bis')->native(false)->displayFormat('d.m.Y')->required(),
                 Select::make('business_id')->label('Betrieb')
                     ->placeholder('Alle Betriebe')
-                    ->options(Business::orderBy('sort_order')->pluck('name', 'id')),
+                    ->options(Business::orderBy('sort_order')->get()->pluck('display_label', 'id')),
                 Select::make('chart')->label('Kontenrahmen')
                     ->options(ChartOfAccounts::class)->required(),
                 TextInput::make('consultant')->label('Beraternummer'),

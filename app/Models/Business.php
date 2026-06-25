@@ -20,6 +20,17 @@ class Business extends Model
         'sort_order' => 'integer',
     ];
 
+    /** Eindeutiges Anzeige-Label (Name + Ort), da mehrere Betriebe gleich heißen können. */
+    public function getDisplayLabelAttribute(): string
+    {
+        $location = trim(($this->postal_code ? $this->postal_code . ' ' : '') . ($this->city ?? ''));
+        if ($location === '' && $this->short_name) {
+            $location = $this->short_name;
+        }
+
+        return $location !== '' ? $this->name . ' – ' . $location : $this->name;
+    }
+
     public function bankAccounts(): HasMany
     {
         return $this->hasMany(BankAccount::class);
