@@ -91,6 +91,52 @@ class BankTransaction extends Model
 
     // ---- Berechnete Attribute ---------------------------------------------
 
+    /**
+     * Lesbarer Verwendungszweck wie im Online-Banking: aus dem rohen
+     * SEPA-Block (EREF+/KREF+/MREF+/CRED+/SVWZ+ …) wird vor allem der
+     * eigentliche Verwendungszweck (SVWZ+) herausgelöst; technische
+     * Referenzen werden entfernt. Ist kein SVWZ+ vorhanden, wird der
+     * Originaltext nur grob bereinigt zurückgegeben.
+     */
+    public function getCleanPurposeAttribute(): string
+    {
+        $raw = trim((string) $this->purpose);
+        if ($raw === '') {
+            return '';
+        }
+
+        // Bekannte SEPA-Tags, die einen neuen Abschnitt einleiten.
+        $tags = 'EREF|KREF|MREF|CRED|DEBT|COAM|OAMT|SVWZ|ABWA|ABWE|IBAN|BIC|PURP|RTRN';
+
+        // Enthält der Text strukturierte Tags? Dann gezielt SVWZ herausziehen.
+        if (preg_match('/\b(?:' . $tags . ')\+/u', $raw)) {
+            if (preg_match('/\bSVWZ\+(.*?)(?=\b(?:' . $tags . ')\+|$)/su', $raw, $m)) {
+                $text = trim($m[1]);
+                // Häufig hängt die Bank im SVWZ eine doppelte Referenz-Kette
+                // im Doppelpunkt-Format an (EREF: … MREF: … CRED: … IBAN: …) –
+                // diese abschneiden.
+                $text = (string) preg_replace('/\s+\b(?:' . $tags . '):.*$/su', '', $text);
+                $text = trim($text);
+                if ($text !== '') {
+                    return $this->collapseWhitespace($text);
+                }
+            }
+
+            // Kein SVWZ vorhanden: alle Tag-Abschnitte entfernen.
+            $stripped = preg_replace('/\b(?:' . $tags . ')\+\S*/u', ' ', $raw);
+
+            return $this->collapseWhitespace((string) $stripped);
+        }
+
+        return $this->collapseWhitespace($raw);
+    }
+
+    private function collapseWhitespace(string $text): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', $text));
+    }
+
+
     /** Summe der zugeordneten Belegbeträge (Pivot-Betrag). */
     public function getAllocatedAmountAttribute(): float
     {

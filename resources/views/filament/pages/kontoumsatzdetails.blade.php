@@ -43,8 +43,8 @@
                         </div>
                         <div style="font-size:1.25rem;font-weight:700;white-space:nowrap;color:{{ $tx->amount < 0 ? '#dc2626' : '#059669' }};">{{ $money($tx->amount) }}</div>
                     </div>
-                    @if ($tx->purpose)
-                        <p style="margin-top:.5rem;font-size:.8rem;opacity:.75;">{{ \Illuminate\Support\Str::limit($tx->purpose, 160) }}</p>
+                    @if ($tx->clean_purpose !== '')
+                        <p style="margin-top:.5rem;font-size:.85rem;" title="{{ $tx->purpose }}">{{ \Illuminate\Support\Str::limit($tx->clean_purpose, 160) }}</p>
                     @endif
                     {{-- Zuordnung (direkt speichern) --}}
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;">

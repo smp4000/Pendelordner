@@ -73,7 +73,7 @@
                 <td>{{ $t->booking_date?->format('d.m.Y') }}</td>
                 <td>
                     <strong>{{ $t->counterparty ?: '—' }}</strong>
-                    @if ($t->purpose)<br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->purpose, 80) }}</span>@endif
+                    @if ($t->clean_purpose !== '')<br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->clean_purpose, 80) }}</span>@endif
                     @php
                         $nums = $t->receipts
                             ->map(fn ($r) => $receiptNumbers[$r->id] ?? null)

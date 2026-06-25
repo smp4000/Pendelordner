@@ -45,8 +45,8 @@ class BankTransactionsTable
 
                 TextColumn::make('counterparty')
                     ->label('Empfänger / Auftraggeber')
-                    ->description(fn (BankTransaction $r): ?string => $r->purpose
-                        ? Str::limit($r->purpose, 60)
+                    ->description(fn (BankTransaction $r): ?string => $r->clean_purpose !== ''
+                        ? Str::limit($r->clean_purpose, 60)
                         : null)
                     ->searchable(['counterparty', 'purpose'])
                     ->wrap(),
