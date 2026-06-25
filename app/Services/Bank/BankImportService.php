@@ -47,20 +47,28 @@ class BankImportService
             'started_at' => now(),
         ]);
 
-        $new = $duplicates = $errors = 0;
+        $new = $duplicates = $restored = $errors = 0;
 
         foreach ($transactions as $row) {
             try {
                 $data = $this->normalize($row, $account, $source);
                 $hash = BankTransaction::makeDedupHash($data);
 
-                $exists = BankTransaction::query()
+                // Dublettenprüfung inkl. gelöschter Umsätze – der Unique-Index
+                // berücksichtigt Soft-Deletes nicht, deshalb withTrashed().
+                $existing = BankTransaction::withTrashed()
                     ->where('bank_account_id', $account->id)
                     ->where('dedup_hash', $hash)
-                    ->exists();
+                    ->first();
 
-                if ($exists) {
-                    $duplicates++;
+                if ($existing) {
+                    if ($existing->trashed()) {
+                        $existing->restore();
+                        $restored++;
+                    } else {
+                        $duplicates++;
+                    }
+
                     continue;
                 }
 
@@ -84,12 +92,18 @@ class BankImportService
             }
         }
 
+        // Wiederhergestellte (zuvor gelöschte) Umsätze zählen wie neue aktive
+        // Buchungen für die Erfolgsbewertung.
+        $effectiveNew = $new + $restored;
+
         $log->update([
-            'new_count' => $new,
+            'new_count' => $effectiveNew,
             'duplicate_count' => $duplicates,
             'error_count' => $errors,
-            'status' => $errors === 0 ? 'success' : ($new > 0 ? 'partial' : 'error'),
-            'message' => sprintf('%d neu, %d Dubletten, %d Fehler.', $new, $duplicates, $errors),
+            'status' => $errors === 0 ? 'success' : ($effectiveNew > 0 ? 'partial' : 'error'),
+            'message' => $restored > 0
+                ? sprintf('%d neu, %d wiederhergestellt, %d Dubletten, %d Fehler.', $new, $restored, $duplicates, $errors)
+                : sprintf('%d neu, %d Dubletten, %d Fehler.', $new, $duplicates, $errors),
             'finished_at' => now(),
         ]);
 

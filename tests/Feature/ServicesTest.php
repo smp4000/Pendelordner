@@ -68,6 +68,30 @@ class ServicesTest extends TestCase
         $this->assertSame(2, $account->bankTransactions()->count());
     }
 
+    public function test_reimport_stellt_geloeschte_umsaetze_wieder_her(): void
+    {
+        $csv = "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;IBAN Zahlungsbeteiligter;Betrag;Waehrung\n"
+            . "02.01.2026;02.01.2026;HBW Sinsheim;Blumen Lieferung;DE12500105170648489890;-63,70;EUR\n";
+
+        $rows = (new CsvBankParser())->parse($csv);
+        $service = new BankImportService();
+        $account = $this->account();
+
+        $service->import($account, $rows, ImportSource::Csv, 'test.csv');
+        $this->assertSame(1, $account->bankTransactions()->count());
+
+        // Umsatz löschen (Soft-Delete) – Unique-Index bleibt bestehen.
+        $account->bankTransactions()->first()->delete();
+        $this->assertSame(0, $account->bankTransactions()->count());
+
+        // Re-Import darf nicht am Unique-Index scheitern, sondern stellt
+        // den gelöschten Umsatz wieder her.
+        $log = $service->import($account, $rows, ImportSource::Csv, 'test.csv');
+        $this->assertSame(0, $log->error_count);
+        $this->assertSame(1, $log->new_count); // wiederhergestellt zählt als neu aktiv
+        $this->assertSame(1, $account->bankTransactions()->count());
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [
