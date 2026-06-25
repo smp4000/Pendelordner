@@ -1,5 +1,2411 @@
 [
     {
+        "number": "5000",
+        "name": "Bruttolohn Festangestellte",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5010",
+        "name": "Bruttolohn Aushilfen",
+        "group": "B, Aushilfen",
+        "chart": "gastro"
+    },
+    {
+        "number": "5015",
+        "name": "Löhne für Minijobs",
+        "group": "B, Aushilfen",
+        "chart": "gastro"
+    },
+    {
+        "number": "5020",
+        "name": "AG-Anteile Sozialversicherung",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5021",
+        "name": "Pauschale Lohnsteuer",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5030",
+        "name": "Freiwillige soziale Aufwendungen, lohnsteuerpflichtig",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5040",
+        "name": "Freiwillige soziale Aufwendungen, lohnsteuerfrei",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5050",
+        "name": "Vermögenswirksame Leistungen (Arbeitgeberzuschuss)",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5060",
+        "name": "Ehegattengehalt (brutto)",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5070",
+        "name": "Reisekosten Arbeitnehmer",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5080",
+        "name": "Betriebliche Altersversorgung (Arbeitgeberzuschuss)",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5086",
+        "name": "Krankengeldzuschüsse",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5087",
+        "name": "Zuschüsse \/ Erstattungen Agentur für Arbeit",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5088",
+        "name": "Erstattungen Aufwendungsausgleichsgesetz",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5089",
+        "name": "Erstattungen Personalkosten, steuerfrei",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5090",
+        "name": "Personalinserate",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5100",
+        "name": "Mieten und Pachten",
+        "group": "B, Mieten, Pachten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5101",
+        "name": "Gastronomiepacht",
+        "group": "B, Mieten, Pachten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5110",
+        "name": "Grundbesitzabgaben",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5120",
+        "name": "Reparaturen",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5130",
+        "name": "Strom",
+        "group": "B, Strom, Gas",
+        "chart": "gastro"
+    },
+    {
+        "number": "5140",
+        "name": "Gerätemiete, Leasing",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5150",
+        "name": "Heizung",
+        "group": "B, Heizung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5160",
+        "name": "Reinigung",
+        "group": "B, Wasser, Kanalisation, Entsorgung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5170",
+        "name": "Entsorgung",
+        "group": "B, Wasser, Kanalisation, Entsorgung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5180",
+        "name": "Sonstige Raumkosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5190",
+        "name": "Rechtsschutzversicherung, Rechtsberatung",
+        "group": "B, Verwaltungskosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5200",
+        "name": "Buchhaltung, Steuer-, Betriebsberatung",
+        "group": "B, Verwaltungskosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5210",
+        "name": "Fremdarbeiten",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5211",
+        "name": "Fremdpersonal",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5220",
+        "name": "Instandhaltung, Wartungsvertrag",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5300",
+        "name": "Büromaterial",
+        "group": "B, Verwaltungskosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5310",
+        "name": "Arbeitskleidung",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5320",
+        "name": "Telefon und Porto",
+        "group": "B, Verwaltungskosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5330",
+        "name": "Kosten Datenverarbeitung",
+        "group": "B, Verwaltungskosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5340",
+        "name": "Arbeitsrechtsstreitigkeiten",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5350",
+        "name": "Abfindungszahlungen Personal",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5360",
+        "name": "GEMA",
+        "group": "B, Versicherungen, Beiträge",
+        "chart": "gastro"
+    },
+    {
+        "number": "5370",
+        "name": "Getränkesteuer",
+        "group": "B, Betr. Steuern, Getränkesteuer",
+        "chart": "gastro"
+    },
+    {
+        "number": "5410",
+        "name": "Kosten Finanz- und Geldverkehr",
+        "group": "B, Zinsen, Geldkosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5420",
+        "name": "Kosten Kreditkarten",
+        "group": "B, Zinsen, Geldkosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5430",
+        "name": "Betriebsversicherungen",
+        "group": "B, Versicherungen, Beiträge",
+        "chart": "gastro"
+    },
+    {
+        "number": "5440",
+        "name": "Gebühren und Beiträge",
+        "group": "B, Versicherungen, Beiträge",
+        "chart": "gastro"
+    },
+    {
+        "number": "5450",
+        "name": "Warenschwund Agentur",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5460",
+        "name": "Warendiebstahl",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5461",
+        "name": "Bruch",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5462",
+        "name": "Verderb",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5463",
+        "name": "Ablauf Mindesthaltbarkeitsdatum",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5464",
+        "name": "Versicherter Einbruchdiebstahl",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5480",
+        "name": "Provisionsaufwendungen",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5500",
+        "name": "Werbekosten",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5510",
+        "name": "Nicht abzugsfähige Bewirtungskosten",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5520",
+        "name": "Reisekosten Unternehmer",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5521",
+        "name": "Fahrtkosten Unternehmer Kilometerpauschale",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5530",
+        "name": "Bewirtung von Geschäftsfreunden",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5540",
+        "name": "Geschenke abzugsfähig",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5550",
+        "name": "Geschenke nicht abzugsfähig",
+        "group": "B, Werbung, Gästeunterhaltung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5560",
+        "name": "Wartungskosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5570",
+        "name": "Systembeitrag Kasse",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5600",
+        "name": "Kosten für Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5601",
+        "name": "Kosten für Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5610",
+        "name": "Versicherung Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5611",
+        "name": "Versicherung Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5612",
+        "name": "Kfz-Steuer",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5613",
+        "name": "Kfz-Steuer (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5620",
+        "name": "Abschreibung Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5630",
+        "name": "Abschreibung Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5631",
+        "name": "Kürzung der Anschaffungs- oder Herstellungskosten nach § 7g Abs. 1 und 2 EStG n.F. (für Fahrzeuge)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5640",
+        "name": "Kosten Vorführwagen",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5650",
+        "name": "Kosten Vermietung PKW, Anhänger",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5660",
+        "name": "Abschreibung Vermietung PKW, Anhänger",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5670",
+        "name": "Leasing Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5671",
+        "name": "Leasing Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5710",
+        "name": "Schadenersatzleistungen, Selbstbeteiligung",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5720",
+        "name": "Fortbildungskosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5730",
+        "name": "Sonstige Personalkosten",
+        "group": "B, Personal",
+        "chart": "gastro"
+    },
+    {
+        "number": "5740",
+        "name": "Gewährleistung, Kulanz",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5750",
+        "name": "Fertigstellung, Auslieferung Neufahrzeuge",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5760",
+        "name": "Fertigstellung, Auslieferung Gebrauchtfahrzeuge",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5770",
+        "name": "Einstellungen in die Pauschalwertberichtigung zu Forderungen",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5771",
+        "name": "Einstellungen in die Einzelwertberichtigung zu Forderungen B, Sonstige Kosten © eurodata Seite 1Stand 15.01.",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "5780",
+        "name": "Anlagenabgänge (Restbuchwert bei Buchverlust)",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5790",
+        "name": "Außerplanmäßige Abschreibungen auf Anlagevermögen",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5800",
+        "name": "Planmäßige Abschreibungen auf Anlagevermögen",
+        "group": "B, Abschreibungen",
+        "chart": "gastro"
+    },
+    {
+        "number": "5801",
+        "name": "Abschreibung GWG-Pool",
+        "group": "B, Abschreibungen",
+        "chart": "gastro"
+    },
+    {
+        "number": "5804",
+        "name": "Sofortabschreibung GWG",
+        "group": "B, Abschreibungen",
+        "chart": "gastro"
+    },
+    {
+        "number": "5810",
+        "name": "Abschreibungen auf Umlaufvermögen, Forderungsverluste",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5820",
+        "name": "Anlagenabgänge (Restbuchwert bei Buchgewinn)",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "gastro"
+    },
+    {
+        "number": "5830",
+        "name": "Personalverpflegung",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5840",
+        "name": "Geschirr",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5850",
+        "name": "Dienstleistungspacht",
+        "group": "B, Mieten, Pachten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5860",
+        "name": "Franchisegebühr",
+        "group": "B, Mieten, Pachten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5870",
+        "name": "Wäsche, Bekleidung",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5875",
+        "name": "Reinigungsmittel",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5880",
+        "name": "Beiträge zur Berufsgenossenschaft",
+        "group": "B, Versicherungen, Beiträge",
+        "chart": "gastro"
+    },
+    {
+        "number": "5900",
+        "name": "An Kunden gewährte Nachlässe",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5910",
+        "name": "Kassenminusdifferenz",
+        "group": "B, Kassenminusdifferenz",
+        "chart": "gastro"
+    },
+    {
+        "number": "5920",
+        "name": "Betriebsbedingte Warenentnahme (netto)",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5930",
+        "name": "Werkzeuge",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5940",
+        "name": "Sonstige betriebliche Kosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "5950",
+        "name": "Wasser und Kanalisation",
+        "group": "B, Wasser, Kanalisation, Entsorgung",
+        "chart": "gastro"
+    },
+    {
+        "number": "5960",
+        "name": "Hilfs- und Verbauchsstoffe",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5970",
+        "name": "Verpackungskosten Einweg",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5980",
+        "name": "Besteck, Geschirr",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5990",
+        "name": "Betriebsbedarf",
+        "group": "B, Betriebsbedarf",
+        "chart": "gastro"
+    },
+    {
+        "number": "5999",
+        "name": "Außergewöhnliche Aufwendungen",
+        "group": "B, Außerordentlicher Aufwand 6 - Warenbestands-, Einkaufs- und Erlöskonten",
+        "chart": "gastro"
+    },
+    {
+        "number": "6000",
+        "name": "Erlöse Säfte, USt voll A, Alkoholfreie Getränke 1 B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6010",
+        "name": "Erlöse Cola, Wasser, Mix, USt voll A, Alkoholfreie Getränke 2 B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6020",
+        "name": "Erlöse Fassbier, USt vollA, Fassbier B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6030",
+        "name": "Erlöse Flaschen-, Dosenbier, USt voll A, Flaschen-, Dosenbier B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6040",
+        "name": "Erlöse Wein, Sekt, USt vollA, Sonstige alkoholische GetränkeB",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6050",
+        "name": "Erlöse Spirituosen, USt vollA, Sonstige alkoholische GetränkeB",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6060",
+        "name": "Erlöse Sonstige alkoholische Getränke, USt voll A, Sonstige alkoholische GetränkeB",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6070",
+        "name": "Erlöse Kaffee, Kaffeeautomat, Tee, USt voll A, Kaffee, Heißgetränke B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6071",
+        "name": "Erlöse Kaffee, Kaffeeautomat, Tee, USt erm. A, Kaffee, Heißgetränke B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6090",
+        "name": "Erlöse Milch, Milchmix, Kakao, Shakes, USt voll A, Milch, Mix, Kakao, ShakesB",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6100",
+        "name": "Erlöse Milch, Milchmix, Kakao, Shakes, USt erm. A, Milch, Mix, Kakao, ShakesB",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6110",
+        "name": "Erlöse Küche, warme Speisen, USt voll A, Küche, warme Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6120",
+        "name": "Erlöse Küche, warme Speisen, USt erm. A, Küche, warme Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6130",
+        "name": "Erlöse Küche, kalte Speisen, USt voll A, Küche, kalte Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6140",
+        "name": "Erlöse Küche, kalte Speisen, USt erm. A, Küche, kalte Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6150",
+        "name": "Erlöse Fast-Food, Hamburger, USt voll A, Fast-Food, Hamburger B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6160",
+        "name": "Erlöse Fast-Food, Hamburger, USt erm. A, Fast-Food, Hamburger B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6170",
+        "name": "Erlöse Küche, Sonstiges, USt voll A, Küche, warme Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6180",
+        "name": "Erlöse Küche, Sonstiges, USt erm. A, Küche, warme Speisen B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6190",
+        "name": "Erlöse Backwaren, USt erm.A, Konditorei, Backwaren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6191",
+        "name": "Erlöse Backwaren, USt vollA, Konditorei, Backwaren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6200",
+        "name": "Erlöse Speiseeis, Eis verpackt, Dessert, USt voll A, Eis, Dessert B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6210",
+        "name": "Erlöse Speiseeis, Eis verpackt, Dessert, USt erm. A, Eis, Dessert B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6220",
+        "name": "Erlöse Süßwaren, USt vollA, Süßwaren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6230",
+        "name": "Erlöse Süßwaren, USt erm.A, Süßwaren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6240",
+        "name": "Erlöse Tabakwaren, USt vollA, Tabakwaren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6250",
+        "name": "Erlöse Automaten, Provisionen, USt voll A, Einnahmen aus Automaten",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6260",
+        "name": "Erlöse Sonstige Waren, USt voll A, Sonstige Waren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6270",
+        "name": "Erlöse Sonstige Waren, USt erm. A, Sonstige Waren B",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6280",
+        "name": "Erlöse Leergut, Abfallverwertung, USt voll A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6290",
+        "name": "Erlöse Personalverpflegung, USt voll A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6300",
+        "name": "Erlöse Telefon, USt vollA, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6310",
+        "name": "Erlöse Toiletten, Bad, Dusche, USt voll A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6315",
+        "name": "Vermietung PKW, Anhänger, USt voll A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6320",
+        "name": "Erhaltene Boni, Rabatte, USt voll A, Sonstige Einnahmen, Personalverpflegung © eurodata Seite 2 Stand 15.01.",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6330",
+        "name": "Erhaltene Boni, Rabatte, USt erm. A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6340",
+        "name": "Erlöse Sonstiges, USt vollA, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6350",
+        "name": "Erlöse Sonstiges, USt erm.A, Sonstige Einnahmen, Personalverpflegung",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6360",
+        "name": "Kassenplusdifferenz A, Kassenplusdifferenz",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6365",
+        "name": "Kfz-Nutzungsanteile Arbeitnehmer, USt voll",
+        "group": "B, Kfz-Kosten",
+        "chart": "gastro"
+    },
+    {
+        "number": "6370",
+        "name": "Außergewöhnliche Erlöse, USt voll A, Außerordentlicher Ertrag",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6375",
+        "name": "Pachterstattung (unbewegliche Wirtschaftsgüter), USt voll",
+        "group": "B, Mieten, Pachten",
+        "chart": "gastro"
+    },
+    {
+        "number": "6380",
+        "name": "Erlöse aus Anlageverkäufen (bei Buchgewinn), USt voll A, Außerordentlicher Ertrag",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6385",
+        "name": "Erlöse aus Anlageverkäufen (bei Buchverlust), USt voll A, Außerordentlicher Ertrag",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6390",
+        "name": "Erlöse aus Zinsen Diskontspesen, USt voll A, Außerordentlicher Ertrag",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6400",
+        "name": "Einkauf Säfte A, Alkoholfreie Getränke 1",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6410",
+        "name": "Einkauf Cola, Wasser, MixA, Alkoholfreie Getränke 2",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6420",
+        "name": "Einkauf Fassbier A, Fassbier",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6430",
+        "name": "Einkauf Flaschen-, DosenbierA, Flaschen-, Dosenbier",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6440",
+        "name": "Einkauf Wein, Sekt A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6450",
+        "name": "Einkauf Spirituosen A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6460",
+        "name": "Einkauf Sonstige alkoholische Getränke A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6470",
+        "name": "Einkauf Kaffee,Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6480",
+        "name": "Einkauf Kaffee,Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6490",
+        "name": "Einkauf Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6500",
+        "name": "Einkauf Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6510",
+        "name": "Einkauf Lebensmittel, Fast-Food A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6520",
+        "name": "Einkauf Fleisch- und Wurstwaren A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6530",
+        "name": "Einkauf Käse, Butter, MilchA, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6540",
+        "name": "Einkauf Obst und Gemüse A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6550",
+        "name": "bis",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6580",
+        "name": "Einkauf Sonstiges A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6590",
+        "name": "Einkauf Backwaren A, Konditorei, Backwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6600",
+        "name": "Einkauf Speiseeis, Eis verpackt, Dessert A, Eis, Dessert",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6610",
+        "name": "Einkauf Speiseeis, DessertA, Eis, Dessert",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6620",
+        "name": "Einkauf Süßwaren A, Süßwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6630",
+        "name": "Einkauf Süßwaren A, Süßwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6640",
+        "name": "Einkauf Tabakwaren A, Tabakwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6650",
+        "name": "Einkauf Tabakwaren A, Tabakwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6660",
+        "name": "Einkauf Sonstige Waren USt voll A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6670",
+        "name": "Einkauf Sonstige Waren USt erm. A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6680",
+        "name": "Einkauf Sonstige Waren A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6690",
+        "name": "Einkauf Sonstige Waren A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6700",
+        "name": "Bestand Säfte A, Alkoholfreie Getränke 1",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6710",
+        "name": "Bestand Cola, Wasser, MixA, Alkoholfreie Getränke 2",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6720",
+        "name": "Bestand Fassbier A, Fassbier",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6730",
+        "name": "Bestand Flaschen-, DosenbierA, Flaschen-, Dosenbier",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6740",
+        "name": "Bestand Wein, Sekt A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6750",
+        "name": "Bestand Spirituosen A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6760",
+        "name": "Bestand Sonstige alkoholische Getränke A, Sonstige alkoholische Getränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6770",
+        "name": "Bestand Kaffee, Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6780",
+        "name": "Bestand Kaffee, Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6790",
+        "name": "Bestand Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6800",
+        "name": "Bestand Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6810",
+        "name": "Bestand Lebenmittel, Fast-Food A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6820",
+        "name": "Bestand Fleisch- und Wurstwaren A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6830",
+        "name": "Bestand Käse, Butter, MilchA, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6840",
+        "name": "Bestand Obst und Gemüse A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6850",
+        "name": "bis",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6880",
+        "name": "Bestand Sonstiges A, Summe Küche, Lebensmittel",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6890",
+        "name": "Bestand Backwaren A, Konditorei, Backwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6900",
+        "name": "Bestand Speiseeis, Eis verpackt, Dessert A, Eis, Dessert",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6910",
+        "name": "Bestand Speiseeis, DessertA, Eis, Dessert",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6920",
+        "name": "Bestand Süßwaren A, Süßwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6930",
+        "name": "Bestand Süßwaren A, Süßwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6940",
+        "name": "Bestand Tabakwaren A, Tabakwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6950",
+        "name": "Bestand Tabakwaren A, Tabakwaren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6960",
+        "name": "Bestand Sonstige Waren USt voll A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6970",
+        "name": "Bestand Sonstige Waren USt erm. A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6980",
+        "name": "Bestand Sonstige Waren A, Sonstige Waren",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "6990",
+        "name": "Bestand Sonstige Waren A, Sonstige Waren © eurodata Seite 3Stand 15.01.",
+        "group": null,
+        "chart": "gastro"
+    },
+    {
+        "number": "5000",
+        "name": "Bruttolohn Festangestellte",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5010",
+        "name": "Bruttolohn Aushilfen",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5015",
+        "name": "Löhne für Minijobs",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5020",
+        "name": "AG-Anteile Sozialversicherung",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5021",
+        "name": "Pauschale Lohnsteuer",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5030",
+        "name": "Freiwillige soziale Aufwendungen, lohnsteuerpflichtig",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5040",
+        "name": "Freiwillige soziale Aufwendungen, lohnsteuerfrei",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5050",
+        "name": "Vermögenswirksame Leistungen (Arbeitgeberzuschuss)",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5060",
+        "name": "Ehegattengehalt (brutto)",
+        "group": "B, Ehegattengehalt",
+        "chart": "kfz"
+    },
+    {
+        "number": "5070",
+        "name": "Reisekosten Arbeitnehmer",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5080",
+        "name": "Betriebliche Altersversorgung (Arbeitgeberzuschuss)",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5086",
+        "name": "Krankengeldzuschüsse",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5087",
+        "name": "Zuschüsse \/ Erstattungen Agentur für Arbeit",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5088",
+        "name": "Erstattungen Aufwendungsausgleichsgesetz",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5089",
+        "name": "Erstattungen Personalkosten, steuerfrei",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5090",
+        "name": "Personalinserate",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5100",
+        "name": "Mieten und Pachten",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5101",
+        "name": "Gastronomiepacht",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5110",
+        "name": "Grundbesitzabgaben",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5120",
+        "name": "Reparaturen",
+        "group": "B, Reparaturen, Instandsetzung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5130",
+        "name": "Strom",
+        "group": "B, Strom, Wasser, Kanal",
+        "chart": "kfz"
+    },
+    {
+        "number": "5140",
+        "name": "Gerätemiete, Leasing",
+        "group": "B, Gerätemieten, Leasing",
+        "chart": "kfz"
+    },
+    {
+        "number": "5150",
+        "name": "Heizung",
+        "group": "B, Heizung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5160",
+        "name": "Reinigung",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5170",
+        "name": "Entsorgung",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5180",
+        "name": "Sonstige Raumkosten",
+        "group": "B, Raumkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5190",
+        "name": "Rechtsschutzversicherung, Rechtsberatung",
+        "group": "B, Rechts- und Beratungskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5200",
+        "name": "Buchhaltung, Steuer-, Betriebsberatung",
+        "group": "B, Rechts- und Beratungskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5210",
+        "name": "Fremdarbeiten",
+        "group": "B, Fremdarbeiten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5211",
+        "name": "Fremdpersonal",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5220",
+        "name": "Instandhaltung, Wartungsvertrag",
+        "group": "B, Reparaturen, Instandsetzung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5300",
+        "name": "Büromaterial",
+        "group": "B, Verwaltungskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5310",
+        "name": "Arbeitskleidung",
+        "group": "B, Arbeitskleidung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5320",
+        "name": "Telefon und Porto",
+        "group": "B, Verwaltungskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5330",
+        "name": "Kosten Datenverarbeitung",
+        "group": "B, Verwaltungskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5340",
+        "name": "Arbeitsrechtsstreitigkeiten",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5350",
+        "name": "Abfindungszahlungen Personal",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5360",
+        "name": "GEMA",
+        "group": "B, Gebühren und Beiträge",
+        "chart": "kfz"
+    },
+    {
+        "number": "5370",
+        "name": "Getränkesteuer",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5410",
+        "name": "Kosten Finanz- und Geldverkehr",
+        "group": "B, Zinsen, Geldkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5420",
+        "name": "Kosten Kreditkarten",
+        "group": "B, Zinsen, Geldkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5430",
+        "name": "Betriebsversicherungen",
+        "group": "B, Betriebsversicherungen",
+        "chart": "kfz"
+    },
+    {
+        "number": "5440",
+        "name": "Gebühren und Beiträge",
+        "group": "B, Gebühren und Beiträge",
+        "chart": "kfz"
+    },
+    {
+        "number": "5450",
+        "name": "Warenschwund Agentur",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5460",
+        "name": "Warendiebstahl",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5461",
+        "name": "Bruch",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5462",
+        "name": "Verderb",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5463",
+        "name": "Ablauf Mindesthaltbarkeitsdatum",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5464",
+        "name": "Versicherter Einbruchdiebstahl",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5480",
+        "name": "Provisionsaufwendungen",
+        "group": "B, Verkaufskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5500",
+        "name": "Werbekosten",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5510",
+        "name": "Nicht abzugsfähige Bewirtungskosten",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5520",
+        "name": "Reisekosten Unternehmer",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5521",
+        "name": "Fahrtkosten Unternehmer Kilometerpauschale",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5530",
+        "name": "Bewirtung von Geschäftsfreunden",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5540",
+        "name": "Geschenke abzugsfähig",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5550",
+        "name": "Geschenke nicht abzugsfähig",
+        "group": "B, Werbung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5560",
+        "name": "Wartungskosten",
+        "group": "B, Reparaturen, Instandsetzung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5570",
+        "name": "Systembeitrag Kasse",
+        "group": "B, Reparaturen, Instandsetzung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5600",
+        "name": "Kosten für Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5601",
+        "name": "Kosten für Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5610",
+        "name": "Versicherung Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5611",
+        "name": "Versicherung Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5612",
+        "name": "Kfz-Steuer",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5613",
+        "name": "Kfz-Steuer (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5620",
+        "name": "Abschreibungen (Anl., Kfz)Abschreibung Fahrzeuge",
+        "group": "B,",
+        "chart": "kfz"
+    },
+    {
+        "number": "5630",
+        "name": "Abschreibungen (Anl., Kfz)Abschreibung Fahrzeuge (Unternehmer)",
+        "group": "B,",
+        "chart": "kfz"
+    },
+    {
+        "number": "5631",
+        "name": "Kürzung der Anschaffungs- oder Herstellungskosten nach § 7g Abs. 1 und 2 EStG n.F. (für Fahrzeuge)",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5640",
+        "name": "Kosten Vorführwagen",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5650",
+        "name": "Kosten Vermietung PKW, Anhänger",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5660",
+        "name": "Abschreibung Vermietung PKW, Anhänger",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5670",
+        "name": "Leasing Fahrzeuge",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5671",
+        "name": "Leasing Fahrzeuge (Unternehmer)",
+        "group": "B, Kfz-Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5710",
+        "name": "Schadenersatzleistungen, Selbstbeteiligung",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5720",
+        "name": "Fortbildungskosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5730",
+        "name": "Sonstige Personalkosten",
+        "group": "B, Personalkosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5740",
+        "name": "Gewährleistung, Kulanz",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5750",
+        "name": "Fertigstellung, Auslieferung Neuwagen",
+        "group": "B, Verkaufskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5760",
+        "name": "Fertigstellung, Auslieferung Gebrauchtwagen",
+        "group": "B, Verkaufskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5770",
+        "name": "Einstellungen in die Pauschalwertberichtigung zu Forderungen",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5771",
+        "name": "Einstellungen in die Einzelwertberichtigung zu Forderungen © eurodata Seite 1Stand 15.01.",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5780",
+        "name": "Anlagenabgänge (Restbuchwert bei Buchverlust)",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5790",
+        "name": "Außerplanmäßige Abschreibungen auf Anlagevermögen",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5800",
+        "name": "Abschreibungen (Anl., Kfz)Planmäßige Abschreibungen auf Anlagevermögen",
+        "group": "B,",
+        "chart": "kfz"
+    },
+    {
+        "number": "5801",
+        "name": "Abschreibungen (Anl., Kfz)Abschreibung GWG-Pool",
+        "group": "B,",
+        "chart": "kfz"
+    },
+    {
+        "number": "5804",
+        "name": "Abschreibungen (Anl., Kfz)Sofortabschreibung GWG",
+        "group": "B,",
+        "chart": "kfz"
+    },
+    {
+        "number": "5810",
+        "name": "Abschreibungen auf Umlaufvermögen, Forderungsverluste",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5820",
+        "name": "Anlagenabgänge (Restbuchwert bei Buchgewinn)",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "5830",
+        "name": "Personalverpflegung",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5840",
+        "name": "Geschirr",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5850",
+        "name": "Dienstleistungspacht",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5860",
+        "name": "Franchisegebühr",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5870",
+        "name": "Wäsche, Bekleidung",
+        "group": "B, Arbeitskleidung",
+        "chart": "kfz"
+    },
+    {
+        "number": "5875",
+        "name": "Reinigungsmittel",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5880",
+        "name": "Beiträge zur Berufsgenossenschaft",
+        "group": "B, Gebühren und Beiträge",
+        "chart": "kfz"
+    },
+    {
+        "number": "5900",
+        "name": "An Kunden gewährte Nachlässe",
+        "group": "B, Verkaufskosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5910",
+        "name": "Kassenminusdifferenz",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5920",
+        "name": "Betriebsbedingte Warenentnahme (netto)",
+        "group": "B, Hilfs- und Verbrauchsstoffe",
+        "chart": "kfz"
+    },
+    {
+        "number": "5930",
+        "name": "Werkzeuge",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5940",
+        "name": "Sonstige betriebliche Kosten",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5950",
+        "name": "Wasser und Kanalisation",
+        "group": "B, Strom, Wasser, Kanal",
+        "chart": "kfz"
+    },
+    {
+        "number": "5960",
+        "name": "Hilfs- und Verbauchsstoffe",
+        "group": "B, Hilfs- und Verbrauchsstoffe",
+        "chart": "kfz"
+    },
+    {
+        "number": "5970",
+        "name": "Verpackungskosten Einweg",
+        "group": "B, Hilfs- und Verbrauchsstoffe",
+        "chart": "kfz"
+    },
+    {
+        "number": "5980",
+        "name": "Besteck, Geschirr",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5990",
+        "name": "Betriebsbedarf",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "5999",
+        "name": "Außergewöhnliche Aufwendungen 6 - Warenbestands-, Einkaufs- und Erlöskonten",
+        "group": "B, Außerordentlicher Aufwand",
+        "chart": "kfz"
+    },
+    {
+        "number": "6000",
+        "name": "A, NeuwagenEinkauf Neuwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6010",
+        "name": "A, VorführwagenEinkauf Vorführwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6020",
+        "name": "A, GebrauchtwagenEinkauf Gebrauchtwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6030",
+        "name": "A, Ersatzteile, ZubehörEinkauf Ersatzteile",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6040",
+        "name": "A, Ersatzteile, ZubehörEinkauf Zubehör",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6050",
+        "name": "A, Schmierstoffe (Eigenwaren)Einkauf Schmierstoffe",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6060",
+        "name": "A, Andere WarenEinkauf Lackiermaterial",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6070",
+        "name": "A, Andere WarenEinkauf Kleinmaterial",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6080",
+        "name": "A, Andere WarenEinkauf Sonstige Handelswaren",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6090",
+        "name": "A, Andere WarenEinkauf Sonstige Handelswaren",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6100",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6150",
+        "name": "A, Andere WarenEinkauf Sonstige Waren, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6160",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6190",
+        "name": "A, Andere WarenEinkauf Sonstige Waren, USt erm.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6200",
+        "name": "Warenbezugs- und Nebenkosten, USt voll",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "6210",
+        "name": "Warenbezugs- und Nebenkosten, USt erm.",
+        "group": "B, Sonstige Kosten",
+        "chart": "kfz"
+    },
+    {
+        "number": "6220",
+        "name": "A, Andere WarenInnergemeinschaftlicher Erwerb, VSt und USt, voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6230",
+        "name": "A, Andere WarenInnergemeinschaftlicher Erwerb, VSt und USt, erm.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6240",
+        "name": "A, NeuwagenInnergemeinschaftlicher Erwerb von Neufahrzeugen VSt und USt, voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6250",
+        "name": "A, Sonstige ErlöseLieferantenskonti, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6260",
+        "name": "A, Sonstige ErlöseLieferantenskonti, USt erm.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6270",
+        "name": "A, Sonstige ErlöseRabatte, Nachlässe",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6280",
+        "name": "A, Sonstige ErlöseErhaltene Boni",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6290",
+        "name": "A, Sonstige ErlöseSonstige Erlöse",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6300",
+        "name": "A, NeuwagenBestand Neuwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6310",
+        "name": "A, VorführwagenBestand Vorführwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6320",
+        "name": "A, GebrauchtwagenBestand Gebrauchtwagen",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6330",
+        "name": "A, Ersatzteile, ZubehörBestand Ersatzteile",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6340",
+        "name": "A, Ersatzteile, ZubehörBestand Zubehör",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6350",
+        "name": "A, Schmierstoffe (Eigenwaren)Bestand Schmierstoffe",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6360",
+        "name": "A, Andere WarenBestand Lackiermaterial",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6370",
+        "name": "A, Andere WarenBestand Kleinmaterial",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6380",
+        "name": "A, Andere WarenBestand Sonstige Waren",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6390",
+        "name": "A, Andere WarenBestand Sonstige Waren",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6400",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6450",
+        "name": "A, Andere WarenBestand Waren (USt voll)",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6460",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6490",
+        "name": "A, Andere WarenBestand Waren (USt erm.)",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6500",
+        "name": "A, NeuwagenErlöse Neuwagen, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6510",
+        "name": "A, VorführwagenErlöse Vorführwagen, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6520",
+        "name": "A, GebrauchtwagenErlöse Gebrauchtwagen, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6530",
+        "name": "A, Ersatzteile, ZubehörErlöse Ersatzteile, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6540",
+        "name": "A, Ersatzteile, ZubehörErlöse Zubehör, USt voll B © eurodata Seite 2 Stand 15.01.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6550",
+        "name": "A, Schmierstoffe (Eigenwaren)Erlöse Schmierstoffe, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6560",
+        "name": "A, Ersatzteile, ZubehörErlöse Austauschteile, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6570",
+        "name": "A, Ersatzteile, ZubehörErlöse Kleinmaterial, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6580",
+        "name": "A, Andere WarenErlöse Sonstige Waren, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6590",
+        "name": "A, FremdleistungenErlöse Fremdleistungen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6600",
+        "name": "A, DienstleistungenErlöse Lohn Werkstatt, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6610",
+        "name": "A, DienstleistungenErlöse Lohn Lackierung, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6620",
+        "name": "A, DienstleistungenErlöse Dienstleistungen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6621",
+        "name": "A, DienstleistungenErlöse Wagenpflege, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6630",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6640",
+        "name": "A, DienstleistungenErlöse Dienstleistungen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6650",
+        "name": "A, Ersatzteile, ZubehörErlöse Garantieleistungen Teile, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6660",
+        "name": "A, Ersatzteile, ZubehörErlöse Garantieleistungen Teile, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6670",
+        "name": "A, GarantieleistungenErlöse Garantiedienstleistungen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6680",
+        "name": "A, GarantieleistungenErlöse Garantiedienstleistungen, USt frei",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6690",
+        "name": "A, DienstleistungenErlöse Dienstleistungen, USt frei",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6700",
+        "name": "A, Provisionen KfzErlöse Provision Neuwagen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6710",
+        "name": "A, Provisionen KfzErlöse Provision Gebrauchtwagen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6720",
+        "name": "A, Andere ProvisionenErlöse Provision Agenturgeschäfte, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6730",
+        "name": "A, Andere ProvisionenErlöse Versicherungsprovisionen, USt frei",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6740",
+        "name": "A, NeuwagenErlöse Neuwagen, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6750",
+        "name": "A, VorführwagenErlöse Vorführwagen, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6760",
+        "name": "A, GebrauchtwagenErlöse Gebrauchtwagen, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6770",
+        "name": "A, Ersatzteile, ZubehörErlöse Ersatzteile, Zubehör, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6780",
+        "name": "A, Schmierstoffe (Eigenwaren)Erlöse Schmierstoffe, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6790",
+        "name": "A, Andere WarenErlöse Andere Waren, USt frei B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6800",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6840",
+        "name": "A, Andere WarenErlöse Waren, USt voll B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6850",
+        "name": "A, NeuwagenSteuerfreie innergemeinschaftliche Lieferungen von Neufahrzeugen an Abnehmer ohne USt-IdNr B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6855",
+        "name": "A, Andere WarenSteuerfreie innergemeinschaftliche Lieferungen B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6860",
+        "name": "bis",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6880",
+        "name": "A, Andere WarenErlöse Waren, USt erm. B",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6890",
+        "name": "A, Sonstige ErlöseSonstige Erlöse, USt erm.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6900",
+        "name": "A, Sonstige ErlöseErlöse aus Werbekostenzuschüssen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6910",
+        "name": "A, Sonstige ErlöseVerkaufshilfen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6920",
+        "name": "A, Sonstige ErlöseSonstige Erlöse - Kfz-Bereich, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6925",
+        "name": "A, Sonstige ErlöseVermietung PKW, Anhänger, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6930",
+        "name": "A, Andere ErlöseAndere Erlöse, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6940",
+        "name": "A, Außerordentliche ErträgeAußergewöhnliche Erlöse, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6950",
+        "name": "A, Außerordentliche ErträgeErlöse aus Anlageverkäufen (bei Buchgewinn), USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6955",
+        "name": "A, Außerordentliche ErträgeErlöse aus Anlageverkäufen (bei Buchverlust), USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6960",
+        "name": "A, NeuwagenErlösschmälerungen Neuwagen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6970",
+        "name": "A, GebrauchtwagenErlösschmälerungen Gebrauchtwagen, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6980",
+        "name": "A, Sonstige KostenErlösschmälerungen Sonstige, USt voll",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
+        "number": "6990",
+        "name": "A, Sonstige KostenForderungsausfälle © eurodata Seite 3Stand 15.01.",
+        "group": null,
+        "chart": "kfz"
+    },
+    {
         "number": "0010",
         "name": "Gebäude",
         "group": "D,Sonstiges Anlagevermögen",
@@ -6862,2411 +9268,5 @@
         "name": "Sammelkonto unzulässige Buchungen © eurodata Seite 19Stand 15.01.",
         "group": "D,Ungeklärte Beträge",
         "chart": "edtas"
-    },
-    {
-        "number": "5000",
-        "name": "Bruttolohn Festangestellte",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5010",
-        "name": "Bruttolohn Aushilfen",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5015",
-        "name": "Löhne für Minijobs",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5020",
-        "name": "PersonalkostenAG-Anteile Sozialversicherung",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5021",
-        "name": "Pauschale Lohnsteuer",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5030",
-        "name": "Freiwillige soziale Aufwendungen, lohnsteuerpflichtig",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5040",
-        "name": "Freiwillige soziale Aufwendungen, lohnsteuerfrei",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5050",
-        "name": "Vermögenswirksame Leistungen (Arbeitgeberzuschuss)",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5060",
-        "name": "Ehegattengehalt (brutto)",
-        "group": "B, Ehegattengehalt",
-        "chart": "kfz"
-    },
-    {
-        "number": "5070",
-        "name": "Reisekosten Arbeitnehmer",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5080",
-        "name": "Betriebliche Altersversorgung (Arbeitgeberzuschuss)",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5086",
-        "name": "Krankengeldzuschüsse",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5087",
-        "name": "Zuschüsse \/ Erstattungen Agentur für Arbeit",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5088",
-        "name": "Erstattungen Aufwendungsausgleichsgesetz",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5089",
-        "name": "Erstattungen Personalkosten, steuerfrei",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5090",
-        "name": "Personalinserate",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5100",
-        "name": "Mieten und Pachten",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5101",
-        "name": "Gastronomiepacht",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5110",
-        "name": "Grundbesitzabgaben",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5120",
-        "name": "Reparaturen",
-        "group": "B, Reparaturen, Instandsetzung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5130",
-        "name": "Strom",
-        "group": "B, Strom, Wasser, Kanal",
-        "chart": "kfz"
-    },
-    {
-        "number": "5140",
-        "name": "Gerätemiete, Leasing",
-        "group": "B, Gerätemieten, Leasing",
-        "chart": "kfz"
-    },
-    {
-        "number": "5150",
-        "name": "Heizung",
-        "group": "B, Heizung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5160",
-        "name": "Reinigung",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5170",
-        "name": "Entsorgung",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5180",
-        "name": "Sonstige Raumkosten",
-        "group": "B, Raumkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5190",
-        "name": "Rechtsschutzversicherung, Rechtsberatung",
-        "group": "B, Rechts- und Beratungskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5200",
-        "name": "Buchhaltung, Steuer-, Betriebsberatung",
-        "group": "B, Rechts- und Beratungskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5210",
-        "name": "Fremdarbeiten",
-        "group": "B, Fremdarbeiten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5211",
-        "name": "Fremdpersonal",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5220",
-        "name": "Instandhaltung, Wartungsvertrag",
-        "group": "B, Reparaturen, Instandsetzung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5300",
-        "name": "Büromaterial",
-        "group": "B, Verwaltungskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5310",
-        "name": "Arbeitskleidung",
-        "group": "B, Arbeitskleidung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5320",
-        "name": "Telefon und Porto",
-        "group": "B, Verwaltungskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5330",
-        "name": "Kosten Datenverarbeitung",
-        "group": "B, Verwaltungskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5340",
-        "name": "Arbeitsrechtsstreitigkeiten",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5350",
-        "name": "Abfindungszahlungen Personal",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5360",
-        "name": "Gebühren und BeiträgeGEMA",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5370",
-        "name": "Getränkesteuer",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5410",
-        "name": "Kosten Finanz- und Geldverkehr",
-        "group": "B, Zinsen, Geldkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5420",
-        "name": "Kosten Kreditkarten",
-        "group": "B, Zinsen, Geldkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5430",
-        "name": "Betriebsversicherungen",
-        "group": "B, Betriebsversicherungen",
-        "chart": "kfz"
-    },
-    {
-        "number": "5440",
-        "name": "Gebühren und Beiträge",
-        "group": "B, Gebühren und Beiträge",
-        "chart": "kfz"
-    },
-    {
-        "number": "5450",
-        "name": "Warenschwund Agentur",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5460",
-        "name": "Warendiebstahl",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5461",
-        "name": "Bruch",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5462",
-        "name": "Verderb",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5463",
-        "name": "Ablauf Mindesthaltbarkeitsdatum",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5464",
-        "name": "Versicherter Einbruchdiebstahl",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5480",
-        "name": "Provisionsaufwendungen",
-        "group": "B, Verkaufskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5500",
-        "name": "Werbekosten",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5510",
-        "name": "Nicht abzugsfähige Bewirtungskosten",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5520",
-        "name": "Reisekosten Unternehmer",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5521",
-        "name": "Fahrtkosten Unternehmer Kilometerpauschale",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5530",
-        "name": "Bewirtung von Geschäftsfreunden",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5540",
-        "name": "Geschenke abzugsfähig",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5550",
-        "name": "Geschenke nicht abzugsfähig",
-        "group": "B, Werbung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5560",
-        "name": "Wartungskosten",
-        "group": "B, Reparaturen, Instandsetzung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5570",
-        "name": "Systembeitrag Kasse",
-        "group": "B, Reparaturen, Instandsetzung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5600",
-        "name": "Kosten für Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5601",
-        "name": "Kosten für Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5610",
-        "name": "Versicherung Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5611",
-        "name": "Versicherung Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5612",
-        "name": "Kfz-Steuer",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5613",
-        "name": "Kfz-Steuer (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5620",
-        "name": "Abschreibungen (Anl., Kfz)Abschreibung Fahrzeuge",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5630",
-        "name": "Abschreibungen (Anl., Kfz)Abschreibung Fahrzeuge (Unternehmer)",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5631",
-        "name": "Kürzung der Anschaffungs- oder Herstellungskosten nach § 7g Abs. 1 und 2 EStG n.F. (für Fahrzeuge)",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5640",
-        "name": "Kosten Vorführwagen",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5650",
-        "name": "Kosten Vermietung PKW, Anhänger",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5660",
-        "name": "Abschreibung Vermietung PKW, Anhänger",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5670",
-        "name": "Leasing Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5671",
-        "name": "Leasing Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5710",
-        "name": "Schadenersatzleistungen, Selbstbeteiligung",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5720",
-        "name": "Fortbildungskosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5730",
-        "name": "Sonstige Personalkosten",
-        "group": "B, Personalkosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5740",
-        "name": "Gewährleistung, Kulanz",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5750",
-        "name": "Fertigstellung, Auslieferung Neuwagen",
-        "group": "B, Verkaufskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5760",
-        "name": "Fertigstellung, Auslieferung Gebrauchtwagen",
-        "group": "B, Verkaufskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5770",
-        "name": "Einstellungen in die Pauschalwertberichtigung zu Forderungen",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5771",
-        "name": "Einstellungen in die Einzelwertberichtigung zu Forderungen © eurodata Seite 1Stand 15.01.",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5780",
-        "name": "Anlagenabgänge (Restbuchwert bei Buchverlust)",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5790",
-        "name": "Außerplanmäßige Abschreibungen auf Anlagevermögen",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5800",
-        "name": "Abschreibungen (Anl., Kfz)Planmäßige Abschreibungen auf Anlagevermögen",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5801",
-        "name": "Abschreibungen (Anl., Kfz)Abschreibung GWG-Pool",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5804",
-        "name": "Abschreibungen (Anl., Kfz)Sofortabschreibung GWG",
-        "group": "B,",
-        "chart": "kfz"
-    },
-    {
-        "number": "5810",
-        "name": "Abschreibungen auf Umlaufvermögen, Forderungsverluste",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5820",
-        "name": "Anlagenabgänge (Restbuchwert bei Buchgewinn)",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "5830",
-        "name": "Personalverpflegung",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5840",
-        "name": "Geschirr",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5850",
-        "name": "Dienstleistungspacht",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5860",
-        "name": "Franchisegebühr",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5870",
-        "name": "Wäsche, Bekleidung",
-        "group": "B, Arbeitskleidung",
-        "chart": "kfz"
-    },
-    {
-        "number": "5875",
-        "name": "Reinigungsmittel",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5880",
-        "name": "Beiträge zur Berufsgenossenschaft",
-        "group": "B, Gebühren und Beiträge",
-        "chart": "kfz"
-    },
-    {
-        "number": "5900",
-        "name": "An Kunden gewährte Nachlässe",
-        "group": "B, Verkaufskosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5910",
-        "name": "Kassenminusdifferenz",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5920",
-        "name": "Betriebsbedingte Warenentnahme (netto)",
-        "group": "B, Hilfs- und Verbrauchsstoffe",
-        "chart": "kfz"
-    },
-    {
-        "number": "5930",
-        "name": "Werkzeuge",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5940",
-        "name": "Sonstige betriebliche Kosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5950",
-        "name": "Wasser und Kanalisation",
-        "group": "B, Strom, Wasser, Kanal",
-        "chart": "kfz"
-    },
-    {
-        "number": "5960",
-        "name": "Hilfs- und Verbauchsstoffe",
-        "group": "B, Hilfs- und Verbrauchsstoffe",
-        "chart": "kfz"
-    },
-    {
-        "number": "5970",
-        "name": "Verpackungskosten Einweg",
-        "group": "B, Hilfs- und Verbrauchsstoffe",
-        "chart": "kfz"
-    },
-    {
-        "number": "5980",
-        "name": "Besteck, Geschirr",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5990",
-        "name": "Betriebsbedarf",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "5999",
-        "name": "Außergewöhnliche Aufwendungen 6 - Warenbestands-, Einkaufs- und Erlöskonten",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "kfz"
-    },
-    {
-        "number": "6000",
-        "name": "A, NeuwagenEinkauf Neuwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6010",
-        "name": "A, VorführwagenEinkauf Vorführwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6020",
-        "name": "A, GebrauchtwagenEinkauf Gebrauchtwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6030",
-        "name": "A, Ersatzteile, ZubehörEinkauf Ersatzteile",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6040",
-        "name": "A, Ersatzteile, ZubehörEinkauf Zubehör",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6050",
-        "name": "A, Schmierstoffe (Eigenwaren)Einkauf Schmierstoffe",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6060",
-        "name": "A, Andere WarenEinkauf Lackiermaterial",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6070",
-        "name": "A, Andere WarenEinkauf Kleinmaterial",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6080",
-        "name": "A, Andere WarenEinkauf Sonstige Handelswaren",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6090",
-        "name": "A, Andere WarenEinkauf Sonstige Handelswaren",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6100",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6150",
-        "name": "A, Andere WarenEinkauf Sonstige Waren, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6160",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6190",
-        "name": "A, Andere WarenEinkauf Sonstige Waren, USt erm.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6200",
-        "name": "Warenbezugs- und Nebenkosten, USt voll",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "6210",
-        "name": "Warenbezugs- und Nebenkosten, USt erm.",
-        "group": "B, Sonstige Kosten",
-        "chart": "kfz"
-    },
-    {
-        "number": "6220",
-        "name": "A, Andere WarenInnergemeinschaftlicher Erwerb, VSt und USt, voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6230",
-        "name": "A, Andere WarenInnergemeinschaftlicher Erwerb, VSt und USt, erm.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6240",
-        "name": "A, NeuwagenInnergemeinschaftlicher Erwerb von Neufahrzeugen VSt und USt, voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6250",
-        "name": "A, Sonstige ErlöseLieferantenskonti, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6260",
-        "name": "A, Sonstige ErlöseLieferantenskonti, USt erm.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6270",
-        "name": "A, Sonstige ErlöseRabatte, Nachlässe",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6280",
-        "name": "A, Sonstige ErlöseErhaltene Boni",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6290",
-        "name": "A, Sonstige ErlöseSonstige Erlöse",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6300",
-        "name": "A, NeuwagenBestand Neuwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6310",
-        "name": "A, VorführwagenBestand Vorführwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6320",
-        "name": "A, GebrauchtwagenBestand Gebrauchtwagen",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6330",
-        "name": "A, Ersatzteile, ZubehörBestand Ersatzteile",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6340",
-        "name": "A, Ersatzteile, ZubehörBestand Zubehör",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6350",
-        "name": "A, Schmierstoffe (Eigenwaren)Bestand Schmierstoffe",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6360",
-        "name": "A, Andere WarenBestand Lackiermaterial",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6370",
-        "name": "A, Andere WarenBestand Kleinmaterial",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6380",
-        "name": "A, Andere WarenBestand Sonstige Waren",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6390",
-        "name": "A, Andere WarenBestand Sonstige Waren",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6400",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6450",
-        "name": "A, Andere WarenBestand Waren (USt voll)",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6460",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6490",
-        "name": "A, Andere WarenBestand Waren (USt erm.)",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6500",
-        "name": "A, NeuwagenErlöse Neuwagen, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6510",
-        "name": "A, VorführwagenErlöse Vorführwagen, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6520",
-        "name": "A, GebrauchtwagenErlöse Gebrauchtwagen, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6530",
-        "name": "A, Ersatzteile, ZubehörErlöse Ersatzteile, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6540",
-        "name": "A, Ersatzteile, ZubehörErlöse Zubehör, USt voll B © eurodata Seite 2 Stand 15.01.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6550",
-        "name": "A, Schmierstoffe (Eigenwaren)Erlöse Schmierstoffe, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6560",
-        "name": "A, Ersatzteile, ZubehörErlöse Austauschteile, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6570",
-        "name": "A, Ersatzteile, ZubehörErlöse Kleinmaterial, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6580",
-        "name": "A, Andere WarenErlöse Sonstige Waren, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6590",
-        "name": "A, FremdleistungenErlöse Fremdleistungen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6600",
-        "name": "A, DienstleistungenErlöse Lohn Werkstatt, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6610",
-        "name": "A, DienstleistungenErlöse Lohn Lackierung, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6620",
-        "name": "A, DienstleistungenErlöse Dienstleistungen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6621",
-        "name": "A, DienstleistungenErlöse Wagenpflege, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6630",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6640",
-        "name": "A, DienstleistungenErlöse Dienstleistungen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6650",
-        "name": "A, Ersatzteile, ZubehörErlöse Garantieleistungen Teile, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6660",
-        "name": "A, Ersatzteile, ZubehörErlöse Garantieleistungen Teile, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6670",
-        "name": "A, GarantieleistungenErlöse Garantiedienstleistungen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6680",
-        "name": "A, GarantieleistungenErlöse Garantiedienstleistungen, USt frei",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6690",
-        "name": "A, DienstleistungenErlöse Dienstleistungen, USt frei",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6700",
-        "name": "A, Provisionen KfzErlöse Provision Neuwagen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6710",
-        "name": "A, Provisionen KfzErlöse Provision Gebrauchtwagen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6720",
-        "name": "A, Andere ProvisionenErlöse Provision Agenturgeschäfte, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6730",
-        "name": "A, Andere ProvisionenErlöse Versicherungsprovisionen, USt frei",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6740",
-        "name": "A, NeuwagenErlöse Neuwagen, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6750",
-        "name": "A, VorführwagenErlöse Vorführwagen, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6760",
-        "name": "A, GebrauchtwagenErlöse Gebrauchtwagen, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6770",
-        "name": "A, Ersatzteile, ZubehörErlöse Ersatzteile, Zubehör, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6780",
-        "name": "A, Schmierstoffe (Eigenwaren)Erlöse Schmierstoffe, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6790",
-        "name": "A, Andere WarenErlöse Andere Waren, USt frei B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6800",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6840",
-        "name": "A, Andere WarenErlöse Waren, USt voll B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6850",
-        "name": "A, NeuwagenSteuerfreie innergemeinschaftliche Lieferungen von Neufahrzeugen an Abnehmer ohne USt-IdNr B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6855",
-        "name": "A, Andere WarenSteuerfreie innergemeinschaftliche Lieferungen B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6860",
-        "name": "bis",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6880",
-        "name": "A, Andere WarenErlöse Waren, USt erm. B",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6890",
-        "name": "A, Sonstige ErlöseSonstige Erlöse, USt erm.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6900",
-        "name": "A, Sonstige ErlöseErlöse aus Werbekostenzuschüssen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6910",
-        "name": "A, Sonstige ErlöseVerkaufshilfen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6920",
-        "name": "A, Sonstige ErlöseSonstige Erlöse - Kfz-Bereich, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6925",
-        "name": "A, Sonstige ErlöseVermietung PKW, Anhänger, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6930",
-        "name": "A, Andere ErlöseAndere Erlöse, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6940",
-        "name": "A, Außerordentliche ErträgeAußergewöhnliche Erlöse, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6950",
-        "name": "A, Außerordentliche ErträgeErlöse aus Anlageverkäufen (bei Buchgewinn), USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6955",
-        "name": "A, Außerordentliche ErträgeErlöse aus Anlageverkäufen (bei Buchverlust), USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6960",
-        "name": "A, NeuwagenErlösschmälerungen Neuwagen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6970",
-        "name": "A, GebrauchtwagenErlösschmälerungen Gebrauchtwagen, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6980",
-        "name": "A, Sonstige KostenErlösschmälerungen Sonstige, USt voll",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "6990",
-        "name": "A, Sonstige KostenForderungsausfälle © eurodata Seite 3Stand 15.01.",
-        "group": null,
-        "chart": "kfz"
-    },
-    {
-        "number": "5000",
-        "name": "Bruttolohn Festangestellte",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5010",
-        "name": "Bruttolohn Aushilfen",
-        "group": "B, Aushilfen",
-        "chart": "gastro"
-    },
-    {
-        "number": "5015",
-        "name": "Löhne für Minijobs",
-        "group": "B, Aushilfen",
-        "chart": "gastro"
-    },
-    {
-        "number": "5020",
-        "name": "AG-Anteile Sozialversicherung",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5021",
-        "name": "Pauschale Lohnsteuer",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5030",
-        "name": "Freiwillige soziale Aufwendungen, lohnsteuerpflichtig",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5040",
-        "name": "Freiwillige soziale Aufwendungen, lohnsteuerfrei",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5050",
-        "name": "Vermögenswirksame Leistungen (Arbeitgeberzuschuss)",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5060",
-        "name": "Ehegattengehalt (brutto)",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5070",
-        "name": "Reisekosten Arbeitnehmer",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5080",
-        "name": "Betriebliche Altersversorgung (Arbeitgeberzuschuss)",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5086",
-        "name": "Krankengeldzuschüsse",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5087",
-        "name": "Zuschüsse \/ Erstattungen Agentur für Arbeit",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5088",
-        "name": "Erstattungen Aufwendungsausgleichsgesetz",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5089",
-        "name": "Erstattungen Personalkosten, steuerfrei",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5090",
-        "name": "Personalinserate",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5100",
-        "name": "Mieten und Pachten",
-        "group": "B, Mieten, Pachten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5101",
-        "name": "Gastronomiepacht",
-        "group": "B, Mieten, Pachten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5110",
-        "name": "Grundbesitzabgaben",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5120",
-        "name": "Reparaturen",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5130",
-        "name": "Strom",
-        "group": "B, Strom, Gas",
-        "chart": "gastro"
-    },
-    {
-        "number": "5140",
-        "name": "Gerätemiete, Leasing",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5150",
-        "name": "Heizung",
-        "group": "B, Heizung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5160",
-        "name": "Reinigung",
-        "group": "B, Wasser, Kanalisation, Entsorgung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5170",
-        "name": "Entsorgung",
-        "group": "B, Wasser, Kanalisation, Entsorgung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5180",
-        "name": "Sonstige Raumkosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5190",
-        "name": "Rechtsschutzversicherung, Rechtsberatung",
-        "group": "B, Verwaltungskosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5200",
-        "name": "Buchhaltung, Steuer-, Betriebsberatung",
-        "group": "B, Verwaltungskosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5210",
-        "name": "Fremdarbeiten",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5211",
-        "name": "Fremdpersonal",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5220",
-        "name": "Instandhaltung, Wartungsvertrag",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5300",
-        "name": "Büromaterial",
-        "group": "B, Verwaltungskosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5310",
-        "name": "Arbeitskleidung",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5320",
-        "name": "Telefon und Porto",
-        "group": "B, Verwaltungskosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5330",
-        "name": "Kosten Datenverarbeitung",
-        "group": "B, Verwaltungskosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5340",
-        "name": "Arbeitsrechtsstreitigkeiten",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5350",
-        "name": "Abfindungszahlungen Personal",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5360",
-        "name": "GEMA",
-        "group": "B, Versicherungen, Beiträge",
-        "chart": "gastro"
-    },
-    {
-        "number": "5370",
-        "name": "Getränkesteuer",
-        "group": "B, Betr. Steuern, Getränkesteuer",
-        "chart": "gastro"
-    },
-    {
-        "number": "5410",
-        "name": "Kosten Finanz- und Geldverkehr",
-        "group": "B, Zinsen, Geldkosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5420",
-        "name": "Kosten Kreditkarten",
-        "group": "B, Zinsen, Geldkosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5430",
-        "name": "Betriebsversicherungen",
-        "group": "B, Versicherungen, Beiträge",
-        "chart": "gastro"
-    },
-    {
-        "number": "5440",
-        "name": "Gebühren und Beiträge",
-        "group": "B, Versicherungen, Beiträge",
-        "chart": "gastro"
-    },
-    {
-        "number": "5450",
-        "name": "Warenschwund Agentur",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5460",
-        "name": "Warendiebstahl",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5461",
-        "name": "Bruch",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5462",
-        "name": "Verderb",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5463",
-        "name": "Ablauf Mindesthaltbarkeitsdatum",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5464",
-        "name": "Versicherter Einbruchdiebstahl",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5480",
-        "name": "Provisionsaufwendungen",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5500",
-        "name": "Werbekosten",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5510",
-        "name": "Nicht abzugsfähige Bewirtungskosten",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5520",
-        "name": "Reisekosten Unternehmer",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5521",
-        "name": "Fahrtkosten Unternehmer Kilometerpauschale",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5530",
-        "name": "Bewirtung von Geschäftsfreunden",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5540",
-        "name": "Geschenke abzugsfähig",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5550",
-        "name": "Geschenke nicht abzugsfähig",
-        "group": "B, Werbung, Gästeunterhaltung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5560",
-        "name": "Wartungskosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5570",
-        "name": "Systembeitrag Kasse",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5600",
-        "name": "Kosten für Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5601",
-        "name": "Kosten für Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5610",
-        "name": "Versicherung Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5611",
-        "name": "Versicherung Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5612",
-        "name": "Kfz-Steuer",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5613",
-        "name": "Kfz-Steuer (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5620",
-        "name": "Abschreibung Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5630",
-        "name": "Abschreibung Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5631",
-        "name": "Kürzung der Anschaffungs- oder Herstellungskosten nach § 7g Abs. 1 und 2 EStG n.F. (für Fahrzeuge)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5640",
-        "name": "Kosten Vorführwagen",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5650",
-        "name": "Kosten Vermietung PKW, Anhänger",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5660",
-        "name": "Abschreibung Vermietung PKW, Anhänger",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5670",
-        "name": "Leasing Fahrzeuge",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5671",
-        "name": "Leasing Fahrzeuge (Unternehmer)",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5710",
-        "name": "Schadenersatzleistungen, Selbstbeteiligung",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5720",
-        "name": "Fortbildungskosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5730",
-        "name": "Sonstige Personalkosten",
-        "group": "B, Personal",
-        "chart": "gastro"
-    },
-    {
-        "number": "5740",
-        "name": "Gewährleistung, Kulanz",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5750",
-        "name": "Fertigstellung, Auslieferung Neufahrzeuge",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5760",
-        "name": "Fertigstellung, Auslieferung Gebrauchtfahrzeuge",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5770",
-        "name": "Einstellungen in die Pauschalwertberichtigung zu Forderungen",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5771",
-        "name": "Einstellungen in die Einzelwertberichtigung zu Forderungen B, Sonstige Kosten © eurodata Seite 1Stand 15.01.",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "5780",
-        "name": "Anlagenabgänge (Restbuchwert bei Buchverlust)",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5790",
-        "name": "Außerplanmäßige Abschreibungen auf Anlagevermögen",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5800",
-        "name": "Planmäßige Abschreibungen auf Anlagevermögen",
-        "group": "B, Abschreibungen",
-        "chart": "gastro"
-    },
-    {
-        "number": "5801",
-        "name": "Abschreibung GWG-Pool",
-        "group": "B, Abschreibungen",
-        "chart": "gastro"
-    },
-    {
-        "number": "5804",
-        "name": "Sofortabschreibung GWG",
-        "group": "B, Abschreibungen",
-        "chart": "gastro"
-    },
-    {
-        "number": "5810",
-        "name": "Abschreibungen auf Umlaufvermögen, Forderungsverluste",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5820",
-        "name": "Anlagenabgänge (Restbuchwert bei Buchgewinn)",
-        "group": "B, Außerordentlicher Aufwand",
-        "chart": "gastro"
-    },
-    {
-        "number": "5830",
-        "name": "Personalverpflegung",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5840",
-        "name": "Geschirr",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5850",
-        "name": "Dienstleistungspacht",
-        "group": "B, Mieten, Pachten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5860",
-        "name": "Franchisegebühr",
-        "group": "B, Mieten, Pachten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5870",
-        "name": "Wäsche, Bekleidung",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5875",
-        "name": "Reinigungsmittel",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5880",
-        "name": "Beiträge zur Berufsgenossenschaft",
-        "group": "B, Versicherungen, Beiträge",
-        "chart": "gastro"
-    },
-    {
-        "number": "5900",
-        "name": "An Kunden gewährte Nachlässe",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5910",
-        "name": "Kassenminusdifferenz",
-        "group": "B, Kassenminusdifferenz",
-        "chart": "gastro"
-    },
-    {
-        "number": "5920",
-        "name": "Betriebsbedingte Warenentnahme (netto)",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5930",
-        "name": "Werkzeuge",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5940",
-        "name": "Sonstige betriebliche Kosten",
-        "group": "B, Sonstige Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "5950",
-        "name": "Wasser und Kanalisation",
-        "group": "B, Wasser, Kanalisation, Entsorgung",
-        "chart": "gastro"
-    },
-    {
-        "number": "5960",
-        "name": "Hilfs- und Verbauchsstoffe",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5970",
-        "name": "Verpackungskosten Einweg",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5980",
-        "name": "Besteck, Geschirr",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5990",
-        "name": "Betriebsbedarf",
-        "group": "B, Betriebsbedarf",
-        "chart": "gastro"
-    },
-    {
-        "number": "5999",
-        "name": "Außergewöhnliche Aufwendungen",
-        "group": "B, Außerordentlicher Aufwand 6 - Warenbestands-, Einkaufs- und Erlöskonten",
-        "chart": "gastro"
-    },
-    {
-        "number": "6000",
-        "name": "Erlöse Säfte, USt voll A, Alkoholfreie Getränke 1 B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6010",
-        "name": "Erlöse Cola, Wasser, Mix, USt voll A, Alkoholfreie Getränke 2 B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6020",
-        "name": "Erlöse Fassbier, USt vollA, Fassbier B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6030",
-        "name": "Erlöse Flaschen-, Dosenbier, USt voll A, Flaschen-, Dosenbier B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6040",
-        "name": "Erlöse Wein, Sekt, USt vollA, Sonstige alkoholische GetränkeB",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6050",
-        "name": "Erlöse Spirituosen, USt vollA, Sonstige alkoholische GetränkeB",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6060",
-        "name": "Erlöse Sonstige alkoholische Getränke, USt voll A, Sonstige alkoholische GetränkeB",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6070",
-        "name": "Erlöse Kaffee, Kaffeeautomat, Tee, USt voll A, Kaffee, Heißgetränke B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6071",
-        "name": "Erlöse Kaffee, Kaffeeautomat, Tee, USt erm. A, Kaffee, Heißgetränke B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6090",
-        "name": "Erlöse Milch, Milchmix, Kakao, Shakes, USt voll A, Milch, Mix, Kakao, ShakesB",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6100",
-        "name": "Erlöse Milch, Milchmix, Kakao, Shakes, USt erm. A, Milch, Mix, Kakao, ShakesB",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6110",
-        "name": "Erlöse Küche, warme Speisen, USt voll A, Küche, warme Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6120",
-        "name": "Erlöse Küche, warme Speisen, USt erm. A, Küche, warme Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6130",
-        "name": "Erlöse Küche, kalte Speisen, USt voll A, Küche, kalte Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6140",
-        "name": "Erlöse Küche, kalte Speisen, USt erm. A, Küche, kalte Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6150",
-        "name": "Erlöse Fast-Food, Hamburger, USt voll A, Fast-Food, Hamburger B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6160",
-        "name": "Erlöse Fast-Food, Hamburger, USt erm. A, Fast-Food, Hamburger B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6170",
-        "name": "Erlöse Küche, Sonstiges, USt voll A, Küche, warme Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6180",
-        "name": "Erlöse Küche, Sonstiges, USt erm. A, Küche, warme Speisen B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6190",
-        "name": "Erlöse Backwaren, USt erm.A, Konditorei, Backwaren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6191",
-        "name": "Erlöse Backwaren, USt vollA, Konditorei, Backwaren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6200",
-        "name": "Erlöse Speiseeis, Eis verpackt, Dessert, USt voll A, Eis, Dessert B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6210",
-        "name": "Erlöse Speiseeis, Eis verpackt, Dessert, USt erm. A, Eis, Dessert B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6220",
-        "name": "Erlöse Süßwaren, USt vollA, Süßwaren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6230",
-        "name": "Erlöse Süßwaren, USt erm.A, Süßwaren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6240",
-        "name": "Erlöse Tabakwaren, USt vollA, Tabakwaren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6250",
-        "name": "Erlöse Automaten, Provisionen, USt voll A, Einnahmen aus Automaten",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6260",
-        "name": "Erlöse Sonstige Waren, USt voll A, Sonstige Waren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6270",
-        "name": "Erlöse Sonstige Waren, USt erm. A, Sonstige Waren B",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6280",
-        "name": "Erlöse Leergut, Abfallverwertung, USt voll A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6290",
-        "name": "Erlöse Personalverpflegung, USt voll A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6300",
-        "name": "Erlöse Telefon, USt vollA, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6310",
-        "name": "Erlöse Toiletten, Bad, Dusche, USt voll A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6315",
-        "name": "Vermietung PKW, Anhänger, USt voll A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6320",
-        "name": "Erhaltene Boni, Rabatte, USt voll A, Sonstige Einnahmen, Personalverpflegung © eurodata Seite 2 Stand 15.01.",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6330",
-        "name": "Erhaltene Boni, Rabatte, USt erm. A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6340",
-        "name": "Erlöse Sonstiges, USt vollA, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6350",
-        "name": "Erlöse Sonstiges, USt erm.A, Sonstige Einnahmen, Personalverpflegung",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6360",
-        "name": "Kassenplusdifferenz A, Kassenplusdifferenz",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6365",
-        "name": "Kfz-Nutzungsanteile Arbeitnehmer, USt voll",
-        "group": "B, Kfz-Kosten",
-        "chart": "gastro"
-    },
-    {
-        "number": "6370",
-        "name": "Außergewöhnliche Erlöse, USt voll A, Außerordentlicher Ertrag",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6375",
-        "name": "Pachterstattung (unbewegliche Wirtschaftsgüter), USt voll",
-        "group": "B, Mieten, Pachten",
-        "chart": "gastro"
-    },
-    {
-        "number": "6380",
-        "name": "Erlöse aus Anlageverkäufen (bei Buchgewinn), USt voll A, Außerordentlicher Ertrag",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6385",
-        "name": "Erlöse aus Anlageverkäufen (bei Buchverlust), USt voll A, Außerordentlicher Ertrag",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6390",
-        "name": "Erlöse aus Zinsen Diskontspesen, USt voll A, Außerordentlicher Ertrag",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6400",
-        "name": "Einkauf Säfte A, Alkoholfreie Getränke 1",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6410",
-        "name": "Einkauf Cola, Wasser, MixA, Alkoholfreie Getränke 2",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6420",
-        "name": "Einkauf Fassbier A, Fassbier",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6430",
-        "name": "Einkauf Flaschen-, DosenbierA, Flaschen-, Dosenbier",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6440",
-        "name": "Einkauf Wein, Sekt A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6450",
-        "name": "Einkauf Spirituosen A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6460",
-        "name": "Einkauf Sonstige alkoholische Getränke A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6470",
-        "name": "Einkauf Kaffee,Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6480",
-        "name": "Einkauf Kaffee,Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6490",
-        "name": "Einkauf Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6500",
-        "name": "Einkauf Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6510",
-        "name": "Einkauf Lebensmittel, Fast-Food A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6520",
-        "name": "Einkauf Fleisch- und Wurstwaren A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6530",
-        "name": "Einkauf Käse, Butter, MilchA, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6540",
-        "name": "Einkauf Obst und Gemüse A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6550",
-        "name": "bis",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6580",
-        "name": "Einkauf Sonstiges A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6590",
-        "name": "Einkauf Backwaren A, Konditorei, Backwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6600",
-        "name": "Einkauf Speiseeis, Eis verpackt, Dessert A, Eis, Dessert",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6610",
-        "name": "Einkauf Speiseeis, DessertA, Eis, Dessert",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6620",
-        "name": "Einkauf Süßwaren A, Süßwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6630",
-        "name": "Einkauf Süßwaren A, Süßwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6640",
-        "name": "Einkauf Tabakwaren A, Tabakwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6650",
-        "name": "Einkauf Tabakwaren A, Tabakwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6660",
-        "name": "Einkauf Sonstige Waren USt voll A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6670",
-        "name": "Einkauf Sonstige Waren USt erm. A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6680",
-        "name": "Einkauf Sonstige Waren A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6690",
-        "name": "Einkauf Sonstige Waren A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6700",
-        "name": "Bestand Säfte A, Alkoholfreie Getränke 1",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6710",
-        "name": "Bestand Cola, Wasser, MixA, Alkoholfreie Getränke 2",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6720",
-        "name": "Bestand Fassbier A, Fassbier",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6730",
-        "name": "Bestand Flaschen-, DosenbierA, Flaschen-, Dosenbier",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6740",
-        "name": "Bestand Wein, Sekt A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6750",
-        "name": "Bestand Spirituosen A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6760",
-        "name": "Bestand Sonstige alkoholische Getränke A, Sonstige alkoholische Getränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6770",
-        "name": "Bestand Kaffee, Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6780",
-        "name": "Bestand Kaffee, Tee für Heißgetränkeautomat A, Kaffee, Heißgetränke",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6790",
-        "name": "Bestand Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6800",
-        "name": "Bestand Milch, Milchmix, Kakao, Shakes A, Milch, Mix, Kakao, Shakes",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6810",
-        "name": "Bestand Lebenmittel, Fast-Food A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6820",
-        "name": "Bestand Fleisch- und Wurstwaren A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6830",
-        "name": "Bestand Käse, Butter, MilchA, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6840",
-        "name": "Bestand Obst und Gemüse A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6850",
-        "name": "bis",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6880",
-        "name": "Bestand Sonstiges A, Summe Küche, Lebensmittel",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6890",
-        "name": "Bestand Backwaren A, Konditorei, Backwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6900",
-        "name": "Bestand Speiseeis, Eis verpackt, Dessert A, Eis, Dessert",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6910",
-        "name": "Bestand Speiseeis, DessertA, Eis, Dessert",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6920",
-        "name": "Bestand Süßwaren A, Süßwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6930",
-        "name": "Bestand Süßwaren A, Süßwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6940",
-        "name": "Bestand Tabakwaren A, Tabakwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6950",
-        "name": "Bestand Tabakwaren A, Tabakwaren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6960",
-        "name": "Bestand Sonstige Waren USt voll A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6970",
-        "name": "Bestand Sonstige Waren USt erm. A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6980",
-        "name": "Bestand Sonstige Waren A, Sonstige Waren",
-        "group": null,
-        "chart": "gastro"
-    },
-    {
-        "number": "6990",
-        "name": "Bestand Sonstige Waren A, Sonstige Waren © eurodata Seite 3Stand 15.01.",
-        "group": null,
-        "chart": "gastro"
     }
 ]
