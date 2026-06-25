@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BankAccounts\Tables;
 
 use App\Enums\ImportSource;
+use App\Filament\Resources\BankTransactions\BankTransactionResource;
 use App\Models\BankAccount;
 use App\Services\Bank\BankImportService;
 use App\Services\Bank\FinTsErrorTranslator;
@@ -45,6 +46,13 @@ class BankAccountsTable
                 TernaryFilter::make('active')->label('Aktiv'),
             ])
             ->recordActions([
+                Action::make('umsaetze')
+                    ->label('Umsätze')
+                    ->icon('heroicon-o-list-bullet')
+                    ->color('info')
+                    ->url(fn (BankAccount $record): string => BankTransactionResource::getUrl('index', [
+                        'tableFilters' => ['bank_account_id' => ['value' => $record->id]],
+                    ])),
                 self::importAction(),
                 self::fintsAction(),
                 EditAction::make(),

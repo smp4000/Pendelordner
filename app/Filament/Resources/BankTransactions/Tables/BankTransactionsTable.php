@@ -10,8 +10,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Collection;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -19,6 +19,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -148,16 +150,45 @@ class BankTransactionsTable
                     ),
 
                 TernaryFilter::make('reviewed')
-                    ->label('Geprüft'),
+                    ->label('Geprüft-Status')
+                    ->placeholder('Alle')
+                    ->trueLabel('Geprüfte')
+                    ->falseLabel('Ungeprüfte'),
 
-                Filter::make('period')
+                Filter::make('zeitraum')
                     ->schema([
-                        DatePicker::make('from')->label('Von'),
-                        DatePicker::make('until')->label('Bis'),
+                        Select::make('preset')
+                            ->label('Zeitraum')
+                            ->options([
+                                'last_7' => 'Letzte 7 Tage',
+                                'last_30' => 'Letzte 30 Tage',
+                                'last_3m' => 'Letzte 3 Monate',
+                                'last_6m' => 'Letzte 6 Monate',
+                                'last_12m' => 'Letzte 12 Monate',
+                                'this_month' => 'Aktueller Monat',
+                                'this_quarter' => 'Aktuelles Quartal',
+                                'this_halfyear' => 'Aktuelles Halbjahr',
+                                'this_year' => 'Aktuelles Jahr',
+                                'last_month' => 'Vormonat',
+                            ])
+                            ->placeholder('Alle'),
+                        DatePicker::make('from')->label('Von (individuell)')->native(false)->displayFormat('d.m.Y'),
+                        DatePicker::make('until')->label('Bis (individuell)')->native(false)->displayFormat('d.m.Y'),
                     ])
-                    ->query(fn (Builder $q, array $data): Builder => $q
-                        ->when($data['from'] ?? null, fn (Builder $q, $d) => $q->whereDate('booking_date', '>=', $d))
-                        ->when($data['until'] ?? null, fn (Builder $q, $d) => $q->whereDate('booking_date', '<=', $d))),
+                    ->query(function (Builder $q, array $data): Builder {
+                        [$from, $until] = self::resolvePeriod($data['preset'] ?? null);
+
+                        return $q
+                            ->when($data['from'] ?? $from, fn (Builder $q, $d) => $q->whereDate('booking_date', '>=', $d))
+                            ->when($data['until'] ?? $until, fn (Builder $q, $d) => $q->whereDate('booking_date', '<=', $d));
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if ($data['from'] ?? false) {
+                            return 'Zeitraum: individuell';
+                        }
+
+                        return $data['preset'] ?? null ? 'Zeitraum gesetzt' : null;
+                    }),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -180,5 +211,35 @@ class BankTransactionsTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Wandelt ein Zeitraum-Preset in [von, bis] (Y-m-d) um.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private static function resolvePeriod(?string $preset): array
+    {
+        if (! $preset) {
+            return [null, null];
+        }
+
+        $now = Carbon::now();
+
+        return match ($preset) {
+            'last_7' => [$now->copy()->subDays(7)->toDateString(), $now->toDateString()],
+            'last_30' => [$now->copy()->subDays(30)->toDateString(), $now->toDateString()],
+            'last_3m' => [$now->copy()->subMonths(3)->toDateString(), $now->toDateString()],
+            'last_6m' => [$now->copy()->subMonths(6)->toDateString(), $now->toDateString()],
+            'last_12m' => [$now->copy()->subMonths(12)->toDateString(), $now->toDateString()],
+            'this_month' => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString()],
+            'this_quarter' => [$now->copy()->firstOfQuarter()->toDateString(), $now->copy()->lastOfQuarter()->toDateString()],
+            'this_halfyear' => $now->month <= 6
+                ? [$now->copy()->startOfYear()->toDateString(), $now->copy()->month(6)->endOfMonth()->toDateString()]
+                : [$now->copy()->month(7)->startOfMonth()->toDateString(), $now->copy()->endOfYear()->toDateString()],
+            'this_year' => [$now->copy()->startOfYear()->toDateString(), $now->copy()->endOfYear()->toDateString()],
+            'last_month' => [$now->copy()->subMonth()->startOfMonth()->toDateString(), $now->copy()->subMonth()->endOfMonth()->toDateString()],
+            default => [null, null],
+        };
     }
 }
