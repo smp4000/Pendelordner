@@ -32,6 +32,7 @@ class PanelSmokeTest extends TestCase
             '/admin/datev-export-seite',    // Modul 14 (DATEV-Export)
             '/admin/auswertungen',          // Modul 10 (Auswertungen)
             '/admin/fints-konten',          // Modul 1 (FinTS-Konten interaktiv)
+            '/admin/umsaetze-importieren',  // Modul 1 (Datei-Upload-Import)
         ];
 
         foreach ($pages as $url) {
