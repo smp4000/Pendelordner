@@ -291,7 +291,10 @@
                             {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
                             <div wire:key="pdf-{{ $receipt->id }}" x-data="pdfViewer(@js($receipt->preview_url))" x-init="load()"
                                 style="height:80vh;overflow:auto;background:#525659;border-radius:.5rem;">
-                                <div x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
+                                {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
+                                     bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
+                                     bleiben und nicht weggemorpht werden. --}}
+                                <div wire:ignore x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
                                 <template x-if="error">
                                     <div style="color:#fff;padding:1rem;text-align:center;">
                                         Inline-Vorschau nicht möglich.
