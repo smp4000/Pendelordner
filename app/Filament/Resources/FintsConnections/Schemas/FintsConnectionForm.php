@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\FintsConnections\Schemas;
 
+use App\Models\BankPreset;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -16,6 +18,25 @@ class FintsConnectionForm
                 Section::make('Bankzugang')
                     ->columns(2)
                     ->schema([
+                        Select::make('bank_preset')
+                            ->label('Bank-Vorlage')
+                            ->options(BankPreset::orderBy('sort_order')->pluck('name', 'id'))
+                            ->searchable()
+                            ->dehydrated(false) // reines Hilfsfeld, nicht speichern
+                            ->live()
+                            ->helperText('Optional: Bank wählen, dann werden URL und HBCI-Version automatisch eingetragen.')
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $preset = BankPreset::find($state);
+                                if (! $preset) {
+                                    return;
+                                }
+                                $set('fints_url', $preset->fints_url);
+                                $set('hbci_version', $preset->hbci_version);
+                                if (blank($get('label'))) {
+                                    $set('label', $preset->name);
+                                }
+                            })
+                            ->columnSpanFull(),
                         TextInput::make('label')->label('Bezeichnung')->required()
                             ->placeholder('z. B. VR Bank Fulda'),
                         TextInput::make('bank_code')->label('Bankleitzahl (BLZ)')->required(),
