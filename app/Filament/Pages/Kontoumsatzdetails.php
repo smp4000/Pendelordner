@@ -563,10 +563,32 @@ class Kontoumsatzdetails extends Page
         if (! $transaction) {
             return;
         }
+
+        // Nächsten ungeprüften Satz ermitteln, BEVOR der aktuelle aus der
+        // Liste fällt – damit die Bearbeitung sauber auf den nächsten springt
+        // statt den geprüften Satz neu einzusortieren.
+        $nextId = $this->neighbourId();
+
         $transaction->reviewed = true;
         $transaction->recalculateStatus();
 
+        if ($nextId) {
+            $this->selectTransaction($nextId);
+        }
+
         Notification::make()->title('Umsatz als geprüft markiert')->success()->send();
+    }
+
+    /** Id des nächsten (sonst vorherigen) Umsatzes in der aktuellen Liste. */
+    private function neighbourId(): ?int
+    {
+        $ids = $this->openTransactions->pluck('id')->all();
+        $i = array_search($this->selectedTransactionId, $ids, true);
+        if ($i === false) {
+            return $ids[0] ?? null;
+        }
+
+        return $ids[$i + 1] ?? $ids[$i - 1] ?? null;
     }
 
     public function togglePaid(): void
