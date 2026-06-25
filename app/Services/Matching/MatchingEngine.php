@@ -40,6 +40,7 @@ class MatchingEngine
             $transaction->supplier_id ??= $rule->supplier_id;
             $transaction->category_id ??= $rule->category_id;
             $transaction->cost_center_id ??= $rule->cost_center_id;
+            $transaction->ledger_account_id ??= $rule->ledger_account_id;
             $transaction->business_id ??= $rule->business_id;
 
             if ($persist) {
@@ -161,6 +162,50 @@ class MatchingEngine
         }
 
         return round(min($score, 100), 1);
+    }
+
+    /**
+     * Wendet eine einzelne Regel rückwirkend auf vorhandene Umsätze an
+     * (z. B. direkt nach dem Erstellen einer Regel aus einem Umsatz). Es
+     * werden nur leere Felder gefüllt; bereits gesetzte Zuordnungen bleiben.
+     * Gibt die Anzahl der geänderten Umsätze zurück.
+     */
+    public function applyRuleToExisting(MatchingRule $rule, bool $onlyUnreviewed = true): int
+    {
+        $count = 0;
+
+        BankTransaction::query()
+            ->when($onlyUnreviewed, fn ($q) => $q->where('reviewed', false))
+            ->chunkById(500, function ($transactions) use ($rule, &$count) {
+                foreach ($transactions as $transaction) {
+                    if (! $this->ruleMatches($rule, $transaction)) {
+                        continue;
+                    }
+
+                    $before = [
+                        $transaction->supplier_id, $transaction->category_id,
+                        $transaction->cost_center_id, $transaction->ledger_account_id,
+                    ];
+
+                    $transaction->supplier_id ??= $rule->supplier_id;
+                    $transaction->category_id ??= $rule->category_id;
+                    $transaction->cost_center_id ??= $rule->cost_center_id;
+                    $transaction->ledger_account_id ??= $rule->ledger_account_id;
+
+                    $after = [
+                        $transaction->supplier_id, $transaction->category_id,
+                        $transaction->cost_center_id, $transaction->ledger_account_id,
+                    ];
+
+                    if ($before !== $after) {
+                        $transaction->saveQuietly();
+                        $rule->registerHit();
+                        $count++;
+                    }
+                }
+            });
+
+        return $count;
     }
 
     private function ruleMatches(MatchingRule $rule, BankTransaction $transaction): bool

@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\ImportSource;
 use App\Models\BankAccount;
 use App\Models\Business;
+use App\Models\BankTransaction;
 use App\Models\Category;
+use App\Models\MatchingRule;
 use App\Models\Receipt;
 use App\Services\Bank\BankImportService;
 use App\Services\Bank\Parsers\CamtParser;
@@ -90,6 +92,40 @@ class ServicesTest extends TestCase
         $this->assertSame(0, $log->error_count);
         $this->assertSame(1, $log->new_count); // wiederhergestellt zählt als neu aktiv
         $this->assertSame(1, $account->bankTransactions()->count());
+    }
+
+    public function test_regel_wird_auf_vorhandene_umsaetze_angewendet(): void
+    {
+        $account = $this->account();
+        $category = Category::firstOrCreate(['name' => 'Versicherung'], ['active' => true]);
+
+        $make = fn (bool $reviewed) => BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'business_id' => $account->business_id,
+            'booking_date' => '2026-06-01',
+            'counterparty' => 'Allianz Versicherungs-AG',
+            'purpose' => 'Vertrag',
+            'amount' => -120.27,
+            'reviewed' => $reviewed,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $offen = $make(false);
+        $geprueft = $make(true);
+
+        $rule = MatchingRule::create([
+            'pattern' => 'Allianz',
+            'pattern_type' => 'counterparty',
+            'category_id' => $category->id,
+            'priority' => 10,
+            'active' => true,
+        ]);
+
+        $changed = (new MatchingEngine())->applyRuleToExisting($rule, onlyUnreviewed: true);
+
+        $this->assertSame(1, $changed);
+        $this->assertSame($category->id, $offen->refresh()->category_id);
+        $this->assertNull($geprueft->refresh()->category_id); // geprüfte bleiben unberührt
     }
 
     public function test_mt940_parser(): void

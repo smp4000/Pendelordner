@@ -6,6 +6,7 @@ use App\Models\BankTransaction;
 use App\Models\Category;
 use App\Models\CostCenter;
 use App\Models\LedgerAccount;
+use App\Models\MatchingRule;
 use App\Models\Receipt;
 use App\Services\Matching\MatchingEngine;
 use App\Services\Ocr\OcrService;
@@ -94,6 +95,15 @@ class Kontoumsatzdetails extends Page
     public bool $showNote = false;
 
     public string $accountantNote = '';
+
+    // --- Regel aus Umsatz erstellen ------------------------------------------
+    public bool $showRuleForm = false;
+
+    public string $rulePattern = '';
+
+    public string $rulePatternType = 'counterparty';
+
+    public bool $ruleApplyExisting = true;
 
     public function mount(): void
     {
@@ -194,6 +204,76 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Kategorie „' . $category->name . '" angelegt')->success()->send();
     }
 
+    public function toggleRuleForm(): void
+    {
+        $this->showRuleForm = ! $this->showRuleForm;
+
+        if ($this->showRuleForm) {
+            // Muster sinnvoll vorbelegen: Empfänger, sonst IBAN.
+            $t = $this->selectedTransaction;
+            $this->rulePattern = trim((string) ($t?->counterparty ?: $t?->counterparty_iban ?: ''));
+            $this->rulePatternType = $t?->counterparty ? 'counterparty' : ($t?->counterparty_iban ? 'iban' : 'counterparty');
+            $this->ruleApplyExisting = true;
+        }
+    }
+
+    /**
+     * Erstellt aus dem aktuellen Umsatz eine Zuordnungsregel für
+     * wiederkehrende Buchungen und wendet sie optional auf vorhandene
+     * (ungeprüfte) Umsätze an.
+     */
+    public function createRule(): void
+    {
+        $t = $this->selectedTransaction;
+        if (! $t) {
+            return;
+        }
+
+        $pattern = trim($this->rulePattern);
+        if ($pattern === '') {
+            Notification::make()->title('Bitte ein Muster angeben')->warning()->send();
+
+            return;
+        }
+
+        if (! $t->category_id && ! $t->cost_center_id && ! $t->ledger_account_id) {
+            Notification::make()
+                ->title('Keine Zuordnung vorhanden')
+                ->body('Bitte zuerst Kategorie, Kostenstelle oder Konto am Umsatz setzen.')
+                ->warning()->send();
+
+            return;
+        }
+
+        $type = in_array($this->rulePatternType, ['counterparty', 'purpose', 'iban', 'any'], true)
+            ? $this->rulePatternType : 'counterparty';
+
+        $rule = MatchingRule::create([
+            'pattern' => $pattern,
+            'pattern_type' => $type,
+            'category_id' => $t->category_id,
+            'cost_center_id' => $t->cost_center_id,
+            'ledger_account_id' => $t->ledger_account_id,
+            'business_id' => $t->business_id,
+            'priority' => 10,
+            'active' => true,
+        ]);
+
+        $applied = 0;
+        if ($this->ruleApplyExisting) {
+            $applied = (new MatchingEngine())->applyRuleToExisting($rule, onlyUnreviewed: true);
+        }
+
+        $this->showRuleForm = false;
+
+        Notification::make()
+            ->title('Regel erstellt')
+            ->body($this->ruleApplyExisting
+                ? 'Auf ' . $applied . ' weitere(n) Umsatz/Umsätze angewendet.'
+                : 'Regel gespeichert.')
+            ->success()->send();
+    }
+
     /** @return Collection<int, Category> */
     public function getCategoriesProperty(): Collection
     {
@@ -248,14 +328,19 @@ class Kontoumsatzdetails extends Page
                 ->when($this->filterFrom, fn ($q) => $q->whereDate('booking_date', '>=', $this->filterFrom))
                 ->when($this->filterTo, fn ($q) => $q->whereDate('booking_date', '<=', $this->filterTo))
                 ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
-                ->when($this->filterReviewed !== null, fn ($q) => $q->where('reviewed', $this->filterReviewed === '1'))
+                // Standardmäßig nur ungeprüfte Umsätze; nur wenn aus der Liste
+                // explizit nach "geprüft" gefiltert wurde, diesen Filter nutzen.
+                ->when($this->filterReviewed !== null,
+                    fn ($q) => $q->where('reviewed', $this->filterReviewed === '1'),
+                    fn ($q) => $q->where('reviewed', false))
                 ->when($this->filterWithoutReceipt !== null, fn ($q) => $this->filterWithoutReceipt === '1'
                     ? $q->whereDoesntHave('receipts')
                     : $q->whereHas('receipts'))
                 ->orderBy('booking_date');
         }
 
-        return BankTransaction::query()->expense()->open()->orderBy('booking_date');
+        // In der Bearbeitung werden ausschließlich ungeprüfte Umsätze angezeigt.
+        return BankTransaction::query()->where('reviewed', false)->orderBy('booking_date');
     }
 
     private function hasFilterContext(): bool
@@ -331,7 +416,7 @@ class Kontoumsatzdetails extends Page
             return null;
         }
 
-        return BankTransaction::with(['receipts', 'category', 'costCenter', 'supplier', 'bankAccount'])
+        return BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount'])
             ->find($this->selectedTransactionId);
     }
 

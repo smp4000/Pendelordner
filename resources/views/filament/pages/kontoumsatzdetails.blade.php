@@ -129,8 +129,49 @@
                             :color="$tx->accountant_note ? 'warning' : 'gray'" size="sm">
                             {{ $tx->accountant_note ? 'Mitteilung ✓' : 'Mitteilung an Steuerberater' }}
                         </x-filament::button>
+                        <x-filament::button wire:click="toggleRuleForm" icon="heroicon-o-bolt" color="gray" size="sm">
+                            Regel erstellen
+                        </x-filament::button>
                         <x-filament::button tag="a" href="{{ \App\Filament\Resources\BankTransactions\BankTransactionResource::getUrl('edit', ['record' => $tx]) }}" icon="heroicon-o-pencil-square" color="gray" size="sm">Bearbeiten</x-filament::button>
                     </div>
+
+                    {{-- Aufklappbares Formular: Zuordnungsregel für wiederkehrende Buchungen --}}
+                    @if ($showRuleForm)
+                        <div style="margin-top:.8rem;padding:.7rem;border:1px solid rgba(16,185,129,.35);border-radius:.5rem;background:rgba(16,185,129,.06);">
+                            <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">Regel für wiederkehrende Buchungen</div>
+                            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.5rem;">
+                                <div>
+                                    <label style="display:block;font-size:.75rem;opacity:.7;margin-bottom:.15rem;">Muster (Suchbegriff)</label>
+                                    <x-filament::input.wrapper>
+                                        <x-filament::input type="text" wire:model="rulePattern" placeholder="z. B. Allianz" />
+                                    </x-filament::input.wrapper>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:.75rem;opacity:.7;margin-bottom:.15rem;">Feld</label>
+                                    <x-filament::input.select wire:model="rulePatternType">
+                                        <option value="counterparty">Empfänger</option>
+                                        <option value="purpose">Verwendungszweck</option>
+                                        <option value="iban">IBAN</option>
+                                        <option value="any">Beliebig</option>
+                                    </x-filament::input.select>
+                                </div>
+                            </div>
+                            <div style="font-size:.78rem;opacity:.75;margin-top:.5rem;">
+                                Übernimmt:
+                                <strong>{{ $tx->category?->name ?? '—' }}</strong> (Kategorie),
+                                <strong>{{ $tx->costCenter?->name ?? '—' }}</strong> (Kostenstelle),
+                                <strong>{{ $tx->ledgerAccount?->number ?? '—' }}</strong> (Konto)
+                            </div>
+                            <label style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:.8rem;cursor:pointer;">
+                                <x-filament::input.checkbox wire:model="ruleApplyExisting" />
+                                Sofort auf vorhandene ungeprüfte Umsätze anwenden
+                            </label>
+                            <div style="display:flex;gap:.5rem;margin-top:.6rem;">
+                                <x-filament::button wire:click="createRule" icon="heroicon-o-check" color="success" size="sm">Regel speichern</x-filament::button>
+                                <x-filament::button wire:click="toggleRuleForm" color="gray" size="sm">Schließen</x-filament::button>
+                            </div>
+                        </div>
+                    @endif
 
                     {{-- Aufklappbares Memo-Feld: Mitteilung an den Steuerberater --}}
                     @if ($showNote)

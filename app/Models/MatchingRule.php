@@ -36,6 +36,11 @@ class MatchingRule extends Model
         return $this->belongsTo(CostCenter::class);
     }
 
+    public function ledgerAccount(): BelongsTo
+    {
+        return $this->belongsTo(LedgerAccount::class);
+    }
+
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
