@@ -158,6 +158,7 @@ php artisan test
 | Problem | Lösung |
 |---------|--------|
 | `SSL certificate problem` bei Composer | `composer config --global cafile "C:/xampp/apache/bin/curl-ca-bundle.crt"` |
+| FinTS: „SSL-/Zertifikatsfehler" (unable to get local issuer certificate) | Meist veraltetes CA-Bündel **oder** ein Antivirus mit HTTPS-Scan (z. B. Norton „Web/Mail Shield"), der das Bank-Zertifikat ersetzt. Lösung: aktuelles `cacert.pem` von https://curl.se/ca/cacert.pem nach `C:\xampp\apache\bin\curl-ca-bundle.crt` kopieren. Bei Antivirus-HTTPS-Scan zusätzlich dessen Wurzelzertifikat ins Bündel aufnehmen **oder** die Bank-Domain vom HTTPS-Scan des Antivirus ausnehmen. PHP nutzt `curl.cainfo` aus `php.ini` (`php --ini`). |
 | `Module "openssl" is already loaded` | harmlose Warnung; ggf. doppelten `extension=openssl`-Eintrag in `php.ini` entfernen |
 | Belegvorschau lädt nicht | `php artisan storage:link` ausführen |
 | 403 im Panel | sicherstellen, dass `User::canAccessPanel()` `true` zurückgibt |
