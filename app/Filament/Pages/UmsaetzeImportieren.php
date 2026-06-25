@@ -52,14 +52,6 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
-    /** Steht ein neues Konto zur Benennung an? */
-    public bool $awaitingName = false;
-
-    /** @var array<string, mixed> erkannte Kontodaten aus der Datei */
-    public array $pendingAccount = [];
-
-    public string $newAccountName = '';
-
     public function mount(): void
     {
         $this->form->fill();
@@ -70,29 +62,22 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
         return $schema
             ->components([
                 FileUpload::make('file')
-                    ->label('Bankdatei (MT940 / CAMT / CSV)')
+                    ->label('Bankdateien (MT940 / CAMT / CSV)')
                     ->disk('local')
                     ->directory('imports/tmp')
                     ->storeFileNamesIn('original_name')
                     ->preserveFilenames(false)
+                    ->multiple()
+                    ->maxFiles(50)
                     ->required()
-                    ->helperText('Datei hierher ziehen oder auswählen (z. B. .mta, .sta, .xml, .csv). Wird nach dem Import automatisch gelöscht.'),
+                    ->helperText('Mehrere Dateien möglich (z. B. .mta, .sta, .xml, .csv) – sie werden nacheinander verarbeitet und nach dem Import automatisch gelöscht.'),
                 Select::make('bank_account_id')
                     ->label('Bankkonto')
                     ->placeholder('Automatisch aus Datei erkennen')
                     ->options(BankAccount::orderBy('label')->pluck('label', 'id'))
-                    ->helperText('Leer lassen für automatische Erkennung. Bei CSV bitte das Zielkonto wählen.'),
+                    ->helperText('Leer lassen für automatische Erkennung je Datei. Bei CSV bitte das Zielkonto wählen.'),
             ])
             ->statePath('data');
-    }
-
-    /** Wenn eine neue Datei gewählt wird, den Anlege-Dialog zurücksetzen. */
-    public function updatedData($value, string $key): void
-    {
-        if ($key === 'file') {
-            $this->awaitingName = false;
-            $this->pendingAccount = [];
-        }
     }
 
     public function importAction(): Action
@@ -103,129 +88,134 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             ->action(fn () => $this->runImport());
     }
 
-    /** Schritt 1: Datei prüfen, Konto ermitteln; ggf. nach Kontonamen fragen. */
+    /** Verarbeitet alle hochgeladenen Dateien nacheinander. */
     public function runImport(): void
     {
         $state = $this->form->getState();
-        $path = $state['file'] ?? null;
+        $files = $this->normalizeFiles($state);
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            Notification::make()->title('Keine Datei')->body('Bitte zuerst eine Datei hochladen.')->warning()->send();
-
-            return;
-        }
-
-        try {
-            $content = $this->readFile($path);
-            [$rows, $source] = $this->parse($content);
-
-            // Manuell gewähltes Konto?
-            if (! empty($state['bank_account_id'])) {
-                $this->doImport(BankAccount::find($state['bank_account_id']), $rows, $source, $path, $state);
-
-                return;
-            }
-
-            // Vorhandenes Konto automatisch erkennen
-            if ($account = $this->matchExistingAccount($content)) {
-                $this->doImport($account, $rows, $source, $path, $state);
-
-                return;
-            }
-
-            // Konto aus Datei ableitbar -> nach Namen fragen (Datei bleibt liegen)
-            if ($detected = $this->detectAccount($content)) {
-                $this->pendingAccount = $detected;
-                $this->newAccountName = $detected['suggested'];
-                $this->awaitingName = true;
-                Notification::make()
-                    ->title('Neues Konto')
-                    ->body('Dieses Konto ist noch nicht vorhanden. Bitte einen Kontonamen vergeben.')
-                    ->info()->send();
-
-                return;
-            }
-
-            Notification::make()
-                ->title('Konto nicht erkennbar')
-                ->body('Aus dieser Datei (CSV) ließ sich kein Konto ableiten. Bitte oben das Zielkonto wählen.')
-                ->warning()->send();
-        } catch (Throwable $e) {
-            report($e);
-            Notification::make()->title('Import fehlgeschlagen')->body($e->getMessage())->danger()->send();
-        }
-    }
-
-    /** Schritt 2: Neues Konto mit eingegebenem Namen anlegen und importieren. */
-    public function confirmNewAccount(): void
-    {
-        $this->validate(
-            ['newAccountName' => 'required|string|min:2|max:120'],
-            [],
-            ['newAccountName' => 'Kontoname']
-        );
-
-        $state = $this->form->getState();
-        $path = $state['file'] ?? null;
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            Notification::make()->title('Datei nicht mehr vorhanden')->body('Bitte die Datei erneut hochladen.')->warning()->send();
-            $this->awaitingName = false;
+        if (empty($files)) {
+            Notification::make()->title('Keine Datei')->body('Bitte zuerst mindestens eine Datei hochladen.')->warning()->send();
 
             return;
         }
 
-        try {
-            $content = $this->readFile($path);
-            [$rows, $source] = $this->parse($content);
+        $manual = ! empty($state['bank_account_id']) ? BankAccount::find($state['bank_account_id']) : null;
 
-            $account = BankAccount::create([
-                'label' => trim($this->newAccountName),
-                'iban' => $this->pendingAccount['iban'] ?? null,
-                'bank_code' => $this->pendingAccount['bank_code'] ?? null,
-                'account_number' => $this->pendingAccount['account_number'] ?? null,
-                'business_id' => Business::orderBy('sort_order')->value('id'),
-                'currency' => 'EUR',
-                'active' => true,
-            ]);
+        $lines = [];
+        $created = [];
+        $sumNew = $sumDup = $sumErr = 0;
 
-            $this->awaitingName = false;
-            $this->pendingAccount = [];
+        foreach ($files as [$path, $name]) {
+            try {
+                if (! Storage::disk('local')->exists($path)) {
+                    $lines[] = $name . ': Datei nicht gefunden';
 
-            $this->doImport($account, $rows, $source, $path, $state, neu: true);
-        } catch (Throwable $e) {
-            report($e);
-            Notification::make()->title('Import fehlgeschlagen')->body($e->getMessage())->danger()->send();
+                    continue;
+                }
+
+                $content = $this->readFile($path);
+                [$rows, $source] = $this->parse($content);
+
+                $account = $manual
+                    ?? $this->matchExistingAccount($content)
+                    ?? $this->autoCreateAccount($content, $created);
+
+                if (! $account) {
+                    $lines[] = $name . ': Konto nicht erkennbar – übersprungen';
+
+                    continue;
+                }
+
+                $log = (new BankImportService())->import($account, $rows, $source, $name);
+
+                $sumNew += $log->new_count;
+                $sumDup += $log->duplicate_count;
+                $sumErr += $log->error_count;
+
+                $lines[] = sprintf(
+                    '%s → %s: %d neu, %d Dubletten, %d Fehler',
+                    $name, $account->label, $log->new_count, $log->duplicate_count, $log->error_count
+                );
+            } catch (Throwable $e) {
+                report($e);
+                $sumErr++;
+                $lines[] = $name . ': Fehler – ' . $e->getMessage();
+            } finally {
+                Storage::disk('local')->delete($path);
+            }
         }
-    }
 
-    public function cancelNewAccount(): void
-    {
-        $this->awaitingName = false;
-        $this->pendingAccount = [];
+        $this->form->fill();
+
+        $body = implode("\n", $lines);
+        if (! empty($created)) {
+            $body .= "\n\nNeu angelegte Konten: "
+                . implode(', ', array_map(fn (BankAccount $a) => $a->label, $created))
+                . ' (unter „Bankkonten" umbenennbar).';
+        }
+
+        Notification::make()
+            ->title(count($files) > 1
+                ? count($files) . ' Dateien verarbeitet (' . $sumNew . ' neu, ' . $sumDup . ' Dubletten, ' . $sumErr . ' Fehler)'
+                : 'Import abgeschlossen')
+            ->body($body)
+            ->success()
+            ->persistent()
+            ->send();
     }
 
     // --- intern --------------------------------------------------------------
 
-    /** Führt den Import durch, löscht die Datei und setzt das Formular zurück. */
-    private function doImport(?BankAccount $account, array $rows, ImportSource $source, string $path, array $state, bool $neu = false): void
+    /**
+     * Bringt den FileUpload-State (einzeln oder mehrfach) auf eine einheitliche
+     * Liste [[$pfad, $originalname], ...].
+     *
+     * @param  array<string, mixed>  $state
+     * @return array<int, array{0: string, 1: string}>
+     */
+    private function normalizeFiles(array $state): array
     {
-        if (! $account) {
-            Notification::make()->title('Kein Konto')->warning()->send();
-
-            return;
+        $files = $state['file'] ?? [];
+        if (is_string($files)) {
+            $files = [$files];
         }
 
-        $log = (new BankImportService())->import($account, $rows, $source, $state['original_name'] ?? basename($path));
+        $names = $state['original_name'] ?? [];
 
-        Storage::disk('local')->delete($path);
-        $this->form->fill();
-        $this->reset(['awaitingName', 'pendingAccount', 'newAccountName']);
+        $out = [];
+        foreach ($files as $key => $path) {
+            if (! $path) {
+                continue;
+            }
+            $name = is_array($names) ? ($names[$key] ?? basename($path)) : (is_string($names) && $names !== '' ? $names : basename($path));
+            $out[] = [$path, $name];
+        }
 
-        Notification::make()
-            ->title('Import abgeschlossen')
-            ->body(($neu ? 'Neues Konto „' . $account->label . '" angelegt. ' : 'Konto ' . $account->label . ': ')
-                . $log->new_count . ' neu, ' . $log->duplicate_count . ' Dubletten, ' . $log->error_count . ' Fehler.')
-            ->success()->send();
+        return $out;
+    }
+
+    /** Legt aus den in der Datei erkannten Kontodaten automatisch ein Konto an. */
+    private function autoCreateAccount(string $content, array &$created): ?BankAccount
+    {
+        $detected = $this->detectAccount($content);
+        if (! $detected) {
+            return null;
+        }
+
+        $account = BankAccount::create([
+            'label' => $detected['suggested'],
+            'iban' => $detected['iban'] ?? null,
+            'bank_code' => $detected['bank_code'] ?? null,
+            'account_number' => $detected['account_number'] ?? null,
+            'business_id' => Business::orderBy('sort_order')->value('id'),
+            'currency' => 'EUR',
+            'active' => true,
+        ]);
+
+        $created[] = $account;
+
+        return $account;
     }
 
     private function readFile(string $path): string
