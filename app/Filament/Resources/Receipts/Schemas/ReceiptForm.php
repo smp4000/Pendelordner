@@ -89,6 +89,12 @@ class ReceiptForm
                             ->relationship('category', 'name')->searchable()->preload(),
                         Select::make('cost_center_id')->label('Kostenstelle')
                             ->relationship('costCenter', 'name')->searchable()->preload(),
+                        Select::make('ledger_account_id')->label('Konto (Sachkonto)')
+                            ->relationship('ledgerAccount', 'name')
+                            ->searchable(['number', 'name'])
+                            ->getOptionLabelFromRecordUsing(fn ($record): string => $record->number . ' – ' . $record->name)
+                            ->placeholder('Konto suchen (Nummer oder Bezeichnung)…')
+                            ->columnSpanFull(),
                         Select::make('status')->label('Status')
                             ->options(ReceiptStatus::class)->default(ReceiptStatus::New->value),
                         Toggle::make('paid')->label('Bezahlt')->inline(false),

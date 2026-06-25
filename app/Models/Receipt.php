@@ -62,6 +62,11 @@ class Receipt extends Model
         return $this->belongsTo(CostCenter::class);
     }
 
+    public function ledgerAccount(): BelongsTo
+    {
+        return $this->belongsTo(LedgerAccount::class);
+    }
+
     public function bankTransactions(): BelongsToMany
     {
         return $this->belongsToMany(BankTransaction::class)
