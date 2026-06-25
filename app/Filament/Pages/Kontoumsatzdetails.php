@@ -3,6 +3,9 @@
 namespace App\Filament\Pages;
 
 use App\Models\BankTransaction;
+use App\Models\Category;
+use App\Models\CostCenter;
+use App\Models\LedgerAccount;
 use App\Models\Receipt;
 use App\Services\Matching\MatchingEngine;
 use App\Services\Ocr\OcrService;
@@ -73,6 +76,15 @@ class Kontoumsatzdetails extends Page
 
     public string $uploadType = 'incoming_invoice';
 
+    // --- Inline-Zuordnung (Kategorie / Kostenstelle / Sachkonto) -------------
+    public ?int $assignCategoryId = null;
+
+    public ?int $assignCostCenterId = null;
+
+    public ?int $assignLedgerAccountId = null;
+
+    public string $ledgerSearch = '';
+
     public function mount(): void
     {
         // Filterkontext aus der Umsatzliste übernehmen (Query-Parameter).
@@ -86,6 +98,84 @@ class Kontoumsatzdetails extends Page
         $this->selectedTransactionId = request('tx')
             ? (int) request('tx')
             : $this->navigationQuery()->value('id');
+
+        $this->fillAssign();
+    }
+
+    /** Zuordnungsfelder aus dem aktuellen Umsatz vorbelegen. */
+    private function fillAssign(): void
+    {
+        $t = $this->selectedTransaction;
+        $this->assignCategoryId = $t?->category_id;
+        $this->assignCostCenterId = $t?->cost_center_id;
+        $this->assignLedgerAccountId = $t?->ledger_account_id;
+        $this->ledgerSearch = '';
+    }
+
+    /** Speichert ein einzelnes Zuordnungsfeld am aktuellen Umsatz. */
+    private function saveAssign(string $field, $value): void
+    {
+        if (! $this->selectedTransactionId) {
+            return;
+        }
+        BankTransaction::whereKey($this->selectedTransactionId)->update([$field => $value ?: null]);
+
+        Notification::make()->title('Zuordnung gespeichert')->success()->send();
+    }
+
+    public function updatedAssignCategoryId($value): void
+    {
+        $this->saveAssign('category_id', $value);
+    }
+
+    public function updatedAssignCostCenterId($value): void
+    {
+        $this->saveAssign('cost_center_id', $value);
+    }
+
+    /** @return Collection<int, Category> */
+    public function getCategoriesProperty(): Collection
+    {
+        return Category::where('active', true)->orderBy('name')->get();
+    }
+
+    /** @return Collection<int, CostCenter> */
+    public function getCostCentersProperty(): Collection
+    {
+        return CostCenter::where('active', true)->orderBy('name')->get();
+    }
+
+    /** Treffer für die Sachkonto-Suche (Nummer oder Bezeichnung). */
+    public function getLedgerResultsProperty(): Collection
+    {
+        $s = trim($this->ledgerSearch);
+        if (mb_strlen($s) < 2) {
+            return collect();
+        }
+
+        return LedgerAccount::query()
+            ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+            ->orderBy('number')
+            ->limit(15)
+            ->get();
+    }
+
+    public function getCurrentLedgerProperty(): ?LedgerAccount
+    {
+        return $this->assignLedgerAccountId ? LedgerAccount::find($this->assignLedgerAccountId) : null;
+    }
+
+    public function setLedger(int $id): void
+    {
+        $this->assignLedgerAccountId = $id;
+        $this->ledgerSearch = '';
+        $this->saveAssign('ledger_account_id', $id);
+    }
+
+    public function clearLedger(): void
+    {
+        $this->assignLedgerAccountId = null;
+        $this->saveAssign('ledger_account_id', null);
     }
 
     /** Basisquery der Navigation – gefiltert (aus der Liste) oder Standard (offene Ausgaben). */
@@ -239,6 +329,7 @@ class Kontoumsatzdetails extends Page
         $this->selectedTransactionId = $id;
         $this->selectedReceiptId = $this->selectedTransaction?->receipts->first()?->id;
         $this->activeTab = 'assigned';
+        $this->fillAssign();
     }
 
     public function selectReceipt(int $id): void

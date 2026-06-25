@@ -55,6 +55,11 @@ class BankTransaction extends Model
         return $this->belongsTo(CostCenter::class);
     }
 
+    public function ledgerAccount(): BelongsTo
+    {
+        return $this->belongsTo(LedgerAccount::class);
+    }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);

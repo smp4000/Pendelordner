@@ -46,9 +46,61 @@
                     @if ($tx->purpose)
                         <p style="margin-top:.5rem;font-size:.8rem;opacity:.75;">{{ \Illuminate\Support\Str::limit($tx->purpose, 160) }}</p>
                     @endif
+                    {{-- Zuordnung (direkt speichern) --}}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;">
+                        <div>
+                            <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Kategorie</label>
+                            <x-filament::input.wrapper>
+                                <x-filament::input.select wire:model.live="assignCategoryId">
+                                    <option value="">—</option>
+                                    @foreach ($this->categories as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </x-filament::input.select>
+                            </x-filament::input.wrapper>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Kostenstelle</label>
+                            <x-filament::input.wrapper>
+                                <x-filament::input.select wire:model.live="assignCostCenterId">
+                                    <option value="">—</option>
+                                    @foreach ($this->costCenters as $cc)
+                                        <option value="{{ $cc->id }}">{{ $cc->name }}</option>
+                                    @endforeach
+                                </x-filament::input.select>
+                            </x-filament::input.wrapper>
+                        </div>
+                    </div>
+
+                    {{-- Sachkonto (Kontenrahmen) mit Suche --}}
+                    <div style="margin-top:.6rem;">
+                        <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Konto (Sachkonto / Kontenrahmen)</label>
+                        @if ($this->currentLedger)
+                            <div style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;">
+                                <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;font-weight:500;">
+                                    {{ $this->currentLedger->number }} – {{ $this->currentLedger->name }}
+                                </span>
+                                <button type="button" wire:click="clearLedger" style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:.8rem;">entfernen</button>
+                            </div>
+                        @else
+                            <x-filament::input.wrapper>
+                                <x-filament::input type="text" wire:model.live.debounce.350ms="ledgerSearch" placeholder="Konto suchen (Nummer oder Bezeichnung)…" />
+                            </x-filament::input.wrapper>
+                            @if ($this->ledgerResults->isNotEmpty())
+                                <div style="margin-top:.25rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:180px;overflow-y:auto;">
+                                    @foreach ($this->ledgerResults as $la)
+                                        <div wire:click="setLedger({{ $la->id }})"
+                                            style="padding:.35rem .6rem;cursor:pointer;font-size:.82rem;border-bottom:1px solid rgba(120,120,120,.1);">
+                                            <strong>{{ $la->number }}</strong> – {{ $la->name }}
+                                            <span style="opacity:.5;">· {{ $la->chart }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        @endif
+                    </div>
+
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.6rem;font-size:.85rem;">
-                        <div><span style="opacity:.6;">Kategorie:</span> {{ $tx->category?->name ?? '—' }}</div>
-                        <div><span style="opacity:.6;">Kostenstelle:</span> {{ $tx->costCenter?->name ?? '—' }}</div>
                         <div><span style="opacity:.6;">Status:</span> {{ $tx->status->getLabel() }}</div>
                         <div><span style="opacity:.6;">Differenz:</span>
                             <span style="color:{{ abs($tx->difference) < 0.01 ? '#059669' : '#d97706' }};">{{ $money($tx->difference) }}</span></div>
