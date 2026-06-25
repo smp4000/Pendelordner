@@ -50,14 +50,29 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;">
                         <div>
                             <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Kategorie</label>
-                            <x-filament::input.wrapper>
-                                <x-filament::input.select wire:model.live="assignCategoryId">
-                                    <option value="">—</option>
-                                    @foreach ($this->categories as $cat)
-                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                    @endforeach
-                                </x-filament::input.select>
-                            </x-filament::input.wrapper>
+                            <div style="display:flex;gap:.35rem;align-items:center;">
+                                <div style="flex:1;">
+                                    <x-filament::input.wrapper>
+                                        <x-filament::input.select wire:model.live="assignCategoryId">
+                                            <option value="">—</option>
+                                            @foreach ($this->categories as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </x-filament::input.select>
+                                    </x-filament::input.wrapper>
+                                </div>
+                                <button type="button" wire:click="toggleNewCategory" title="Neue Kategorie anlegen"
+                                    style="flex:0 0 auto;width:2.25rem;height:2.25rem;border:1px solid #10b981;color:#10b981;background:transparent;border-radius:.4rem;cursor:pointer;font-size:1.1rem;line-height:1;">+</button>
+                            </div>
+                            @if ($showNewCategory)
+                                <div style="display:flex;gap:.35rem;margin-top:.35rem;">
+                                    <x-filament::input.wrapper style="flex:1;">
+                                        <x-filament::input type="text" wire:model="newCategory" placeholder="Neue Kategorie…"
+                                            wire:keydown.enter="createCategory" />
+                                    </x-filament::input.wrapper>
+                                    <x-filament::button wire:click="createCategory" size="sm" color="success">Anlegen</x-filament::button>
+                                </div>
+                            @endif
                         </div>
                         <div>
                             <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Kostenstelle</label>

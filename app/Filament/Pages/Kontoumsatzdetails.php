@@ -85,6 +85,11 @@ class Kontoumsatzdetails extends Page
 
     public string $ledgerSearch = '';
 
+    // Neue Kategorie inline anlegen
+    public bool $showNewCategory = false;
+
+    public string $newCategory = '';
+
     public function mount(): void
     {
         // Filterkontext aus der Umsatzliste übernehmen (Query-Parameter).
@@ -131,6 +136,31 @@ class Kontoumsatzdetails extends Page
     public function updatedAssignCostCenterId($value): void
     {
         $this->saveAssign('cost_center_id', $value);
+    }
+
+    public function toggleNewCategory(): void
+    {
+        $this->showNewCategory = ! $this->showNewCategory;
+        $this->newCategory = '';
+    }
+
+    /** Neue Kategorie anlegen, dem Umsatz zuordnen und auswählen. */
+    public function createCategory(): void
+    {
+        $name = trim($this->newCategory);
+        if ($name === '') {
+            return;
+        }
+
+        $category = Category::firstOrCreate(['name' => $name], ['active' => true]);
+
+        $this->assignCategoryId = $category->id;
+        $this->saveAssign('category_id', $category->id);
+
+        $this->newCategory = '';
+        $this->showNewCategory = false;
+
+        Notification::make()->title('Kategorie „' . $category->name . '" angelegt')->success()->send();
     }
 
     /** @return Collection<int, Category> */
