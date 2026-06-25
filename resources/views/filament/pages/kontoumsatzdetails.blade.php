@@ -221,57 +221,50 @@
         </div>
     @endif
 
-    {{-- PDF.js für Inline-Belegvorschau (wird einmalig geladen) --}}
-    <script>
-        (function () {
-            if (window.__pdfViewerInit) return;
-            window.__pdfViewerInit = true;
+    {{-- PDF.js Bibliothek einmalig laden (auch bei SPA-Navigation) --}}
+    @assets
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    @endassets
 
-            var s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            s.onload = function () {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                }
-            };
-            document.head.appendChild(s);
-
-            window.pdfViewer = function (url) {
-                return {
-                    url: url,
-                    error: false,
-                    async load() {
-                        try {
-                            let tries = 0;
-                            while (!window.pdfjsLib && tries < 120) {
-                                await new Promise(function (r) { setTimeout(r, 50); });
-                                tries++;
-                            }
-                            if (!window.pdfjsLib) { this.error = true; return; }
-
-                            const pdf = await window.pdfjsLib.getDocument(this.url).promise;
-                            const container = this.$refs.pages;
-                            container.innerHTML = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const viewport = page.getViewport({ scale: 1.4 });
-                                const canvas = document.createElement('canvas');
-                                canvas.width = viewport.width;
-                                canvas.height = viewport.height;
-                                canvas.style.maxWidth = '100%';
-                                canvas.style.background = '#fff';
-                                canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
-                                container.appendChild(canvas);
-                                await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-                            }
-                        } catch (e) {
-                            console.error(e);
-                            this.error = true;
+    {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
+    @script
+        <script>
+            Alpine.data('pdfViewer', (url) => ({
+                url: url,
+                error: false,
+                async load() {
+                    try {
+                        let tries = 0;
+                        while (!window.pdfjsLib && tries < 160) {
+                            await new Promise((r) => setTimeout(r, 50));
+                            tries++;
                         }
-                    },
-                };
-            };
-        })();
-    </script>
+                        if (!window.pdfjsLib) { this.error = true; return; }
+
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                        const pdf = await window.pdfjsLib.getDocument(this.url).promise;
+                        const container = this.$refs.pages;
+                        container.innerHTML = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 1.4 });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            canvas.style.maxWidth = '100%';
+                            canvas.style.background = '#fff';
+                            canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                            container.appendChild(canvas);
+                            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        this.error = true;
+                    }
+                },
+            }));
+        </script>
+    @endscript
 </x-filament-panels::page>
