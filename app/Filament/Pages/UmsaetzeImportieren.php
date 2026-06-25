@@ -52,6 +52,17 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
+    /** Stehen neue Konten zur Benennung an? */
+    public bool $awaitingNames = false;
+
+    /**
+     * Zu benennende neue Konten (eindeutig je Konto):
+     * [ ['key' => ..., 'detected' => [...], 'name' => 'Vorschlag', 'hint' => '...'], ... ]
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public array $pendingAccounts = [];
+
     public function mount(): void
     {
         $this->form->fill();
@@ -88,7 +99,19 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             ->action(fn () => $this->runImport());
     }
 
-    /** Verarbeitet alle hochgeladenen Dateien nacheinander. */
+    /** Wenn neue Dateien gewählt werden, den Benennungs-Schritt zurücksetzen. */
+    public function updatedData($value, string $key): void
+    {
+        if ($key === 'file') {
+            $this->awaitingNames = false;
+            $this->pendingAccounts = [];
+        }
+    }
+
+    /**
+     * Schritt 1: Dateien prüfen. Werden neue Konten benötigt, zunächst editier-
+     * bare Namensvorschläge anzeigen; sonst direkt importieren.
+     */
     public function runImport(): void
     {
         $state = $this->form->getState();
@@ -102,8 +125,104 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
 
         $manual = ! empty($state['bank_account_id']) ? BankAccount::find($state['bank_account_id']) : null;
 
+        // Neue (noch nicht vorhandene) Konten ermitteln und je Konto einmal
+        // einen editierbaren Namensvorschlag sammeln.
+        $pending = [];
+        if (! $manual) {
+            foreach ($files as [$path, $name]) {
+                if (! Storage::disk('local')->exists($path)) {
+                    continue;
+                }
+                $content = $this->readFile($path);
+                if ($this->matchExistingAccount($content)) {
+                    continue;
+                }
+                $detected = $this->detectAccount($content);
+                if (! $detected) {
+                    continue;
+                }
+                $key = $this->accountKey($content);
+                if ($key && ! isset($pending[$key])) {
+                    $pending[$key] = [
+                        'key' => $key,
+                        'detected' => $detected,
+                        'name' => $detected['suggested'],
+                        'hint' => $detected['iban']
+                            ? 'IBAN ' . $detected['iban']
+                            : 'Konto ' . $detected['account_number'] . ' / BLZ ' . $detected['bank_code'],
+                    ];
+                }
+            }
+        }
+
+        if (! empty($pending)) {
+            $this->pendingAccounts = array_values($pending);
+            $this->awaitingNames = true;
+            Notification::make()
+                ->title('Neue Konten gefunden')
+                ->body('Bitte die vorgeschlagenen Kontonamen prüfen und ggf. ändern.')
+                ->info()->send();
+
+            return;
+        }
+
+        // Keine neuen Konten nötig -> direkt importieren.
+        $this->processFiles($files, $manual, []);
+    }
+
+    /** Schritt 2: Neue Konten mit den (ggf. geänderten) Namen anlegen, dann importieren. */
+    public function confirmNames(): void
+    {
+        foreach ($this->pendingAccounts as $i => $acc) {
+            if (trim((string) ($acc['name'] ?? '')) === '') {
+                $this->addError('pendingAccounts.' . $i . '.name', 'Bitte einen Kontonamen vergeben.');
+
+                return;
+            }
+        }
+
+        $state = $this->form->getState();
+        $files = $this->normalizeFiles($state);
+        $manual = ! empty($state['bank_account_id']) ? BankAccount::find($state['bank_account_id']) : null;
+
+        $createdMap = [];
+        foreach ($this->pendingAccounts as $acc) {
+            $d = $acc['detected'];
+            $createdMap[$acc['key']] = BankAccount::create([
+                'label' => trim((string) $acc['name']),
+                'iban' => $d['iban'] ?? null,
+                'bank_code' => $d['bank_code'] ?? null,
+                'account_number' => $d['account_number'] ?? null,
+                'business_id' => Business::orderBy('sort_order')->value('id'),
+                'currency' => 'EUR',
+                'active' => true,
+            ]);
+        }
+
+        $this->awaitingNames = false;
+        $this->pendingAccounts = [];
+
+        $this->processFiles($files, $manual, $createdMap);
+    }
+
+    public function cancelNames(): void
+    {
+        $this->awaitingNames = false;
+        $this->pendingAccounts = [];
+    }
+
+    // --- intern --------------------------------------------------------------
+
+    /**
+     * Importiert alle Dateien nacheinander. Konto je Datei: manuell gewählt,
+     * sonst vorhandenes (per IBAN/BLZ), sonst eines der neu angelegten Konten.
+     *
+     * @param  array<int, array{0: string, 1: string}>  $files
+     * @param  array<string, BankAccount>  $createdMap
+     */
+    private function processFiles(array $files, ?BankAccount $manual, array $createdMap): void
+    {
         $lines = [];
-        $created = [];
         $sumNew = $sumDup = $sumErr = 0;
 
         foreach ($files as [$path, $name]) {
@@ -117,9 +236,11 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
                 $content = $this->readFile($path);
                 [$rows, $source] = $this->parse($content);
 
-                $account = $manual
-                    ?? $this->matchExistingAccount($content)
-                    ?? $this->autoCreateAccount($content, $created);
+                $account = $manual ?? $this->matchExistingAccount($content);
+                if (! $account) {
+                    $key = $this->accountKey($content);
+                    $account = $key ? ($createdMap[$key] ?? null) : null;
+                }
 
                 if (! $account) {
                     $lines[] = $name . ': Konto nicht erkennbar – übersprungen';
@@ -149,10 +270,9 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
         $this->form->fill();
 
         $body = implode("\n", $lines);
-        if (! empty($created)) {
+        if (! empty($createdMap)) {
             $body .= "\n\nNeu angelegte Konten: "
-                . implode(', ', array_map(fn (BankAccount $a) => $a->label, $created))
-                . ' (unter „Bankkonten" umbenennbar).';
+                . implode(', ', array_map(fn (BankAccount $a) => $a->label, $createdMap));
         }
 
         Notification::make()
@@ -165,7 +285,16 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             ->send();
     }
 
-    // --- intern --------------------------------------------------------------
+    /** Eindeutiger Schlüssel eines Kontos aus dem Dateiinhalt (IBAN bzw. BLZ/Konto). */
+    private function accountKey(string $content): ?string
+    {
+        $d = $this->detectAccount($content);
+        if (! $d) {
+            return null;
+        }
+
+        return $d['iban'] ?: ($d['bank_code'] . '/' . $d['account_number']);
+    }
 
     /**
      * Bringt den FileUpload-State (einzeln oder mehrfach) auf eine einheitliche
