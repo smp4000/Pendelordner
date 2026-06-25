@@ -78,7 +78,44 @@ Da das Projekt unter `C:\xampp\htdocs\Pendelordner` liegt, kann auch der
 Apache-DocumentRoot auf `public/` zeigen (VirtualHost) – für den lokalen
 Betrieb genügt aber `php artisan serve`.
 
-## 6. Tests
+## 6. Automatischer Bankabruf (FinTS, Modul 1)
+
+Voraussetzung: Pro Bank ein **FinTS-Zugang** anlegen (Panel → Bank → FinTS-Zugänge)
+und beim **Bankkonto** „FinTS aktiv" setzen sowie den Zugang zuordnen.
+
+Manuell abrufen geht jederzeit über den Button **„FinTS abrufen"** am Bankkonto
+oder per Befehl:
+
+```bash
+php artisan bank:fetch              # alle FinTS-Konten
+php artisan bank:fetch --account=1 # nur Konto 1
+php artisan bank:fetch --days=30   # Zeitraum 30 Tage
+```
+
+**Automatisch (zeitgesteuert):** Der Abruf ist im Laravel-Scheduler auf täglich
+06:00 Uhr eingeplant (`routes/console.php`, Uhrzeit per `BANK_FETCH_TIME` in
+`.env`). Damit das läuft, muss der Scheduler regelmäßig gestartet werden.
+
+Variante A – dauerhaft laufender Worker (einfach):
+```bash
+php artisan schedule:work
+```
+
+Variante B – Windows-Aufgabenplanung (empfohlen für den Dauerbetrieb):
+1. Aufgabenplanung öffnen → „Einfache Aufgabe erstellen".
+2. Trigger: täglich, alle 1 Minute wiederholen (oder zur gewünschten Uhrzeit).
+3. Aktion „Programm starten":
+   - Programm: `C:\xampp\php\php.exe`
+   - Argumente: `artisan schedule:run`
+   - Starten in: `C:\xampp\htdocs\Pendelordner`
+
+> Hinweis TAN/PSD2: Reiner Umsatzabruf ist bei vielen Banken ohne TAN möglich
+> (ggf. nach einmaliger Freischaltung, 90-Tage-Fenster). Verlangt die Bank pro
+> Abruf eine TAN, ist ein vollautomatischer Lauf nicht möglich – das Konto wird
+> dann übersprungen und im FinTS-Zugang („letzte Meldung") vermerkt; nutze in
+> dem Fall den manuellen Abruf oder den Datei-Import (MT940/CAMT/CSV).
+
+## 7. Tests
 
 ```bash
 php artisan test
