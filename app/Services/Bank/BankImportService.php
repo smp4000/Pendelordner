@@ -69,6 +69,18 @@ class BankImportService
                         $duplicates++;
                     }
 
+                    // Beschreibende Bankfelder auffrischen (z. B. korrigierter
+                    // Verwendungszweck nach Parser-Verbesserung). Manuelle
+                    // Zuordnungen (Kategorie/Kostenstelle/Konto/Mitteilung/
+                    // Status) bleiben unberührt.
+                    $existing->fill([
+                        'purpose' => $data['purpose'],
+                        'counterparty' => $data['counterparty'],
+                        'booking_text' => $data['booking_text'],
+                        'counterparty_iban' => $data['counterparty_iban'],
+                        'counterparty_bic' => $data['counterparty_bic'],
+                    ])->saveQuietly();
+
                     continue;
                 }
 

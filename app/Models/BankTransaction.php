@@ -161,12 +161,17 @@ class BankTransaction extends Model
      */
     public static function makeDedupHash(array $data): string
     {
+        // Verwendungszweck/Empfänger ohne jegliche Leerzeichen normalisieren,
+        // damit unterschiedliche MT940-Segmentierung (z. B. "Lautsprec her"
+        // vs. "Lautsprecher") nicht als verschiedene Umsätze gilt.
+        $norm = fn (string $s) => mb_strtolower((string) preg_replace('/\s+/u', '', $s));
+
         $parts = [
             trim((string) ($data['bank_reference'] ?? '')),
             (string) ($data['booking_date'] ?? ''),
             number_format((float) ($data['amount'] ?? 0), 2, '.', ''),
-            mb_strtolower(trim((string) ($data['purpose'] ?? ''))),
-            mb_strtolower(trim((string) ($data['counterparty'] ?? ''))),
+            $norm((string) ($data['purpose'] ?? '')),
+            $norm((string) ($data['counterparty'] ?? '')),
         ];
 
         return hash('sha256', implode('|', $parts));

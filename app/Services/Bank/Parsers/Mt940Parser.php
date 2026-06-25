@@ -110,29 +110,32 @@ class Mt940Parser
     private function parseInfo(string $value): array
     {
         $value = str_replace("\n", '', $value);
-        // Subfelder ?NN extrahieren
+        // Subfelder ?NN extrahieren – bewusst NICHT trimmen, da bei ?20–?29
+        // Leerzeichen an den 27-Zeichen-Segmentgrenzen zum Text gehören.
         preg_match_all('/\?(\d{2})([^?]*)/', $value, $matches, PREG_SET_ORDER);
 
         $sub = [];
         foreach ($matches as $match) {
-            $sub[(int) $match[1]] = trim($match[2]);
+            $sub[(int) $match[1]] = $match[2];
         }
 
-        // Verwendungszweck = ?20..?29 zusammengesetzt
+        // Verwendungszweck = ?20..?29 OHNE Trenner aneinanderhängen. Deutsche
+        // Banken zerlegen den fortlaufenden Text in 27-Zeichen-Segmente; ein
+        // Leerzeichen als Trenner würde Wörter zerreißen ("Lautsprec her").
         $purpose = '';
         for ($n = 20; $n <= 29; $n++) {
             if (isset($sub[$n])) {
-                $purpose .= ' ' . $sub[$n];
+                $purpose .= $sub[$n];
             }
         }
 
-        $name = trim(($sub[32] ?? '') . ' ' . ($sub[33] ?? ''));
+        $name = trim(trim($sub[32] ?? '') . ' ' . trim($sub[33] ?? ''));
 
         return array_filter([
-            'booking_text' => $sub[0] ?? null,
+            'booking_text' => isset($sub[0]) ? trim($sub[0]) : null,
             'purpose' => trim($purpose) ?: null,
-            'counterparty_bic' => $sub[30] ?? null,
-            'counterparty_iban' => $sub[31] ?? null,
+            'counterparty_bic' => isset($sub[30]) ? trim($sub[30]) : null,
+            'counterparty_iban' => isset($sub[31]) ? trim($sub[31]) : null,
             'counterparty' => $name ?: null,
         ], fn ($v) => $v !== null && $v !== '');
     }
