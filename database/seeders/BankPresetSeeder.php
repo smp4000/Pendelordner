@@ -13,6 +13,9 @@ class BankPresetSeeder extends Seeder
 {
     public function run(): void
     {
+        // Reine Referenzdaten – vor dem Neuaufbau leeren (vermeidet veraltete Einträge).
+        BankPreset::query()->delete();
+
         $presets = [
             [
                 'name' => 'Commerzbank',
@@ -31,20 +34,20 @@ class BankPresetSeeder extends Seeder
                 'note' => 'HBCI mit PIN/TAN (HBCI+) muss einmalig im Internetbanking unter Service / Optionen / Weitere Dienste aktiviert werden.',
             ],
             [
-                'name' => 'Volksbank (GAD)',
-                'fints_url' => 'https://hbci-pintan.gad.de/cgi-bin/hbciservlet',
-                'login_hint' => 'Kundennummer (von der TAN-Liste, mind. 7-stellig, sonst mit führenden Nullen)',
-                'customer_id_hint' => 'VR-Kennung (beginnt mit „VR" oder „VRK"), i. d. R. 19-stellig',
+                'name' => 'Volksbank / VR-Bank (Atruvia, früher Fiducia/GAD)',
+                'fints_url' => 'https://fints1.atruvia.de/cgi-bin/hbciservlet',
+                'login_hint' => 'VR-NetKey bzw. Kundennummer/Alias laut Bank',
+                'customer_id_hint' => 'Bei manchen Banken VR-Kennung (beginnt mit „VR"/„VRK"); sonst leer',
                 'account_hint' => null,
-                'note' => 'Volksbanken im GAD-Rechenzentrum.',
+                'note' => 'Aktuelle FinTS-Adresse der Atruvia (ehem. Fiducia & GAD). Deine Bank kann eine eigene URL haben – im Zweifel bei der Bank erfragen.',
             ],
             [
-                'name' => 'Volksbank (Fiducia)',
+                'name' => 'Volksbank (Fiducia, ALT)',
                 'fints_url' => 'https://hbci11.fiducia.de/cgi-bin/hbciservlet',
                 'login_hint' => 'VR-Net-Key',
                 'customer_id_hint' => '(leer)',
                 'account_hint' => null,
-                'note' => 'Volksbanken im Fiducia-Rechenzentrum.',
+                'note' => 'Veraltete Adresse – i. d. R. nicht mehr erreichbar. Bitte „Atruvia" verwenden.',
             ],
             [
                 'name' => 'HypoVereinsbank',
