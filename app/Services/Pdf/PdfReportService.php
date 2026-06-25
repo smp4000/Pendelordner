@@ -53,13 +53,16 @@ class PdfReportService
 
         $pdf = new Fpdi();
 
+        $stats = $this->buildStats($transactions);
+        $stats['appendedFiles'] = $this->countAppendableFiles($transactions);
+
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
             'business' => $business,
             'periodLabel' => $this->germanMonth($month),
             'generatedAt' => now()->format('d.m.Y'),
             'transactions' => $transactions,
-            'stats' => $this->buildStats($transactions),
+            'stats' => $stats,
             'money' => $this->money,
         ])->setPaper('a4')->output();
         $this->importPdfString($pdf, $frontMatter);
@@ -102,6 +105,20 @@ class PdfReportService
             'withoutReceipt' => $transactions->filter(fn (BankTransaction $t) => $t->receipts->isEmpty())->count(),
             'unreviewed' => $transactions->where('reviewed', false)->count(),
         ];
+    }
+
+    /**
+     * Zählt die tatsächlich anhängbaren Beleg-Dateien (Datei vorhanden).
+     *
+     * @param  \Illuminate\Support\Collection<int, BankTransaction>  $transactions
+     */
+    private function countAppendableFiles($transactions): int
+    {
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+
+        return $transactions->sum(fn (BankTransaction $t) => $t->receipts
+            ->filter(fn (Receipt $r) => $r->file_path && $disk->exists($r->file_path))
+            ->count());
     }
 
     /** Importiert alle Seiten eines PDF-Strings in das Zieldokument. */

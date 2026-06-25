@@ -45,6 +45,7 @@
         <tr><td class="label">Summe Eingänge</td><td class="value pos">{{ $money($stats['income']) }}</td></tr>
         <tr><td class="label">Summe Ausgänge</td><td class="value neg">{{ $money($stats['expense']) }}</td></tr>
         <tr><td class="label">Anzahl zugeordneter Belege</td><td class="value">{{ $stats['receipts'] }}</td></tr>
+        <tr><td class="label">davon als PDF angehängt</td><td class="value">{{ $stats['appendedFiles'] ?? 0 }}</td></tr>
         <tr><td class="label">Umsätze ohne Beleg</td><td class="value neg">{{ $stats['withoutReceipt'] }}</td></tr>
         <tr><td class="label">Nicht geprüfte Umsätze</td><td class="value">{{ $stats['unreviewed'] }}</td></tr>
     </table>
