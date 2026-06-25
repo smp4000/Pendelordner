@@ -116,7 +116,14 @@ class Kontoumsatzdetails extends Page
     {
         return BankTransaction::query()
             ->with(['receipts'])
-            ->open()
+            // offene Umsätze + den aktuell gewählten (auch wenn schon geprüft),
+            // damit Navigation/Position stimmen.
+            ->where(function ($q) {
+                $q->open();
+                if ($this->selectedTransactionId) {
+                    $q->orWhere('id', $this->selectedTransactionId);
+                }
+            })
             ->orderBy('booking_date')
             ->limit(100)
             ->get();
@@ -134,7 +141,15 @@ class Kontoumsatzdetails extends Page
 
     public function getSelectedReceiptProperty(): ?Receipt
     {
-        return $this->selectedReceiptId ? Receipt::find($this->selectedReceiptId) : null;
+        if ($this->selectedReceiptId) {
+            if ($r = Receipt::find($this->selectedReceiptId)) {
+                return $r;
+            }
+        }
+
+        // Fällt automatisch auf den ersten zugeordneten Beleg zurück, damit die
+        // Vorschau auch ohne Klick erscheint.
+        return $this->selectedTransaction?->receipts->first();
     }
 
     public function getSuggestionsProperty(): Collection

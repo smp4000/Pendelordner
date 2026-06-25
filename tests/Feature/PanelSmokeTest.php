@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Receipt;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PanelSmokeTest extends TestCase
@@ -60,6 +62,23 @@ class PanelSmokeTest extends TestCase
         foreach ($forms as $url) {
             $this->actingAs($user)->get($url)->assertSuccessful();
         }
+    }
+
+    public function test_belegvorschau_route_liefert_die_datei(): void
+    {
+        Storage::fake('belege');
+        $user = $this->preparedUser();
+
+        Storage::disk('belege')->put('2026/06/test.pdf', "%PDF-1.4\nTest");
+        $receipt = Receipt::create([
+            'type' => 'incoming_invoice',
+            'file_path' => '2026/06/test.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('beleg.datei', $receipt))
+            ->assertOk();
     }
 
     private function preparedUser(): User
