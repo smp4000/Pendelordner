@@ -159,13 +159,14 @@ class ServicesTest extends TestCase
             ':28C:00001/001',
             ':60F:C260101EUR1000,00',
             ':61:2606010601D19,99NMSCNONREF',
-            ':86:177?00Umbuchung?20Umbuchung PC Lautsprec?21her Expert Klein',
+            ':86:177?00Umbuchung?20Umbuchung PC Lautsprec?21her Expert Klein?32Stripe Technology Europe Lt?33d',
             ':62F:C260102EUR980,01',
         ]);
 
         $rows = (new Mt940Parser())->parse($mt940);
         $this->assertCount(1, $rows);
         $this->assertSame('Umbuchung PC Lautsprecher Expert Klein', $rows[0]['purpose']);
+        $this->assertSame('Stripe Technology Europe Ltd', $rows[0]['counterparty']);
     }
 
     public function test_camt_parser(): void

@@ -129,7 +129,10 @@ class Mt940Parser
             }
         }
 
-        $name = trim(trim($sub[32] ?? '') . ' ' . trim($sub[33] ?? ''));
+        // Name der Gegenseite: ?32 und ?33 sind ebenfalls 27-Zeichen-Segmente
+        // eines fortlaufenden Namens und werden ohne Trenner zusammengesetzt
+        // (sonst "Stripe Technology Europe Lt d" statt "... Ltd").
+        $name = trim(($sub[32] ?? '') . ($sub[33] ?? ''));
 
         return array_filter([
             'booking_text' => isset($sub[0]) ? trim($sub[0]) : null,
