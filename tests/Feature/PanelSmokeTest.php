@@ -35,6 +35,7 @@ class PanelSmokeTest extends TestCase
             '/admin/auswertungen',          // Modul 10 (Auswertungen)
             '/admin/fints-konten',          // Modul 1 (FinTS-Konten interaktiv)
             '/admin/umsaetze-importieren',  // Modul 1 (Datei-Upload-Import)
+            '/admin/belege-zuordnen',       // Modul 3/4 (Beleg-Upload + Vorschläge)
         ];
 
         foreach ($pages as $url) {

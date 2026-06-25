@@ -79,6 +79,38 @@ class MatchingEngine
     }
 
     /**
+     * Umgekehrter Vorschlag: passende Bankumsätze zu einem Beleg.
+     *
+     * @return Collection<int, array{transaction: BankTransaction, score: float}>
+     */
+    public function suggestTransactions(Receipt $receipt, ?int $limit = 5): Collection
+    {
+        $threshold = (float) config('pendelordner.matching.vorschlag_ab', 60);
+        $maxDays = (int) config('pendelordner.matching.datum_toleranz_tage', 14);
+        $gross = (float) ($receipt->gross_amount ?? 0);
+
+        $candidates = BankTransaction::query()
+            ->open() // nur Umsätze, die noch (Teil-)Belege brauchen
+            ->when($gross > 0, fn ($q) => $q->whereRaw('ABS(amount) BETWEEN ? AND ?', [$gross * 0.95, $gross * 1.05]))
+            ->when($receipt->invoice_date, fn ($q) => $q->whereBetween('booking_date', [
+                $receipt->invoice_date->copy()->subDays($maxDays)->toDateString(),
+                $receipt->invoice_date->copy()->addDays($maxDays)->toDateString(),
+            ]))
+            ->when($receipt->business_id, fn ($q) => $q->where(function ($q) use ($receipt) {
+                $q->whereNull('business_id')->orWhere('business_id', $receipt->business_id);
+            }))
+            ->limit(300)
+            ->get();
+
+        return $candidates
+            ->map(fn (BankTransaction $t) => ['transaction' => $t, 'score' => $this->scoreReceipt($t, $receipt)])
+            ->filter(fn (array $row) => $row['score'] >= $threshold)
+            ->sortByDesc('score')
+            ->when($limit, fn (Collection $c) => $c->take($limit))
+            ->values();
+    }
+
+    /**
      * Trefferquote (0–100 %) zwischen Umsatz und Beleg anhand gewichteter
      * Einzelkriterien Betrag/Lieferant/Datum/IBAN.
      */
