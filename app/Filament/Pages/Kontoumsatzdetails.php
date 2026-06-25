@@ -430,7 +430,17 @@ class Kontoumsatzdetails extends Page
 
         // Fällt automatisch auf den ersten zugeordneten Beleg zurück, damit die
         // Vorschau auch ohne Klick erscheint.
-        return $this->selectedTransaction?->receipts->first();
+        if ($first = $this->selectedTransaction?->receipts->first()) {
+            return $first;
+        }
+
+        // Auf dem Vorschläge-Tab ohne zugeordneten Beleg den besten Vorschlag
+        // direkt in der Vorschau zeigen.
+        if ($this->activeTab === 'suggestions') {
+            return $this->suggestions->first()['receipt'] ?? null;
+        }
+
+        return null;
     }
 
     public function getSuggestionsProperty(): Collection

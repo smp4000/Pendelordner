@@ -230,8 +230,9 @@
                         {{-- TAB: Vorschläge --}}
                         @elseif ($activeTab === 'suggestions')
                             @forelse ($this->suggestions as $s)
-                                <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .75rem;border-bottom:1px solid rgba(120,120,120,.15);">
-                                    <span wire:click="selectReceipt({{ $s['receipt']->id }})" style="cursor:pointer;">
+                                <div wire:key="suggest-{{ $s['receipt']->id }}"
+                                    style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem .75rem;border-bottom:1px solid rgba(120,120,120,.15);{{ $s['receipt']->id === $this->selectedReceipt?->id ? 'background:rgba(16,185,129,.12);' : '' }}">
+                                    <span wire:click="selectReceipt({{ $s['receipt']->id }})" style="cursor:pointer;flex:1;" title="In der Vorschau anzeigen">
                                         {{ $s['receipt']->invoice_number ?: ('Beleg #' . $s['receipt']->id) }}
                                         <span style="opacity:.6;">· {{ $s['receipt']->supplier?->name }} · {{ $money($s['receipt']->gross_amount) }}</span>
                                         <span style="margin-left:.4rem;padding:.05rem .4rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;font-size:.75rem;">{{ $s['score'] }} %</span>
