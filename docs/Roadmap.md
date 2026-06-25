@@ -34,18 +34,23 @@
   (DomPDF + FPDI), Belege in exakter Umsatzreihenfolge angehängt
 - **Globale Suche** (Modul 11): Bankumsatz, Beleg (inkl. OCR-Text), Lieferant
 
-## 🔜 Phase 4 – Buchhaltung & Komfort
+## ✅ Phase 4 – Buchhaltung & Auswertungen (abgeschlossen)
 
-- **Kontierung** (Modul 13): SKR03/04-Buchungssätze aus Regeln/Kategorien
-  konkret erzeugen und in `account_assignments` ablegen (Datenmodell steht)
-- **DATEV-Export** (Modul 14): EXTF-Buchungsstapel-CSV, Debitoren/Kreditoren
-- **Auswertungen vertiefen**: Kosten je Tankstelle/Kostenstelle/Bankkonto,
-  Jahresvergleich, Kostenentwicklung als eigene Auswertungsseite
-- Queue-Jobs für OCR/Import (Server-Betrieb)
-- FinTS-Scheduler (automatischer Abruf), TAN-Eingabe-Flow in der UI
-- Mehrfach-Kostenstellen-Verteilung in der UI aktivieren
+- **Kontierung** (Modul 13): KontierungService erzeugt SKR03/04-Buchungssätze
+  in `account_assignments` (Konto aus Kategorie/Lieferant, Geldkonto als
+  Gegenkonto), Massenaktion „Kontieren" + Resource „Kontierungen"
+- **DATEV-Export** (Modul 14): DatevExportService erzeugt EXTF-Buchungsstapel
+  (Windows-1252), Seite „DATEV-Export" mit Zeitraum/Betrieb/Berater-/Mandanten-
+  nummer
+- **Auswertungen** (Modul 10): eigene Seite mit Zeitraumfilter
+  (Monat/Quartal/Jahr/Vorjahr) und Aufschlüsselung je Betrieb, Kostenstelle,
+  Kategorie, Bankkonto und Top-Lieferanten
+- **Automatischer Bankabruf**: Befehl `bank:fetch` + Scheduler (täglich)
 
-## 🔮 Später
+## 🔮 Später / Komfort
 
+- Queue-Jobs für OCR/Import (entlastet das UI im Server-Betrieb)
+- Interaktiver TAN-Eingabe-Flow für FinTS in der UI
+- Mehrfach-Kostenstellen-Verteilung in der UI aktivieren (Datenmodell steht)
 - Mandantenfähigkeit & Benutzerrechte (für Server-Betrieb)
-- Tankstellen 2..n im Echtbetrieb
+- Debitoren/Kreditoren-Stammdatenexport für DATEV

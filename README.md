@@ -9,10 +9,11 @@ abzuheften, bildet die Anwendung den kompletten Ablauf digital ab:
 Bankumsätze abrufen → Belege erfassen (OCR) → automatisch zuordnen →
 auswerten → Pendelordner-PDF für den Steuerberater erzeugen.
 
-> Status: **Module 1–12 funktionsfähig** (Bankimport + FinTS, OCR-Belegarchiv,
-> lernfähige Zuordnung, 3-Spalten-Kontoumsatzdetails, Dashboard/Charts,
-> Steuerberater-PDF, globale Suche). Kontierung/DATEV (13/14) als Datenmodell
-> vorbereitet. Testsuite grün. Details in der [Roadmap](docs/Roadmap.md).
+> Status: **Alle 14 Module funktionsfähig** – Bankimport + automatischer FinTS-
+> Abruf, OCR-Belegarchiv, lernfähige Zuordnung, 3-Spalten-Kontoumsatzdetails,
+> Dashboard/Charts/Auswertungen, Steuerberater-PDF, globale Suche, SKR03/04-
+> Kontierung und DATEV-EXTF-Export. Testsuite grün (13 Tests).
+> Details in der [Roadmap](docs/Roadmap.md).
 
 ---
 
@@ -80,8 +81,8 @@ Ausführliche Anleitung: [docs/Installation.md](docs/Installation.md)
 | 10 | Auswertungen / Dashboard / Charts | ✅ |
 | 11 | Globale Suche | ✅ |
 | 12 | PDF-Bericht (Steuerberater-Pendelordner) | ✅ |
-| 13 | Kontierung SKR03/04 (Vorbereitung) | Datenmodell ✅ |
-| 14 | DATEV-Export (nur Datenmodell) | Datenmodell ✅ |
+| 13 | Kontierung SKR03/04 (Buchungssätze, Massenaktion) | ✅ |
+| 14 | DATEV-Export (EXTF-Buchungsstapel CSV) | ✅ |
 
 ---
 
