@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\BankAccount;
+use App\Services\Bank\FinTsErrorTranslator;
 use App\Services\Bank\FinTsService;
 use App\Services\Bank\FinTsTanRequiredException;
 use Illuminate\Console\Command;
@@ -62,8 +63,9 @@ class FetchBankTransactions extends Command
             } catch (Throwable $e) {
                 $hadError = true;
                 report($e);
-                $this->error('  ✗ Fehler: ' . $e->getMessage());
-                $account->fintsConnection?->forceFill(['last_message' => 'Fehler: ' . $e->getMessage()])->saveQuietly();
+                $message = FinTsErrorTranslator::translate($e);
+                $this->error('  ✗ Fehler: ' . $message);
+                $account->fintsConnection?->forceFill(['last_message' => 'Fehler: ' . $message])->saveQuietly();
             }
         }
 

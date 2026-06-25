@@ -11,6 +11,7 @@ use App\Services\Bank\BankImportService;
 use App\Services\Bank\Parsers\CamtParser;
 use App\Services\Bank\Parsers\CsvBankParser;
 use App\Services\Bank\Parsers\Mt940Parser;
+use App\Services\Bank\FinTsErrorTranslator;
 use App\Services\Matching\MatchingEngine;
 use App\Services\Ocr\ReceiptParser;
 use Database\Seeders\MasterDataSeeder;
@@ -141,6 +142,20 @@ XML;
 
         $suggestions = (new MatchingEngine())->suggestReceipts($transaction);
         $this->assertTrue($suggestions->contains(fn ($s) => $s['receipt']->is($receipt)));
+    }
+
+    public function test_fints_fehler_werden_uebersetzt(): void
+    {
+        $this->assertSame(
+            'Die PIN fehlt – bitte PIN eingeben.',
+            FinTsErrorTranslator::translate('pin cannot be empty'),
+        );
+        $this->assertStringContainsString(
+            'Verbindung zur Bank fehlgeschlagen',
+            FinTsErrorTranslator::translate('cURL error 6: Could not resolve host'),
+        );
+        // Bereits deutsche Meldung bleibt unverändert.
+        $this->assertSame('Eigene Meldung', FinTsErrorTranslator::translate('Eigene Meldung'));
     }
 
     public function test_receipt_parser_extrahiert_rechnungsdaten(): void

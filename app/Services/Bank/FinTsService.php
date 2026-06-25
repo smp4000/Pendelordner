@@ -43,9 +43,9 @@ class FinTsService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function discoverAccounts(FintsConnection $connection): array
+    public function discoverAccounts(FintsConnection $connection, ?string $pin = null): array
     {
-        $fints = $this->makeClient($connection);
+        $fints = $this->makeClient($connection, null, $pin);
         $this->selectTanMode($fints, $connection);
 
         $ctx = ['connection_id' => $connection->id];
@@ -61,7 +61,7 @@ class FinTsService
     /**
      * Umsätze eines Kontos abrufen und importieren.
      */
-    public function fetchAccount(BankAccount $account, ?Carbon $from = null, ?Carbon $to = null): ImportLog
+    public function fetchAccount(BankAccount $account, ?Carbon $from = null, ?Carbon $to = null, ?string $pin = null): ImportLog
     {
         $connection = $account->fintsConnection;
         if (! $connection) {
@@ -78,7 +78,7 @@ class FinTsService
             'to' => $to->toDateString(),
         ];
 
-        $fints = $this->makeClient($connection);
+        $fints = $this->makeClient($connection, null, $pin);
         $this->selectTanMode($fints, $connection);
 
         $login = $fints->login();
@@ -97,13 +97,11 @@ class FinTsService
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>  ['type' => 'accounts', 'accounts' => [...]] | ['type' => 'log', 'log' => ImportLog]
      */
-    public function resumeWithTan(string $flow, string $stage, array $context, string $persist, string $serializedAction, string $tan): array
+    public function resumeWithTan(string $flow, string $stage, array $context, string $persist, string $serializedAction, string $tan, ?string $pin = null): array
     {
         $connection = FintsConnection::findOrFail($context['connection_id']);
-        $fints = $this->makeClient($connection, $persist);
-
-        $connectionModel = FintsConnection::findOrFail($context['connection_id']);
-        $this->selectTanMode($fints, $connectionModel);
+        $fints = $this->makeClient($connection, $persist, $pin);
+        $this->selectTanMode($fints, $connection);
 
         /** @var BaseAction $action */
         $action = unserialize($serializedAction);
@@ -120,10 +118,10 @@ class FinTsService
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
-    public function checkDecoupled(string $flow, string $stage, array $context, string $persist, string $serializedAction): array
+    public function checkDecoupled(string $flow, string $stage, array $context, string $persist, string $serializedAction, ?string $pin = null): array
     {
         $connection = FintsConnection::findOrFail($context['connection_id']);
-        $fints = $this->makeClient($connection, $persist);
+        $fints = $this->makeClient($connection, $persist, $pin);
         $this->selectTanMode($fints, $connection);
 
         /** @var BaseAction $action */
@@ -229,7 +227,7 @@ class FinTsService
     //  Hilfsfunktionen
     // ===================================================================
 
-    private function makeClient(FintsConnection $connection, ?string $persist = null): FinTs
+    private function makeClient(FintsConnection $connection, ?string $persist = null, ?string $pinOverride = null): FinTs
     {
         $options = new FinTsOptions();
         $options->url = $connection->fints_url;
@@ -237,7 +235,13 @@ class FinTsService
         $options->productName = $connection->product_id ?: config('pendelordner.fints.product_id', 'PENDELORDNER');
         $options->productVersion = $connection->product_version ?: '1.0';
 
-        $credentials = Credentials::create($connection->username, (string) $connection->pin);
+        // PIN: zur Laufzeit eingegebene PIN hat Vorrang vor der gespeicherten.
+        $pin = $pinOverride !== null && $pinOverride !== '' ? $pinOverride : (string) $connection->pin;
+        if ($pin === '') {
+            throw new \RuntimeException('Die PIN fehlt – bitte PIN eingeben oder im FinTS-Zugang hinterlegen.');
+        }
+
+        $credentials = Credentials::create($connection->username, $pin);
 
         return FinTs::new($options, $credentials, $persist);
     }

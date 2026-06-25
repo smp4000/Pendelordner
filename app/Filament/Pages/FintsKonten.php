@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\BankAccount;
 use App\Models\FintsConnection;
+use App\Services\Bank\FinTsErrorTranslator;
 use App\Services\Bank\FinTsService;
 use App\Services\Bank\FinTsTanRequiredException;
 use BackedEnum;
@@ -35,6 +36,9 @@ class FintsKonten extends Page
     protected static ?string $navigationLabel = 'FinTS-Konten abrufen';
 
     public ?int $connectionId = null;
+
+    /** Zur Laufzeit eingegebene PIN (leer = im Zugang gespeicherte PIN nutzen). */
+    public string $pin = '';
 
     /** idle | tan | accounts */
     public string $step = 'idle';
@@ -90,13 +94,13 @@ class FintsKonten extends Page
         }
 
         try {
-            $accounts = (new FinTsService())->discoverAccounts($connection);
+            $accounts = (new FinTsService())->discoverAccounts($connection, $this->pin ?: null);
             $this->showAccounts($accounts);
         } catch (FinTsTanRequiredException $e) {
             $this->requestTan($e);
         } catch (Throwable $e) {
             report($e);
-            $this->notifyError($e->getMessage());
+            $this->notifyError($e);
         }
     }
 
@@ -109,13 +113,13 @@ class FintsKonten extends Page
         }
 
         try {
-            $log = (new FinTsService())->fetchAccount($account);
+            $log = (new FinTsService())->fetchAccount($account, null, null, $this->pin ?: null);
             $this->notifyImport($log);
         } catch (FinTsTanRequiredException $e) {
             $this->requestTan($e);
         } catch (Throwable $e) {
             report($e);
-            $this->notifyError($e->getMessage());
+            $this->notifyError($e);
         }
     }
 
@@ -132,7 +136,7 @@ class FintsKonten extends Page
         try {
             $result = (new FinTsService())->resumeWithTan(
                 $pending['flow'], $pending['stage'], $pending['context'],
-                $pending['persist'], $pending['serialized'], trim($this->tan),
+                $pending['persist'], $pending['serialized'], trim($this->tan), $pending['pin'] ?? null,
             );
             $this->handleResult($result);
         } catch (FinTsTanRequiredException $e) {
@@ -140,7 +144,7 @@ class FintsKonten extends Page
         } catch (Throwable $e) {
             report($e);
             $this->step = 'idle';
-            $this->notifyError($e->getMessage());
+            $this->notifyError($e);
         }
     }
 
@@ -157,7 +161,7 @@ class FintsKonten extends Page
         try {
             $result = (new FinTsService())->checkDecoupled(
                 $pending['flow'], $pending['stage'], $pending['context'],
-                $pending['persist'], $pending['serialized'],
+                $pending['persist'], $pending['serialized'], $pending['pin'] ?? null,
             );
             $this->handleResult($result);
         } catch (FinTsTanRequiredException $e) {
@@ -169,7 +173,7 @@ class FintsKonten extends Page
         } catch (Throwable $e) {
             report($e);
             $this->step = 'idle';
-            $this->notifyError($e->getMessage());
+            $this->notifyError($e);
         }
     }
 
@@ -245,6 +249,7 @@ class FintsKonten extends Page
             'context' => $e->context,
             'persist' => $e->persist,
             'serialized' => $e->serializedAction,
+            'pin' => $this->pin ?: null,
         ]);
 
         $this->tan = '';
@@ -262,8 +267,10 @@ class FintsKonten extends Page
             ->send();
     }
 
-    private function notifyError(string $message): void
+    private function notifyError(\Throwable|string $error): void
     {
-        Notification::make()->title('FinTS-Fehler')->body($message)->danger()->send();
+        Notification::make()->title('FinTS-Fehler')
+            ->body(FinTsErrorTranslator::translate($error))
+            ->danger()->send();
     }
 }

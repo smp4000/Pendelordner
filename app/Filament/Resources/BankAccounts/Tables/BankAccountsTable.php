@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BankAccounts\Tables;
 use App\Enums\ImportSource;
 use App\Models\BankAccount;
 use App\Services\Bank\BankImportService;
+use App\Services\Bank\FinTsErrorTranslator;
 use App\Services\Bank\FinTsService;
 use App\Services\Bank\FinTsTanRequiredException;
 use App\Services\Bank\Parsers\CamtParser;
@@ -146,7 +147,7 @@ class BankAccountsTable
                 } catch (Throwable $e) {
                     Notification::make()
                         ->title('FinTS-Abruf fehlgeschlagen')
-                        ->body($e->getMessage())
+                        ->body(FinTsErrorTranslator::translate($e))
                         ->danger()
                         ->send();
                 }

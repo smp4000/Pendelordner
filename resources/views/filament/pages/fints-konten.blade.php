@@ -13,12 +13,23 @@
                     @endforeach
                 </select>
 
+                <div>
+                    <label class="block text-sm font-medium mb-1">PIN</label>
+                    <input type="password" wire:model="pin" autocomplete="off"
+                        placeholder="PIN eingeben"
+                        class="block w-48 rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+                </div>
+
                 <x-filament::button wire:click="discover" wire:loading.attr="disabled" icon="heroicon-o-magnifying-glass"
                     :disabled="! $connectionId">
                     Konten abrufen
                     <span wire:loading wire:target="discover">…</span>
                 </x-filament::button>
             </div>
+            <p class="mt-2 text-xs text-gray-400">
+                PIN hier eingeben (wird nur für den Abruf verwendet, nicht gespeichert) – oder leer lassen,
+                wenn sie im FinTS-Zugang hinterlegt ist.
+            </p>
             @if ($this->connections->isEmpty())
                 <p class="mt-2 text-sm text-warning-600">
                     Noch kein FinTS-Zugang vorhanden – bitte zuerst unter „Bank → FinTS-Zugänge" anlegen.
