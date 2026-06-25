@@ -71,24 +71,28 @@ class Mt940Parser
     private function parseLine(string $value): array
     {
         $value = str_replace("\n", '', $value);
+        // Soll/Haben-Kennung: C, D, RC, RD (Storno) sowie CR/DR (R hinten, manche Banken).
         preg_match(
-            '/^(?<vdate>\d{6})(?<edate>\d{4})?(?<mark>R?[CD])(?<amount>[\d,]+)(?<code>[A-Z][A-Z0-9]{3})?(?<ref>.*)$/',
+            '/^(?<vdate>\d{6})(?<edate>\d{4})?(?<mark>R?[CD]R?)(?<amount>[\d,]+)(?<code>[A-Z][A-Z0-9]{3})?(?<ref>.*)$/',
             $value,
             $m
         );
 
         $valueDate = $this->parseDate($m['vdate'] ?? null);
         $bookingDate = isset($m['edate']) && $m['edate'] !== ''
-            ? $this->parseEntryDate($m['edate'], $m['vdate'] ?? null)
+            ? $this->parseEntryDate($m['edate'], $valueDate)
             : $valueDate;
 
         $amount = $this->parseAmount($m['amount'] ?? '0');
-        $mark = $m['mark'] ?? 'C';
-        // C=Haben(+), D=Soll(-); ein vorangestelltes R (Storno) kehrt das Vorzeichen um.
-        $sign = str_contains($mark, 'D') ? -1 : 1;
-        if (str_starts_with($mark, 'R')) {
-            $sign *= -1;
-        }
+        $mark = strtoupper($m['mark'] ?? 'C');
+        // C/CR = Haben (+), D/DR = Soll (−); RC/RD = Storno (kehrt das Vorzeichen um).
+        $sign = match ($mark) {
+            'C', 'CR' => 1,
+            'D', 'DR' => -1,
+            'RC' => -1,
+            'RD' => 1,
+            default => str_contains($mark, 'D') ? -1 : 1,
+        };
 
         return [
             'booking_date' => $bookingDate,
@@ -147,10 +151,30 @@ class Mt940Parser
 
     private function parseEntryDate(string $mmdd, ?string $valueDate): ?string
     {
-        // Jahr aus dem Valutadatum übernehmen (Buchungsdatum hat nur MMTT).
-        $year = $valueDate ? 2000 + (int) substr($valueDate, 0, 2) : (int) date('Y');
+        // Buchungsdatum hat nur MMTT -> Jahr aus dem Valutadatum (Y-m-d) ableiten.
+        $year = $valueDate ? (int) substr($valueDate, 0, 4) : (int) date('Y');
+        $month = (int) substr($mmdd, 0, 2);
+        $day = (int) substr($mmdd, 2, 2);
 
-        return sprintf('%04d-%s-%s', $year, substr($mmdd, 0, 2), substr($mmdd, 2, 2));
+        if (! checkdate($month, $day, $year)) {
+            return $valueDate;
+        }
+
+        $candidate = sprintf('%04d-%02d-%02d', $year, $month, $day);
+
+        // Jahreswechsel ausgleichen: liegt das Buchungsdatum mit Valuta-Jahr weit
+        // vom Valutadatum entfernt, gehört es ins Vor-/Folgejahr
+        // (z. B. Valuta 31.12.2025, Buchung 02.01. -> 02.01.2026).
+        if ($valueDate) {
+            $diff = (strtotime($candidate) - strtotime($valueDate)) / 86400;
+            if ($diff < -300) {
+                $candidate = sprintf('%04d-%02d-%02d', $year + 1, $month, $day);
+            } elseif ($diff > 300) {
+                $candidate = sprintf('%04d-%02d-%02d', $year - 1, $month, $day);
+            }
+        }
+
+        return $candidate;
     }
 
     private function parseAmount(string $value): float
