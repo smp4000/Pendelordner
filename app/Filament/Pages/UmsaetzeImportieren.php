@@ -103,7 +103,7 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
                     if (! $account) {
                         Notification::make()
                             ->title('Konto nicht erkannt')
-                            ->body('Bitte das Zielkonto auswählen (bei CSV/CAMT erforderlich).')
+                            ->body('Aus dieser CSV ließ sich kein Konto ableiten. Bitte das Zielkonto auswählen.')
                             ->warning()->send();
 
                         return;
@@ -147,7 +147,9 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
     }
 
     /**
-     * Konto bestimmen: ausgewählt > automatisch aus MT940 (:25: BLZ/Kontonummer).
+     * Konto bestimmen: ausgewählt > automatisch aus der Datei erkennen und – falls
+     * nicht vorhanden – automatisch anlegen. MT940 über :25: (BLZ/Kontonummer),
+     * CAMT über die Konto-IBAN im Auszugskopf. Bei CSV nicht ableitbar -> null.
      */
     private function resolveAccount(?int $selectedId, string $content): ?BankAccount
     {
@@ -155,19 +157,66 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
             return BankAccount::find($selectedId);
         }
 
+        // MT940: :25:BLZ/Kontonummer
         if (preg_match('/:25:([0-9]+)\/([A-Z0-9]+)/', $content, $m)) {
             $blz = $m[1];
-            $kontonummer = ltrim($m[2], '0');
+            $account = $m[2];
+            $trimmed = ltrim($account, '0');
 
-            return BankAccount::query()
+            $existing = BankAccount::query()
                 ->where('bank_code', $blz)
-                ->where(function ($q) use ($m, $kontonummer) {
-                    $q->where('account_number', $m[2])
-                        ->orWhereRaw('TRIM(LEADING ? FROM account_number) = ?', ['0', $kontonummer]);
+                ->where(function ($q) use ($account, $trimmed) {
+                    $q->where('account_number', $account)
+                        ->orWhereRaw('TRIM(LEADING ? FROM account_number) = ?', ['0', $trimmed]);
                 })
                 ->first();
+
+            return $existing ?? $this->createAccount(
+                bankCode: $blz,
+                accountNumber: $account,
+                label: 'Konto ' . $account . ' (BLZ ' . $blz . ')',
+            );
+        }
+
+        // CAMT.053: erste IBAN im Dokument = Konto-IBAN des Auszugs
+        if ((str_contains($content, 'camt.05') || str_contains($content, '<Ntry>'))
+            && preg_match('/<IBAN>([A-Z]{2}[0-9A-Z]+)<\/IBAN>/', $content, $m)) {
+            $iban = $m[1];
+
+            $existing = BankAccount::where('iban', $iban)->first();
+
+            return $existing ?? $this->createAccount(
+                iban: $iban,
+                bankCode: substr($iban, 4, 8), // dt. IBAN: Stellen 5–12 = BLZ
+                label: 'Konto ' . $iban,
+            );
         }
 
         return null;
+    }
+
+    /** Legt automatisch ein Bankkonto an (dem ersten Betrieb zugeordnet). */
+    private function createAccount(
+        ?string $iban = null,
+        ?string $bankCode = null,
+        ?string $accountNumber = null,
+        string $label = 'Importiertes Konto',
+    ): BankAccount {
+        $account = BankAccount::create([
+            'label' => $label,
+            'iban' => $iban,
+            'bank_code' => $bankCode,
+            'account_number' => $accountNumber,
+            'business_id' => \App\Models\Business::orderBy('sort_order')->value('id'),
+            'currency' => 'EUR',
+            'active' => true,
+        ]);
+
+        Notification::make()
+            ->title('Neues Bankkonto angelegt')
+            ->body('„' . $label . '" wurde automatisch erstellt.')
+            ->success()->send();
+
+        return $account;
     }
 }
