@@ -25,6 +25,8 @@
         .beleg-nr { display: inline-block; margin-top: 2px; background: #059669; color: #fff;
                     font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
         .memo { margin-top: 3px; font-weight: bold; color: #b45309; font-size: 10px; }
+        .splits { width: 100%; margin-top: 3px; border-collapse: collapse; }
+        .splits td { border: none; border-bottom: 1px dotted #e5e7eb; padding: 1px 4px; font-size: 9px; color: #4b5563; }
     </style>
 </head>
 <body>
@@ -86,6 +88,18 @@
                     @endif
                     @if (trim((string) $t->accountant_note) !== '')
                         <div class="memo">{{ $t->accountant_note }}</div>
+                    @endif
+                    @if ($t->accountAssignments->isNotEmpty())
+                        <table class="splits">
+                            @foreach ($t->accountAssignments as $a)
+                                <tr>
+                                    <td style="width:55px;">Konto {{ $a->account ?: '—' }}</td>
+                                    <td>{{ $a->costCenter?->name ?? '' }}@if($a->booking_text) · {{ \Illuminate\Support\Str::limit($a->booking_text, 30) }}@endif</td>
+                                    <td style="width:34px;" class="num">{{ $a->tax_rate !== null ? rtrim(rtrim(number_format((float)$a->tax_rate,2,',','.'),'0'),',').'%' : '' }}</td>
+                                    <td style="width:60px;" class="num">{{ $money($a->amount) }}</td>
+                                </tr>
+                            @endforeach
+                        </table>
                     @endif
                 </td>
                 <td>{{ $t->category?->name ?? '—' }}</td>

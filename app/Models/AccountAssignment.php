@@ -17,6 +17,7 @@ class AccountAssignment extends Model
         'service_date' => 'date',
         'booking_date' => 'date',
         'amount' => 'decimal:2',
+        'tax_rate' => 'decimal:2',
         'exported' => 'boolean',
     ];
 
