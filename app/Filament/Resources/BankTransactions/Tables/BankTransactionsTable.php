@@ -14,6 +14,7 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -190,6 +191,9 @@ class BankTransactionsTable
                         return $data['preset'] ?? null ? 'Zeitraum gesetzt' : null;
                     }),
             ])
+            // Filter dauerhaft oberhalb der Tabelle anzeigen (mehrspaltig).
+            ->filtersLayout(FiltersLayout::AboveContent)
+            ->filtersFormColumns(4)
             ->recordActions([
                 EditAction::make(),
             ])
