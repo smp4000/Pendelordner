@@ -98,6 +98,10 @@ class BankTransactionForm
                         Toggle::make('reviewed')->label('Geprüft')->inline(false),
                         Toggle::make('fully_paid')->label('Vollständig bezahlt')->inline(false),
                         Textarea::make('note')->label('Notiz')->rows(2),
+                        Textarea::make('accountant_note')
+                            ->label('Mitteilung an den Steuerberater')
+                            ->helperText('Erscheint fett unter dem Umsatz im Steuerberater-Bericht.')
+                            ->rows(2),
                     ]),
             ]);
     }

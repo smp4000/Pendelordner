@@ -24,6 +24,7 @@
         .receipts { color: #6b7280; font-size: 9px; }
         .beleg-nr { display: inline-block; margin-top: 2px; background: #059669; color: #fff;
                     font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
+        .memo { margin-top: 3px; font-weight: bold; color: #b45309; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -81,6 +82,9 @@
                     @endphp
                     @if ($nums->isNotEmpty())
                         <br><span class="beleg-nr">Beleg {{ $nums->implode(', ') }}</span>
+                    @endif
+                    @if (trim((string) $t->accountant_note) !== '')
+                        <div class="memo">{{ $t->accountant_note }}</div>
                     @endif
                 </td>
                 <td>{{ $t->category?->name ?? '—' }}</td>

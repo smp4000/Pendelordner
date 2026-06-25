@@ -125,8 +125,30 @@
                         <x-filament::button wire:click="togglePaid" icon="heroicon-o-banknotes" :color="$tx->fully_paid ? 'success' : 'gray'" size="sm">
                             {{ $tx->fully_paid ? 'Vollständig bezahlt ✓' : 'Als bezahlt markieren' }}
                         </x-filament::button>
+                        <x-filament::button wire:click="toggleNote" icon="heroicon-o-chat-bubble-left-ellipsis"
+                            :color="$tx->accountant_note ? 'warning' : 'gray'" size="sm">
+                            {{ $tx->accountant_note ? 'Mitteilung ✓' : 'Mitteilung an Steuerberater' }}
+                        </x-filament::button>
                         <x-filament::button tag="a" href="{{ \App\Filament\Resources\BankTransactions\BankTransactionResource::getUrl('edit', ['record' => $tx]) }}" icon="heroicon-o-pencil-square" color="gray" size="sm">Bearbeiten</x-filament::button>
                     </div>
+
+                    {{-- Aufklappbares Memo-Feld: Mitteilung an den Steuerberater --}}
+                    @if ($showNote)
+                        <div style="margin-top:.8rem;padding:.6rem;border:1px solid rgba(217,119,6,.35);border-radius:.5rem;background:rgba(217,119,6,.06);">
+                            <label style="display:block;font-size:.78rem;opacity:.7;margin-bottom:.3rem;">
+                                Mitteilung an den Steuerberater (erscheint fett unter dem Umsatz im Bericht)
+                            </label>
+                            <x-filament::input.wrapper>
+                                <textarea wire:model="accountantNote" rows="2"
+                                    placeholder="z. B. Betrifft privates Fahrzeug"
+                                    style="width:100%;border:none;background:transparent;outline:none;resize:vertical;font-size:.85rem;padding:.3rem;"></textarea>
+                            </x-filament::input.wrapper>
+                            <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+                                <x-filament::button wire:click="saveNote" icon="heroicon-o-check" color="warning" size="sm">Mitteilung speichern</x-filament::button>
+                                <x-filament::button wire:click="toggleNote" color="gray" size="sm">Schließen</x-filament::button>
+                            </div>
+                        </div>
+                    @endif
                 </x-filament::section>
 
                 {{-- Tabs --}}

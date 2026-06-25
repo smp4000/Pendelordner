@@ -90,6 +90,11 @@ class Kontoumsatzdetails extends Page
 
     public string $newCategory = '';
 
+    // --- Mitteilung an den Steuerberater -------------------------------------
+    public bool $showNote = false;
+
+    public string $accountantNote = '';
+
     public function mount(): void
     {
         // Filterkontext aus der Umsatzliste übernehmen (Query-Parameter).
@@ -115,6 +120,32 @@ class Kontoumsatzdetails extends Page
         $this->assignCostCenterId = $t?->cost_center_id;
         $this->assignLedgerAccountId = $t?->ledger_account_id;
         $this->ledgerSearch = '';
+        $this->accountantNote = (string) ($t?->accountant_note ?? '');
+        $this->showNote = $this->accountantNote !== '';
+    }
+
+    public function toggleNote(): void
+    {
+        $this->showNote = ! $this->showNote;
+    }
+
+    /** Mitteilung an den Steuerberater am aktuellen Umsatz speichern. */
+    public function saveNote(): void
+    {
+        if (! $this->selectedTransactionId) {
+            return;
+        }
+
+        $note = trim($this->accountantNote);
+        BankTransaction::whereKey($this->selectedTransactionId)
+            ->update(['accountant_note' => $note !== '' ? $note : null]);
+
+        $this->accountantNote = $note;
+        $this->showNote = $note !== '';
+
+        Notification::make()
+            ->title($note !== '' ? 'Mitteilung gespeichert' : 'Mitteilung entfernt')
+            ->success()->send();
     }
 
     /** Speichert ein einzelnes Zuordnungsfeld am aktuellen Umsatz. */
