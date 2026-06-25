@@ -49,6 +49,9 @@ class FintsKonten extends Page
 
     public string $tanChallenge = '';
 
+    /** true = App-Freigabe (Decoupled), keine TAN-Eingabe nötig. */
+    public bool $tanDecoupled = false;
+
     private const SESSION_KEY = 'fints.pending';
 
     public function mount(): void
@@ -58,7 +61,7 @@ class FintsKonten extends Page
 
     public function updatedConnectionId(): void
     {
-        $this->reset(['step', 'discovered', 'selected', 'tan', 'tanChallenge']);
+        $this->reset(['step', 'discovered', 'selected', 'tan', 'tanChallenge', 'tanDecoupled']);
         session()->forget(self::SESSION_KEY);
     }
 
@@ -131,24 +134,56 @@ class FintsKonten extends Page
                 $pending['flow'], $pending['stage'], $pending['context'],
                 $pending['persist'], $pending['serialized'], trim($this->tan),
             );
-
-            session()->forget(self::SESSION_KEY);
-            $this->tan = '';
-            $this->tanChallenge = '';
-
-            if (($result['type'] ?? null) === 'accounts') {
-                $this->showAccounts($result['accounts']);
-            } else {
-                $this->step = 'idle';
-                $this->notifyImport($result['log']);
-            }
+            $this->handleResult($result);
         } catch (FinTsTanRequiredException $e) {
-            // Weitere TAN nötig
             $this->requestTan($e);
         } catch (Throwable $e) {
             report($e);
             $this->step = 'idle';
             $this->notifyError($e->getMessage());
+        }
+    }
+
+    /** App-Freigabe („über das Handy") prüfen und Vorgang fortsetzen. */
+    public function checkApproval(): void
+    {
+        $pending = session(self::SESSION_KEY);
+        if (! $pending) {
+            $this->step = 'idle';
+
+            return;
+        }
+
+        try {
+            $result = (new FinTsService())->checkDecoupled(
+                $pending['flow'], $pending['stage'], $pending['context'],
+                $pending['persist'], $pending['serialized'],
+            );
+            $this->handleResult($result);
+        } catch (FinTsTanRequiredException $e) {
+            // Noch nicht freigegeben – Zustand aktualisieren und Hinweis geben.
+            $this->requestTan($e);
+            Notification::make()->title('Noch nicht freigegeben')
+                ->body('Bitte die Freigabe in der Banking-App abschließen und erneut prüfen.')
+                ->warning()->send();
+        } catch (Throwable $e) {
+            report($e);
+            $this->step = 'idle';
+            $this->notifyError($e->getMessage());
+        }
+    }
+
+    /** @param array<string, mixed> $result */
+    private function handleResult(array $result): void
+    {
+        session()->forget(self::SESSION_KEY);
+        $this->reset(['tan', 'tanChallenge', 'tanDecoupled']);
+
+        if (($result['type'] ?? null) === 'accounts') {
+            $this->showAccounts($result['accounts']);
+        } else {
+            $this->step = 'idle';
+            $this->notifyImport($result['log']);
         }
     }
 
@@ -214,6 +249,7 @@ class FintsKonten extends Page
 
         $this->tan = '';
         $this->tanChallenge = $e->challenge;
+        $this->tanDecoupled = $e->decoupled;
         $this->step = 'tan';
     }
 

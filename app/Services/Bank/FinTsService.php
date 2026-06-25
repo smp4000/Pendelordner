@@ -102,11 +102,51 @@ class FinTsService
         $connection = FintsConnection::findOrFail($context['connection_id']);
         $fints = $this->makeClient($connection, $persist);
 
+        $connectionModel = FintsConnection::findOrFail($context['connection_id']);
+        $this->selectTanMode($fints, $connectionModel);
+
         /** @var BaseAction $action */
         $action = unserialize($serializedAction);
         $fints->submitTan($action, $tan);
 
-        // Manche Verfahren verlangen eine weitere (z. B. entkoppelte) Bestätigung.
+        return $this->continueAfterAuth($fints, $action, $flow, $stage, $context);
+    }
+
+    /**
+     * Prüft, ob eine entkoppelte Freigabe (App-Freigabe „über das Handy")
+     * erfolgt ist, und setzt den Vorgang fort. Ist noch nicht freigegeben, wird
+     * erneut eine (Decoupled-)TAN-Exception geworfen.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    public function checkDecoupled(string $flow, string $stage, array $context, string $persist, string $serializedAction): array
+    {
+        $connection = FintsConnection::findOrFail($context['connection_id']);
+        $fints = $this->makeClient($connection, $persist);
+        $this->selectTanMode($fints, $connection);
+
+        /** @var BaseAction $action */
+        $action = unserialize($serializedAction);
+
+        if (! $fints->checkDecoupledSubmission($action)) {
+            // Noch nicht freigegeben – Zustand aktualisieren und erneut melden.
+            throw $this->tan($fints, $action, $flow, $stage, $context);
+        }
+
+        return $this->continueAfterAuth($fints, $action, $flow, $stage, $context);
+    }
+
+    /**
+     * Gemeinsame Fortsetzungslogik nach erfolgreicher Authentifizierung
+     * (TAN-Eingabe oder App-Freigabe).
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function continueAfterAuth(FinTs $fints, BaseAction $action, string $flow, string $stage, array $context): array
+    {
+        // Manche Verfahren verlangen eine weitere Bestätigung.
         if ($action->needsTan()) {
             throw $this->tan($fints, $action, $flow, $stage, $context);
         }
@@ -214,13 +254,17 @@ class FinTsService
      */
     private function tan(FinTs $fints, BaseAction $action, string $flow, string $stage, array $context): FinTsTanRequiredException
     {
+        $decoupled = $fints->getSelectedTanMode()?->isDecoupled() ?? false;
+
         return new FinTsTanRequiredException(
             persist: $fints->persist(),
             serializedAction: serialize($action),
             flow: $flow,
             stage: $stage,
             context: $context,
-            challenge: $action->getTanRequest()?->getChallenge() ?? 'Bitte TAN eingeben.',
+            challenge: $action->getTanRequest()?->getChallenge()
+                ?? ($decoupled ? 'Bitte in Ihrer Banking-App freigeben.' : 'Bitte TAN eingeben.'),
+            decoupled: $decoupled,
         );
     }
 

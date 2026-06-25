@@ -25,7 +25,8 @@ class FinTsTanRequiredException extends RuntimeException
         public readonly string $stage,
         public readonly array $context,
         public readonly string $challenge,
+        public readonly bool $decoupled = false,
     ) {
-        parent::__construct('TAN erforderlich: ' . $challenge);
+        parent::__construct(($decoupled ? 'Freigabe in der Banking-App erforderlich: ' : 'TAN erforderlich: ') . $challenge);
     }
 }

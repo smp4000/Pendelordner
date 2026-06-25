@@ -93,6 +93,25 @@ Panel → Bank → **„FinTS-Konten abrufen"**:
 4. Pro Konto **„Umsätze abrufen"** (auch hier ggf. TAN). Danach läuft der
    tägliche automatische Abruf für diese Konten.
 
+**App-Freigabe (Decoupled-TAN „über das Handy"):** Verlangt die Bank keine
+getippte TAN, sondern eine Freigabe in der Banking-App, zeigt die Seite den
+Hinweis „Freigabe in der Banking-App erforderlich". Dann den Auftrag im Handy
+freigeben und auf **„Freigabe prüfen"** klicken – der Abruf läuft weiter.
+
+**Felder je Bank (Benutzerkennung / URL / HBCI 3.0 = „300"):**
+- Commerzbank: Teilnehmernummer · `https://fints.commerzbank.de/fints`
+- Deutsche Bank: Filial+Konto+Unterkonto (z. B. 700123456700) · `https://fints.deutsche-bank.de`
+- Volksbank (Fiducia): VR-Net-Key · `https://hbci11.fiducia.de/cgi-bin/hbciservlet`
+- Volksbank (GAD): Kundennummer + **Kunden-ID** (VR-Kennung) · `https://hbci-pintan.gad.de/cgi-bin/hbciservlet`
+- HypoVereinsbank: 10-stellige Directbanking-Nr. · `https://hbci-01.hypovereinsbank.de/bank/hbci`
+- Postbank: Kontonummer · `https://hbci.postbank.de/banking/hbci.do`
+- comdirect: 8-stellige Zugangsnummer · `https://hbci.comdirect.de/pintan/HbciPinTanHttpGate`
+
+> Voraussetzung bei den meisten Banken: HBCI/FinTS mit PIN/TAN muss einmalig im
+> Online-Banking bzw. durch die Bank für das Konto freigeschaltet werden.
+> Die Kunden-ID ist nur bei wenigen Banken (z. B. Volksbank GAD) nötig – sonst
+> leer lassen, php-fints ermittelt sie automatisch.
+
 Alternativ Bankkonto manuell anlegen und beim Konto „FinTS aktiv" setzen sowie
 den Zugang zuordnen.
 

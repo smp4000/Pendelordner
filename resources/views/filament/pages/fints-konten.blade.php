@@ -26,23 +26,38 @@
             @endif
         </div>
 
-        {{-- 2. TAN-Eingabe --}}
+        {{-- 2. TAN bzw. App-Freigabe --}}
         @if ($step === 'tan')
             <div class="rounded-xl border border-warning-300 bg-warning-50 p-4 dark:border-warning-500/30 dark:bg-warning-500/10">
-                <h3 class="font-semibold text-warning-800 dark:text-warning-200">TAN erforderlich</h3>
-                <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">{{ $tanChallenge }}</p>
-                <div class="mt-3 flex items-end gap-3">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">TAN</label>
-                        <input type="text" wire:model="tan" inputmode="numeric" autocomplete="one-time-code"
-                            wire:keydown.enter="submitTan"
-                            class="block w-48 rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+                @if ($tanDecoupled)
+                    <h3 class="font-semibold text-warning-800 dark:text-warning-200">Freigabe in der Banking-App erforderlich</h3>
+                    <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">{{ $tanChallenge }}</p>
+                    <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">
+                        Bitte den Auftrag in deiner Banking-App auf dem Handy freigeben und anschließend auf
+                        „Freigabe prüfen" klicken.
+                    </p>
+                    <div class="mt-3">
+                        <x-filament::button wire:click="checkApproval" wire:loading.attr="disabled" icon="heroicon-o-device-phone-mobile">
+                            Freigabe prüfen
+                            <span wire:loading wire:target="checkApproval">…</span>
+                        </x-filament::button>
                     </div>
-                    <x-filament::button wire:click="submitTan" wire:loading.attr="disabled" icon="heroicon-o-check">
-                        TAN bestätigen
-                        <span wire:loading wire:target="submitTan">…</span>
-                    </x-filament::button>
-                </div>
+                @else
+                    <h3 class="font-semibold text-warning-800 dark:text-warning-200">TAN erforderlich</h3>
+                    <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">{{ $tanChallenge }}</p>
+                    <div class="mt-3 flex items-end gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">TAN</label>
+                            <input type="text" wire:model="tan" inputmode="numeric" autocomplete="one-time-code"
+                                wire:keydown.enter="submitTan"
+                                class="block w-48 rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+                        </div>
+                        <x-filament::button wire:click="submitTan" wire:loading.attr="disabled" icon="heroicon-o-check">
+                            TAN bestätigen
+                            <span wire:loading wire:target="submitTan">…</span>
+                        </x-filament::button>
+                    </div>
+                @endif
             </div>
         @endif
 
