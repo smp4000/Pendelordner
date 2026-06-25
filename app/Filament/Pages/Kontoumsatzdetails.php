@@ -394,6 +394,22 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Beleg zugeordnet')->success()->send();
     }
 
+    /** Zugeordneten (Teil-)Betrag eines Belegs ändern. */
+    public function updateAllocation(int $receiptId, $amount): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $value = round((float) str_replace(',', '.', (string) $amount), 2);
+
+        $transaction->receipts()->updateExistingPivot($receiptId, ['amount' => $value]);
+        $transaction->recalculateStatus();
+
+        Notification::make()->title('Betrag aktualisiert')->success()->send();
+    }
+
     public function detachReceipt(int $receiptId): void
     {
         $transaction = $this->selectedTransaction;

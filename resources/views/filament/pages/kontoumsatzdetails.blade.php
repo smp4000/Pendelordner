@@ -142,12 +142,15 @@
                         {{-- TAB: Zugeordnete Belege --}}
                         @if ($activeTab === 'assigned')
                             @forelse ($tx->receipts as $r)
-                                <div wire:click="selectReceipt({{ $r->id }})"
+                                <div wire:key="assigned-{{ $r->id }}" wire:click="selectReceipt({{ $r->id }})"
                                     style="{{ $rowBase }}align-items:center;{{ $r->id === $this->selectedReceiptId ? 'background:rgba(16,185,129,.12);' : '' }}">
                                     <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
                                         <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
-                                    <span style="display:flex;gap:.75rem;align-items:center;white-space:nowrap;">
-                                        {{ $money($r->pivot->amount) }}
+                                    <span style="display:flex;gap:.5rem;align-items:center;white-space:nowrap;">
+                                        <input type="number" step="0.01" value="{{ $r->pivot->amount }}"
+                                            wire:click.stop
+                                            wire:change.stop="updateAllocation({{ $r->id }}, $event.target.value)"
+                                            style="width:7rem;text-align:right;border:1px solid rgba(120,120,120,.3);border-radius:.3rem;padding:.15rem .4rem;"> €
                                         <button type="button" wire:click.stop="detachReceipt({{ $r->id }})" style="color:#dc2626;background:none;border:none;cursor:pointer;">lösen</button>
                                     </span>
                                 </div>

@@ -100,10 +100,23 @@ class ReceiptParser
 
     private function grossAmount(string $text): ?float
     {
-        $keywords = ['gesamtbetrag', 'rechnungsbetrag', 'zu zahlen', 'gesamt', 'brutto', 'summe', 'total'];
+        // Starke, eindeutige Gesamtbetrags-Schlüsselwörter zuerst (in Reihenfolge).
+        // "gesamt(?!preis)" verhindert Falschtreffer auf der Spalte "Gesamtpreis".
+        $keywords = [
+            'endbetrag',
+            'rechnungsbetrag',
+            'rechnungssumme',
+            'gesamtbetrag',
+            'zu zahlender betrag',
+            'zahlbetrag',
+            'zu zahlen',
+            'gesamtsumme',
+            'gesamt(?!preis)',
+            'brutto',
+        ];
 
         foreach ($keywords as $keyword) {
-            if (preg_match('/' . preg_quote($keyword, '/') . '[^0-9\-]{0,20}(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
+            if (preg_match('/' . $keyword . '[^0-9\-]{0,25}(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
                 return $this->parseAmount($m[1]);
             }
         }
