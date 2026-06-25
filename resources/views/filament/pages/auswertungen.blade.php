@@ -3,7 +3,6 @@
         $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' €';
         $total = $this->total;
         $pct = fn ($v) => $total > 0 ? round((float) $v / $total * 100) : 0;
-
         $blocks = [
             ['Kosten je Betrieb', $this->byBusiness],
             ['Kosten je Kostenstelle', $this->byCostCenter],
@@ -13,49 +12,47 @@
         ];
     @endphp
 
-    <div class="space-y-6">
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
         {{-- Steuerung --}}
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="w-64">
-                <label class="block text-sm font-medium mb-1">Zeitraum</label>
-                <select wire:model.live="period"
-                    class="block w-full rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
-                    @foreach ($this->periodOptions as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                    @endforeach
-                </select>
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
+            <div style="width:18rem;">
+                <label style="display:block;font-size:.85rem;font-weight:500;margin-bottom:.25rem;">Zeitraum</label>
+                <x-filament::input.wrapper>
+                    <x-filament::input.select wire:model.live="period">
+                        @foreach ($this->periodOptions as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </x-filament::input.select>
+                </x-filament::input.wrapper>
             </div>
-            <div class="text-right">
-                <div class="text-sm text-gray-500">Gesamtkosten</div>
-                <div class="text-2xl font-bold text-danger-600">{{ $money($total) }}</div>
+            <div style="text-align:right;">
+                <div style="font-size:.85rem;opacity:.6;">Gesamtkosten</div>
+                <div style="font-size:1.5rem;font-weight:700;color:#dc2626;">{{ $money($total) }}</div>
             </div>
         </div>
 
         {{-- Aufschlüsselungen --}}
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;">
             @foreach ($blocks as [$title, $rows])
-                <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900">
-                    <div class="border-b border-gray-200 px-4 py-3 text-sm font-semibold dark:border-white/10">
-                        {{ $title }}
-                    </div>
-                    <div class="divide-y divide-gray-100 dark:divide-white/5">
+                <x-filament::section style="padding:0;overflow:hidden;">
+                    <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">{{ $title }}</div>
+                    <div>
                         @forelse ($rows as $row)
-                            <div class="px-4 py-2">
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="truncate">{{ $row->label }}
-                                        <span class="text-xs text-gray-400">({{ $row->anzahl }})</span>
-                                    </span>
-                                    <span class="font-medium whitespace-nowrap">{{ $money($row->total) }}</span>
+                            <div style="padding:.5rem .75rem;border-bottom:1px solid rgba(120,120,120,.12);">
+                                <div style="display:flex;justify-content:space-between;font-size:.9rem;gap:.5rem;">
+                                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $row->label }}
+                                        <span style="opacity:.5;font-size:.75rem;">({{ $row->anzahl }})</span></span>
+                                    <span style="font-weight:500;white-space:nowrap;">{{ $money($row->total) }}</span>
                                 </div>
-                                <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                                    <div class="h-full rounded-full bg-primary-500" style="width: {{ $pct($row->total) }}%"></div>
+                                <div style="margin-top:.3rem;height:6px;width:100%;background:rgba(120,120,120,.15);border-radius:9999px;overflow:hidden;">
+                                    <div style="height:100%;border-radius:9999px;background:#10b981;width:{{ $pct($row->total) }}%;"></div>
                                 </div>
                             </div>
                         @empty
-                            <p class="px-4 py-6 text-sm text-gray-500">Keine Daten im Zeitraum.</p>
+                            <p style="padding:1rem;font-size:.85rem;opacity:.6;">Keine Daten im Zeitraum.</p>
                         @endforelse
                     </div>
-                </div>
+                </x-filament::section>
             @endforeach
         </div>
     </div>
