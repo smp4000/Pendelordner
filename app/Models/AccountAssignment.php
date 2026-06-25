@@ -31,6 +31,11 @@ class AccountAssignment extends Model
         return $this->belongsTo(CostCenter::class);
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function datevExport(): BelongsTo
     {
         return $this->belongsTo(DatevExport::class);

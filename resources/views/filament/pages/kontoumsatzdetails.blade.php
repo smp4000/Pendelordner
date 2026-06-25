@@ -132,6 +132,10 @@
                         <x-filament::button wire:click="toggleRuleForm" icon="heroicon-o-bolt" color="gray" size="sm">
                             Regel erstellen
                         </x-filament::button>
+                        <x-filament::button wire:click="toggleSplit" icon="heroicon-o-scissors"
+                            :color="$tx->accountAssignments->isNotEmpty() ? 'info' : 'gray'" size="sm">
+                            {{ $tx->accountAssignments->isNotEmpty() ? 'Aufteilung (' . $tx->accountAssignments->count() . ')' : 'Betrag aufteilen' }}
+                        </x-filament::button>
                         <x-filament::button tag="a" href="{{ \App\Filament\Resources\BankTransactions\BankTransactionResource::getUrl('edit', ['record' => $tx]) }}" icon="heroicon-o-pencil-square" color="gray" size="sm">Bearbeiten</x-filament::button>
                     </div>
 
@@ -190,6 +194,48 @@
                             </div>
                         </div>
                     @endif
+
+                    {{-- Aufklappbarer Editor: Betrag auf Kategorien aufteilen (G&V) --}}
+                    @if ($showSplit)
+                        <div style="margin-top:.8rem;padding:.7rem;border:1px solid rgba(14,165,233,.35);border-radius:.5rem;background:rgba(14,165,233,.06);">
+                            <div style="font-weight:600;font-size:.85rem;margin-bottom:.2rem;">Betrag auf Kategorien aufteilen</div>
+                            <p style="font-size:.78rem;opacity:.7;margin:0 0 .6rem;">
+                                Für die Gewinn- und Verlustrechnung: den Umsatzbetrag auf mehrere Kategorien
+                                aufteilen (z. B. Kosten, Lotto neutral, Provision).
+                            </p>
+
+                            @foreach ($splits as $i => $row)
+                                <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:1.6fr 1fr auto;gap:.4rem;align-items:center;margin-bottom:.4rem;">
+                                    <x-filament::input.select wire:model="splits.{{ $i }}.category_id">
+                                        <option value="">Kategorie wählen…</option>
+                                        @foreach ($this->categories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                        @endforeach
+                                    </x-filament::input.select>
+                                    <x-filament::input.wrapper>
+                                        <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.amount" placeholder="Betrag €" />
+                                    </x-filament::input.wrapper>
+                                    <button type="button" wire:click="removeSplit({{ $i }})" title="Position entfernen"
+                                        style="color:#dc2626;background:none;border:none;cursor:pointer;padding:.3rem;">✕</button>
+                                </div>
+                            @endforeach
+
+                            @php $rest = $this->splitRemaining; @endphp
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.4rem;font-size:.82rem;">
+                                <span>Aufgeteilt: <strong>{{ number_format($this->splitTotal, 2, ',', '.') }} €</strong>
+                                    von {{ number_format(abs((float) $tx->amount), 2, ',', '.') }} €</span>
+                                <span style="color:{{ abs($rest) < 0.005 ? '#059669' : '#d97706' }};">
+                                    Rest: {{ number_format($rest, 2, ',', '.') }} €
+                                </span>
+                            </div>
+
+                            <div style="display:flex;gap:.5rem;margin-top:.6rem;">
+                                <x-filament::button wire:click="addSplit" icon="heroicon-o-plus" color="gray" size="sm">Position</x-filament::button>
+                                <x-filament::button wire:click="saveSplits" icon="heroicon-o-check" color="info" size="sm">Aufteilung speichern</x-filament::button>
+                                <x-filament::button wire:click="toggleSplit" color="gray" size="sm">Schließen</x-filament::button>
+                            </div>
+                        </div>
+                    @endif
                 </x-filament::section>
 
                 {{-- Tabs --}}
@@ -197,7 +243,6 @@
                     <div style="display:flex;gap:.25rem;border-bottom:1px solid rgba(120,120,120,.2);padding:0 .5rem;flex-wrap:wrap;">
                         <button wire:click="setTab('assigned')" style="{{ $tabBtn($activeTab==='assigned') }}">Zugeordnete Belege ({{ $tx->receipts->count() }})</button>
                         <button wire:click="setTab('suggestions')" style="{{ $tabBtn($activeTab==='suggestions') }}">Vorschläge ({{ $this->suggestions->count() }})</button>
-                        <button wire:click="setTab('split')" style="{{ $tabBtn($activeTab==='split') }}">Aufteilen ({{ $tx->accountAssignments->count() }})</button>
                         <button wire:click="setTab('search')" style="{{ $tabBtn($activeTab==='search') }}">Manuelle Belegsuche</button>
                         <button wire:click="setTab('upload')" style="{{ $tabBtn($activeTab==='upload') }}">Beleg hochladen</button>
                     </div>
@@ -243,77 +288,6 @@
                             @empty
                                 <p style="padding:.75rem;font-size:.85rem;opacity:.6;">Keine Vorschläge gefunden.</p>
                             @endforelse
-
-                        {{-- TAB: Aufteilen / Kontierungs-Split --}}
-                        @elseif ($activeTab === 'split')
-                            <p style="font-size:.82rem;opacity:.7;margin:0 0 .6rem;">
-                                Den Umsatzbetrag auf mehrere Positionen mit eigenem Sachkonto/Erlöskonto,
-                                Kostenstelle und Steuersatz aufteilen.
-                            </p>
-
-                            @forelse ($splits as $i => $row)
-                                <div wire:key="split-{{ $i }}" style="border:1px solid rgba(120,120,120,.2);border-radius:.5rem;padding:.5rem;margin-bottom:.5rem;">
-                                    <div style="display:grid;grid-template-columns:1.4fr 1.2fr .7fr .9fr auto;gap:.4rem;align-items:end;">
-                                        <div>
-                                            <label style="display:block;font-size:.7rem;opacity:.6;">Konto (Nr.)</label>
-                                            <x-filament::input.wrapper>
-                                                <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.account" placeholder="z. B. 2610" />
-                                            </x-filament::input.wrapper>
-                                            @php $lbl = $this->ledgerLabel((string) ($row['account'] ?? '')); @endphp
-                                            <div style="font-size:.7rem;margin-top:.15rem;{{ $lbl ? 'color:#059669;' : 'color:#dc2626;' }}">
-                                                {{ $lbl ?? (trim((string)($row['account'] ?? '')) !== '' ? 'Konto unbekannt' : '—') }}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label style="display:block;font-size:.7rem;opacity:.6;">Kostenstelle</label>
-                                            <x-filament::input.select wire:model="splits.{{ $i }}.cost_center_id">
-                                                <option value="">—</option>
-                                                @foreach ($this->costCenters as $cc)
-                                                    <option value="{{ $cc->id }}">{{ $cc->name }}</option>
-                                                @endforeach
-                                            </x-filament::input.select>
-                                        </div>
-                                        <div>
-                                            <label style="display:block;font-size:.7rem;opacity:.6;">USt %</label>
-                                            <x-filament::input.select wire:model="splits.{{ $i }}.tax_rate">
-                                                <option value="">—</option>
-                                                <option value="19">19</option>
-                                                <option value="7">7</option>
-                                                <option value="0">0</option>
-                                            </x-filament::input.select>
-                                        </div>
-                                        <div>
-                                            <label style="display:block;font-size:.7rem;opacity:.6;">Betrag €</label>
-                                            <x-filament::input.wrapper>
-                                                <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.amount" placeholder="0,00" />
-                                            </x-filament::input.wrapper>
-                                        </div>
-                                        <button type="button" wire:click="removeSplit({{ $i }})" title="Position entfernen"
-                                            style="color:#dc2626;background:none;border:none;cursor:pointer;padding:.4rem;">✕</button>
-                                    </div>
-                                    <div style="margin-top:.35rem;">
-                                        <x-filament::input.wrapper>
-                                            <x-filament::input type="text" wire:model="splits.{{ $i }}.booking_text" placeholder="Buchungstext (optional)" />
-                                        </x-filament::input.wrapper>
-                                    </div>
-                                </div>
-                            @empty
-                                <p style="padding:.5rem 0;font-size:.85rem;opacity:.6;">Noch keine Aufteilung. Mit „+ Position" beginnen.</p>
-                            @endforelse
-
-                            @php $rest = $this->splitRemaining; @endphp
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;font-size:.85rem;">
-                                <span>Aufgeteilt: <strong>{{ number_format($this->splitTotal, 2, ',', '.') }} €</strong>
-                                    von {{ number_format(abs((float) $tx->amount), 2, ',', '.') }} €</span>
-                                <span style="color:{{ abs($rest) < 0.005 ? '#059669' : '#d97706' }};">
-                                    Rest: {{ number_format($rest, 2, ',', '.') }} €
-                                </span>
-                            </div>
-
-                            <div style="display:flex;gap:.5rem;margin-top:.7rem;">
-                                <x-filament::button wire:click="addSplit" icon="heroicon-o-plus" color="gray" size="sm">Position</x-filament::button>
-                                <x-filament::button wire:click="saveSplits" icon="heroicon-o-check" color="success" size="sm">Aufteilung speichern</x-filament::button>
-                            </div>
 
                         {{-- TAB: Manuelle Belegsuche --}}
                         @elseif ($activeTab === 'search')

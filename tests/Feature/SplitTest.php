@@ -6,6 +6,7 @@ use App\Filament\Pages\Kontoumsatzdetails;
 use App\Models\BankAccount;
 use App\Models\BankTransaction;
 use App\Models\Business;
+use App\Models\Category;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Filament\Facades\Filament;
@@ -40,24 +41,26 @@ class SplitTest extends TestCase
             'dedup_hash' => bin2hex(random_bytes(16)),
         ]);
 
+        $kosten = Category::firstOrCreate(['name' => 'Lotto Kosten'], ['active' => true]);
+        $provision = Category::firstOrCreate(['name' => 'Lotto Provision'], ['active' => true]);
+
         Livewire::test(Kontoumsatzdetails::class)
             ->set('selectedTransactionId', $tx->id)
             ->set('splits', [
-                ['account' => '4400', 'cost_center_id' => null, 'tax_rate' => '19', 'amount' => '80,00', 'booking_text' => 'Erlöse 19%'],
-                ['account' => '4300', 'cost_center_id' => null, 'tax_rate' => '0', 'amount' => '20,00', 'booking_text' => ''],
+                ['category_id' => $kosten->id, 'amount' => '80,00', 'booking_text' => 'Kosten'],
+                ['category_id' => $provision->id, 'amount' => '20,00', 'booking_text' => ''],
             ])
             ->call('saveSplits');
 
         $this->assertSame(2, $tx->accountAssignments()->count());
-        $a = $tx->accountAssignments()->where('account', '4400')->first();
+        $a = $tx->accountAssignments()->where('category_id', $kosten->id)->first();
         $this->assertEqualsWithDelta(80.00, (float) $a->amount, 0.001);
-        $this->assertEqualsWithDelta(19.00, (float) $a->tax_rate, 0.001);
 
         // Speichern ersetzt vorhandene Positionen (kein Duplikat-Aufbau)
         Livewire::test(Kontoumsatzdetails::class)
             ->set('selectedTransactionId', $tx->id)
             ->set('splits', [
-                ['account' => '4400', 'cost_center_id' => null, 'tax_rate' => '19', 'amount' => '100,00', 'booking_text' => ''],
+                ['category_id' => $kosten->id, 'amount' => '100,00', 'booking_text' => ''],
             ])
             ->call('saveSplits');
 

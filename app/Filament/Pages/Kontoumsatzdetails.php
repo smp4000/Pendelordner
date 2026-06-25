@@ -96,11 +96,13 @@ class Kontoumsatzdetails extends Page
 
     public string $accountantNote = '';
 
-    // --- Aufteilung / Kontierungs-Split --------------------------------------
+    // --- Aufteilung nach Kategorie (für die G&V) -----------------------------
+    public bool $showSplit = false;
+
     /**
-     * Split-Positionen des aktuellen Umsatzes.
-     * Jede Zeile: ['account' => '4400', 'cost_center_id' => 1, 'tax_rate' => '19',
-     *              'amount' => '100,00', 'booking_text' => '...'].
+     * Split-Positionen des aktuellen Umsatzes – Aufteilung des Betrags auf
+     * mehrere Kategorien (G&V). Jede Zeile:
+     * ['category_id' => 5, 'amount' => '100,00', 'booking_text' => '...'].
      *
      * @var array<int, array<string, mixed>>
      */
@@ -145,31 +147,37 @@ class Kontoumsatzdetails extends Page
         $this->loadSplits();
     }
 
-    // --- Aufteilung / Kontierungs-Split --------------------------------------
+    // --- Aufteilung nach Kategorie (für die G&V) -----------------------------
 
-    /** Vorhandene Kontierungspositionen des Umsatzes in den Editor laden. */
+    public function toggleSplit(): void
+    {
+        $this->showSplit = ! $this->showSplit;
+
+        if ($this->showSplit && empty($this->splits)) {
+            $this->addSplit();
+        }
+    }
+
+    /** Vorhandene Aufteilungs-Positionen des Umsatzes in den Editor laden. */
     private function loadSplits(): void
     {
         $t = $this->selectedTransaction;
         $this->splits = $t
             ? $t->accountAssignments->map(fn (\App\Models\AccountAssignment $a) => [
-                'account' => (string) ($a->account ?? ''),
-                'cost_center_id' => $a->cost_center_id,
-                'tax_rate' => $a->tax_rate !== null ? rtrim(rtrim(number_format((float) $a->tax_rate, 2, ',', ''), '0'), ',') : '',
+                'category_id' => $a->category_id,
                 'amount' => $a->amount !== null ? number_format((float) $a->amount, 2, ',', '') : '',
                 'booking_text' => (string) ($a->booking_text ?? ''),
             ])->values()->all()
             : [];
+        $this->showSplit = ! empty($this->splits);
     }
 
-    /** Neue, leere Split-Zeile – Betrag mit dem Restbetrag vorbelegen. */
+    /** Neue, leere Position – Betrag mit dem Restbetrag vorbelegen. */
     public function addSplit(): void
     {
         $rest = $this->splitRemaining;
         $this->splits[] = [
-            'account' => '',
-            'cost_center_id' => $this->selectedTransaction?->cost_center_id,
-            'tax_rate' => '19',
+            'category_id' => null,
             'amount' => $rest > 0.005 ? number_format($rest, 2, ',', '') : '',
             'booking_text' => '',
         ];
@@ -195,19 +203,7 @@ class Kontoumsatzdetails extends Page
         return round($total - $this->splitTotal, 2);
     }
 
-    /** Auflösen einer Kontonummer in „Nr – Bezeichnung" für die Anzeige. */
-    public function ledgerLabel(string $number): ?string
-    {
-        $number = trim($number);
-        if ($number === '') {
-            return null;
-        }
-        $la = LedgerAccount::where('number', $number)->orderBy('id')->first();
-
-        return $la ? $la->number . ' – ' . $la->name : null;
-    }
-
-    /** Split-Positionen speichern (ersetzt die bisherigen Kontierungen des Umsatzes). */
+    /** Aufteilung speichern (ersetzt die bisherigen Positionen des Umsatzes). */
     public function saveSplits(): void
     {
         $t = $this->selectedTransaction;
@@ -216,7 +212,7 @@ class Kontoumsatzdetails extends Page
         }
 
         $rows = array_values(array_filter($this->splits, function ($row) {
-            return trim((string) ($row['account'] ?? '')) !== '' || $this->parseAmount($row['amount'] ?? '') != 0.0;
+            return ! empty($row['category_id']) || $this->parseAmount($row['amount'] ?? '') != 0.0;
         }));
 
         if (empty($rows)) {
@@ -234,9 +230,8 @@ class Kontoumsatzdetails extends Page
         foreach ($rows as $row) {
             $t->accountAssignments()->create([
                 'chart_of_accounts' => $chart,
-                'account' => trim((string) $row['account']) ?: null,
-                'cost_center_id' => $row['cost_center_id'] ?: null,
-                'tax_rate' => ($row['tax_rate'] ?? '') !== '' ? $this->parseAmount($row['tax_rate']) : null,
+                'category_id' => $row['category_id'] ?: null,
+                'cost_center_id' => $t->cost_center_id, // Kostenstelle vom Umsatz übernehmen
                 'amount' => $this->parseAmount($row['amount'] ?? ''),
                 'booking_text' => trim((string) ($row['booking_text'] ?? '')) ?: null,
                 'booking_date' => $t->booking_date,
@@ -249,7 +244,7 @@ class Kontoumsatzdetails extends Page
         Notification::make()
             ->title('Aufteilung gespeichert (' . count($rows) . ' Positionen)')
             ->body(abs($diff) < 0.005
-                ? 'Betrag vollständig aufgeteilt.'
+                ? 'Betrag vollständig auf Kategorien aufgeteilt.'
                 : 'Achtung: Restbetrag ' . number_format($diff, 2, ',', '.') . ' € nicht zugeordnet.')
             ->success()->send();
     }
