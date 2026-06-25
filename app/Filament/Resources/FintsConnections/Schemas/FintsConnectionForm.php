@@ -67,7 +67,8 @@ class FintsConnectionForm
                 Section::make('Produktregistrierung & Status')
                     ->columns(2)
                     ->schema([
-                        TextInput::make('product_id')->label('Produkt-ID (FinTS-Registrierung)'),
+                        TextInput::make('product_id')->label('Produkt-ID (FinTS-Registrierung)')
+                            ->helperText('Pflicht bei vielen Banken (Fehler 9078). Kostenlose Registrierungsnummer beantragen unter www.fints.org → Registrierung, dann hier eintragen.'),
                         TextInput::make('product_version')->label('Produktversion')->default('1.0'),
                         Toggle::make('active')->label('Aktiv')->default(true)->inline(false),
                     ]),
