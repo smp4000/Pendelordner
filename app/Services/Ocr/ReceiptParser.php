@@ -100,10 +100,18 @@ class ReceiptParser
 
     private function grossAmount(string $text): ?float
     {
+        // Höchste Priorität: ein direkt mit "=" ausgewiesener fälliger Betrag,
+        // z. B. "fälligen Betrag (Euro) = 3.103,57" (Lotto-/Sammelabrechnungen).
+        // Das "=" liegt unmittelbar vor dem Betrag und ist damit eindeutig.
+        if (preg_match('/betrag[^0-9\-]{0,15}=\s*(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
+            return $this->parseAmount($m[1]);
+        }
+
         // Starke, eindeutige Gesamtbetrags-Schlüsselwörter zuerst (in Reihenfolge).
         // "gesamt(?!preis)" verhindert Falschtreffer auf der Spalte "Gesamtpreis".
         $keywords = [
             'endbetrag',
+            'abrechnungsbetrag',
             'rechnungsbetrag',
             'rechnungssumme',
             'gesamtbetrag',

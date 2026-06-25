@@ -251,4 +251,16 @@ XML;
         $this->assertEqualsWithDelta(19.0, $data['tax_rate'], 0.001);
         $this->assertSame('DE12500105170648489890', $data['iban']);
     }
+
+    public function test_receipt_parser_erkennt_faelligen_abrechnungsbetrag(): void
+    {
+        // Lotto-Wochenabrechnung: viele Zwischensummen, der fällige Betrag ist
+        // mit "= 3.103,57" ausgewiesen und darf nicht durch den größten Betrag
+        // (Gesamtumsatz 5.041,90) überstimmt werden.
+        $text = "05.Gesamtumsatz 5.041,90\n14.Abrechnungsbetrag\n"
+            . "Der Einzug erfolgt am 24.06.2026 über den dann fälligen Betrag (Euro) = 3.103,57";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertEqualsWithDelta(3103.57, $data['gross_amount'], 0.001);
+    }
 }
