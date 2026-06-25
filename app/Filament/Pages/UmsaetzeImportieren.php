@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\ImportSource;
 use App\Models\BankAccount;
+use App\Models\Business;
 use App\Services\Bank\BankImportService;
 use App\Services\Bank\Parsers\CamtParser;
 use App\Services\Bank\Parsers\CsvBankParser;
@@ -27,8 +28,9 @@ use UnitEnum;
 /**
  * Datei-Upload zum Import von Bankumsätzen (Modul 1). Die hochgeladene Datei
  * wird nur kurz zwischengespeichert, eingelesen und anschließend wieder
- * gelöscht. Format (MT940/CAMT/CSV) und – bei MT940 – das Konto werden
- * automatisch erkannt.
+ * gelöscht. Format (MT940/CAMT/CSV) und – soweit ableitbar – das Konto werden
+ * automatisch erkannt. Ist das Konto noch nicht vorhanden, wird nach einem
+ * Kontonamen gefragt und das Konto angelegt.
  */
 class UmsaetzeImportieren extends Page implements HasActions, HasForms
 {
@@ -50,6 +52,14 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
+    /** Steht ein neues Konto zur Benennung an? */
+    public bool $awaitingName = false;
+
+    /** @var array<string, mixed> erkannte Kontodaten aus der Datei */
+    public array $pendingAccount = [];
+
+    public string $newAccountName = '';
+
     public function mount(): void
     {
         $this->form->fill();
@@ -69,11 +79,20 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
                     ->helperText('Datei hierher ziehen oder auswählen (z. B. .mta, .sta, .xml, .csv). Wird nach dem Import automatisch gelöscht.'),
                 Select::make('bank_account_id')
                     ->label('Bankkonto')
-                    ->placeholder('Automatisch aus Datei erkennen (MT940)')
+                    ->placeholder('Automatisch aus Datei erkennen')
                     ->options(BankAccount::orderBy('label')->pluck('label', 'id'))
-                    ->helperText('Bei CSV/CAMT bitte das Zielkonto wählen.'),
+                    ->helperText('Leer lassen für automatische Erkennung. Bei CSV bitte das Zielkonto wählen.'),
             ])
             ->statePath('data');
+    }
+
+    /** Wenn eine neue Datei gewählt wird, den Anlege-Dialog zurücksetzen. */
+    public function updatedData($value, string $key): void
+    {
+        if ($key === 'file') {
+            $this->awaitingName = false;
+            $this->pendingAccount = [];
+        }
     }
 
     public function importAction(): Action
@@ -81,55 +100,145 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
         return Action::make('import')
             ->label('Importieren')
             ->icon('heroicon-o-arrow-down-tray')
-            ->action(function (): void {
-                $state = $this->form->getState();
-                $path = $state['file'] ?? null;
+            ->action(fn () => $this->runImport());
+    }
 
-                if (! $path || ! Storage::disk('local')->exists($path)) {
-                    Notification::make()->title('Keine Datei')->body('Bitte zuerst eine Datei hochladen.')->warning()->send();
+    /** Schritt 1: Datei prüfen, Konto ermitteln; ggf. nach Kontonamen fragen. */
+    public function runImport(): void
+    {
+        $state = $this->form->getState();
+        $path = $state['file'] ?? null;
 
-                    return;
-                }
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            Notification::make()->title('Keine Datei')->body('Bitte zuerst eine Datei hochladen.')->warning()->send();
 
-                try {
-                    $content = Storage::disk('local')->get($path);
-                    if (! mb_check_encoding($content, 'UTF-8')) {
-                        $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
-                    }
+            return;
+        }
 
-                    [$rows, $source] = $this->parse($content);
+        try {
+            $content = $this->readFile($path);
+            [$rows, $source] = $this->parse($content);
 
-                    $account = $this->resolveAccount($state['bank_account_id'] ?? null, $content);
-                    if (! $account) {
-                        Notification::make()
-                            ->title('Konto nicht erkannt')
-                            ->body('Aus dieser CSV ließ sich kein Konto ableiten. Bitte das Zielkonto auswählen.')
-                            ->warning()->send();
+            // Manuell gewähltes Konto?
+            if (! empty($state['bank_account_id'])) {
+                $this->doImport(BankAccount::find($state['bank_account_id']), $rows, $source, $path, $state);
 
-                        return;
-                    }
+                return;
+            }
 
-                    $log = (new BankImportService())->import($account, $rows, $source, $state['original_name'] ?? basename($path));
+            // Vorhandenes Konto automatisch erkennen
+            if ($account = $this->matchExistingAccount($content)) {
+                $this->doImport($account, $rows, $source, $path, $state);
 
-                    Notification::make()
-                        ->title('Import abgeschlossen')
-                        ->body('Konto ' . $account->label . ': ' . $log->new_count . ' neu, ' . $log->duplicate_count . ' Dubletten, ' . $log->error_count . ' Fehler.')
-                        ->success()->send();
+                return;
+            }
 
-                    $this->form->fill();
-                } catch (Throwable $e) {
-                    report($e);
-                    Notification::make()->title('Import fehlgeschlagen')->body($e->getMessage())->danger()->send();
-                } finally {
-                    // Hochgeladene Datei in jedem Fall wieder löschen.
-                    Storage::disk('local')->delete($path);
-                }
-            });
+            // Konto aus Datei ableitbar -> nach Namen fragen (Datei bleibt liegen)
+            if ($detected = $this->detectAccount($content)) {
+                $this->pendingAccount = $detected;
+                $this->newAccountName = $detected['suggested'];
+                $this->awaitingName = true;
+                Notification::make()
+                    ->title('Neues Konto')
+                    ->body('Dieses Konto ist noch nicht vorhanden. Bitte einen Kontonamen vergeben.')
+                    ->info()->send();
+
+                return;
+            }
+
+            Notification::make()
+                ->title('Konto nicht erkennbar')
+                ->body('Aus dieser Datei (CSV) ließ sich kein Konto ableiten. Bitte oben das Zielkonto wählen.')
+                ->warning()->send();
+        } catch (Throwable $e) {
+            report($e);
+            Notification::make()->title('Import fehlgeschlagen')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    /** Schritt 2: Neues Konto mit eingegebenem Namen anlegen und importieren. */
+    public function confirmNewAccount(): void
+    {
+        $this->validate(
+            ['newAccountName' => 'required|string|min:2|max:120'],
+            [],
+            ['newAccountName' => 'Kontoname']
+        );
+
+        $state = $this->form->getState();
+        $path = $state['file'] ?? null;
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            Notification::make()->title('Datei nicht mehr vorhanden')->body('Bitte die Datei erneut hochladen.')->warning()->send();
+            $this->awaitingName = false;
+
+            return;
+        }
+
+        try {
+            $content = $this->readFile($path);
+            [$rows, $source] = $this->parse($content);
+
+            $account = BankAccount::create([
+                'label' => trim($this->newAccountName),
+                'iban' => $this->pendingAccount['iban'] ?? null,
+                'bank_code' => $this->pendingAccount['bank_code'] ?? null,
+                'account_number' => $this->pendingAccount['account_number'] ?? null,
+                'business_id' => Business::orderBy('sort_order')->value('id'),
+                'currency' => 'EUR',
+                'active' => true,
+            ]);
+
+            $this->awaitingName = false;
+            $this->pendingAccount = [];
+
+            $this->doImport($account, $rows, $source, $path, $state, neu: true);
+        } catch (Throwable $e) {
+            report($e);
+            Notification::make()->title('Import fehlgeschlagen')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    public function cancelNewAccount(): void
+    {
+        $this->awaitingName = false;
+        $this->pendingAccount = [];
+    }
+
+    // --- intern --------------------------------------------------------------
+
+    /** Führt den Import durch, löscht die Datei und setzt das Formular zurück. */
+    private function doImport(?BankAccount $account, array $rows, ImportSource $source, string $path, array $state, bool $neu = false): void
+    {
+        if (! $account) {
+            Notification::make()->title('Kein Konto')->warning()->send();
+
+            return;
+        }
+
+        $log = (new BankImportService())->import($account, $rows, $source, $state['original_name'] ?? basename($path));
+
+        Storage::disk('local')->delete($path);
+        $this->form->fill();
+        $this->reset(['awaitingName', 'pendingAccount', 'newAccountName']);
+
+        Notification::make()
+            ->title('Import abgeschlossen')
+            ->body(($neu ? 'Neues Konto „' . $account->label . '" angelegt. ' : 'Konto ' . $account->label . ': ')
+                . $log->new_count . ' neu, ' . $log->duplicate_count . ' Dubletten, ' . $log->error_count . ' Fehler.')
+            ->success()->send();
+    }
+
+    private function readFile(string $path): string
+    {
+        $content = Storage::disk('local')->get($path);
+        if (! mb_check_encoding($content, 'UTF-8')) {
+            $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+        }
+
+        return $content;
     }
 
     /**
-     * Erkennt das Format am Inhalt und parst die Datei.
-     *
      * @return array{0: array<int, array<string, mixed>>, 1: ImportSource}
      */
     private function parse(string $content): array
@@ -146,77 +255,53 @@ class UmsaetzeImportieren extends Page implements HasActions, HasForms
         return [(new CsvBankParser())->parse($content), ImportSource::Csv];
     }
 
-    /**
-     * Konto bestimmen: ausgewählt > automatisch aus der Datei erkennen und – falls
-     * nicht vorhanden – automatisch anlegen. MT940 über :25: (BLZ/Kontonummer),
-     * CAMT über die Konto-IBAN im Auszugskopf. Bei CSV nicht ableitbar -> null.
-     */
-    private function resolveAccount(?int $selectedId, string $content): ?BankAccount
+    /** Sucht ein bereits vorhandenes Konto anhand der Kontodaten in der Datei. */
+    private function matchExistingAccount(string $content): ?BankAccount
     {
-        if ($selectedId) {
-            return BankAccount::find($selectedId);
-        }
-
-        // MT940: :25:BLZ/Kontonummer
         if (preg_match('/:25:([0-9]+)\/([A-Z0-9]+)/', $content, $m)) {
-            $blz = $m[1];
-            $account = $m[2];
-            $trimmed = ltrim($account, '0');
+            $trimmed = ltrim($m[2], '0');
 
-            $existing = BankAccount::query()
-                ->where('bank_code', $blz)
-                ->where(function ($q) use ($account, $trimmed) {
-                    $q->where('account_number', $account)
+            return BankAccount::query()
+                ->where('bank_code', $m[1])
+                ->where(function ($q) use ($m, $trimmed) {
+                    $q->where('account_number', $m[2])
                         ->orWhereRaw('TRIM(LEADING ? FROM account_number) = ?', ['0', $trimmed]);
                 })
                 ->first();
-
-            return $existing ?? $this->createAccount(
-                bankCode: $blz,
-                accountNumber: $account,
-                label: 'Konto ' . $account . ' (BLZ ' . $blz . ')',
-            );
         }
 
-        // CAMT.053: erste IBAN im Dokument = Konto-IBAN des Auszugs
-        if ((str_contains($content, 'camt.05') || str_contains($content, '<Ntry>'))
-            && preg_match('/<IBAN>([A-Z]{2}[0-9A-Z]+)<\/IBAN>/', $content, $m)) {
-            $iban = $m[1];
-
-            $existing = BankAccount::where('iban', $iban)->first();
-
-            return $existing ?? $this->createAccount(
-                iban: $iban,
-                bankCode: substr($iban, 4, 8), // dt. IBAN: Stellen 5–12 = BLZ
-                label: 'Konto ' . $iban,
-            );
+        if (preg_match('/<IBAN>([A-Z]{2}[0-9A-Z]+)<\/IBAN>/', $content, $m)) {
+            return BankAccount::where('iban', $m[1])->first();
         }
 
         return null;
     }
 
-    /** Legt automatisch ein Bankkonto an (dem ersten Betrieb zugeordnet). */
-    private function createAccount(
-        ?string $iban = null,
-        ?string $bankCode = null,
-        ?string $accountNumber = null,
-        string $label = 'Importiertes Konto',
-    ): BankAccount {
-        $account = BankAccount::create([
-            'label' => $label,
-            'iban' => $iban,
-            'bank_code' => $bankCode,
-            'account_number' => $accountNumber,
-            'business_id' => \App\Models\Business::orderBy('sort_order')->value('id'),
-            'currency' => 'EUR',
-            'active' => true,
-        ]);
+    /**
+     * Leitet Kontodaten + Namensvorschlag aus der Datei ab (für neues Konto).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function detectAccount(string $content): ?array
+    {
+        if (preg_match('/:25:([0-9]+)\/([A-Z0-9]+)/', $content, $m)) {
+            return [
+                'bank_code' => $m[1],
+                'account_number' => $m[2],
+                'iban' => null,
+                'suggested' => 'Konto ' . $m[2] . ' (BLZ ' . $m[1] . ')',
+            ];
+        }
 
-        Notification::make()
-            ->title('Neues Bankkonto angelegt')
-            ->body('„' . $label . '" wurde automatisch erstellt.')
-            ->success()->send();
+        if (preg_match('/<IBAN>([A-Z]{2}[0-9A-Z]+)<\/IBAN>/', $content, $m)) {
+            return [
+                'bank_code' => substr($m[1], 4, 8),
+                'account_number' => null,
+                'iban' => $m[1],
+                'suggested' => 'Konto ' . $m[1],
+            ];
+        }
 
-        return $account;
+        return null;
     }
 }
