@@ -60,7 +60,6 @@ class PdfReportService
         $pdf = new ReportPdf();
 
         $stats = $this->buildStats($transactions);
-        $stats['appendedFiles'] = $this->countAppendableFiles($transactions);
 
         // Fortlaufende Beleg-Nummern (chronologisch) vergeben: Umsatz->id => [receipt_id => Nr].
         // Dieselbe Nummer steht in der Umsatzliste und wird auf den angehängten Beleg gestempelt.
@@ -69,11 +68,15 @@ class PdfReportService
         $counter = 0;
         foreach ($transactions as $transaction) {
             foreach ($transaction->receipts as $receipt) {
-                if ($receipt->file_path && $disk->exists($receipt->file_path)) {
+                if ($receipt->include_in_report
+                    && $receipt->file_path && $disk->exists($receipt->file_path)) {
                     $receiptNumbers[$receipt->id] = ++$counter;
                 }
             }
         }
+
+        // Tatsächlich angehängte Belege = Anzahl vergebener Beleg-Nummern.
+        $stats['appendedFiles'] = count($receiptNumbers);
 
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
@@ -117,20 +120,6 @@ class PdfReportService
             'withoutReceipt' => $transactions->filter(fn (BankTransaction $t) => $t->receipts->isEmpty())->count(),
             'unreviewed' => $transactions->where('reviewed', false)->count(),
         ];
-    }
-
-    /**
-     * Zählt die tatsächlich anhängbaren Beleg-Dateien (Datei vorhanden).
-     *
-     * @param  \Illuminate\Support\Collection<int, BankTransaction>  $transactions
-     */
-    private function countAppendableFiles($transactions): int
-    {
-        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
-
-        return $transactions->sum(fn (BankTransaction $t) => $t->receipts
-            ->filter(fn (Receipt $r) => $r->file_path && $disk->exists($r->file_path))
-            ->count());
     }
 
     /**

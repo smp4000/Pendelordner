@@ -37,6 +37,7 @@ class Receipt extends Model
         'file_size' => 'integer',
         'paid' => 'boolean',
         'reviewed' => 'boolean',
+        'include_in_report' => 'boolean',
         'ocr_processed_at' => 'datetime',
     ];
 

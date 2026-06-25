@@ -64,5 +64,15 @@ class PdfReportTest extends TestCase
         $this->assertStringStartsWith('%PDF', $content);
         // Vorspann (>=3 Seiten) + Trennseite + 1 Belegseite -> Dokument nicht trivial klein
         $this->assertGreaterThan(3000, strlen($content));
+
+        // Mit Beleg angehängt = ein deutlich größeres Dokument als ohne.
+        $withReceipt = strlen($content);
+
+        // Beleg aus dem Bericht ausschließen -> Datei wird nicht mehr angehängt.
+        $receipt->update(['include_in_report' => false]);
+        $path2 = (new PdfReportService())->generateMonthlyReport(Carbon::parse('2026-01-15'));
+        $withoutReceipt = strlen(Storage::disk('local')->get($path2));
+
+        $this->assertLessThan($withReceipt, $withoutReceipt);
     }
 }

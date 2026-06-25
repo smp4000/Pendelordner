@@ -210,6 +210,12 @@
                                     <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
                                         <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
                                     <span style="display:flex;gap:.5rem;align-items:center;white-space:nowrap;">
+                                        <label wire:click.stop title="Im Steuerberater-Bericht anhängen"
+                                            style="display:flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.8;cursor:pointer;">
+                                            <input type="checkbox" wire:click.stop="toggleReceiptInReport({{ $r->id }})"
+                                                @checked($r->include_in_report)>
+                                            im Bericht
+                                        </label>
                                         <input type="number" step="0.01" value="{{ $r->pivot->amount }}"
                                             wire:click.stop
                                             wire:change.stop="updateAllocation({{ $r->id }}, $event.target.value)"

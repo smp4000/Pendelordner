@@ -526,6 +526,24 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Betrag aktualisiert')->success()->send();
     }
 
+    /** Steuert, ob die Belegdatei im Steuerberater-Bericht angehängt wird. */
+    public function toggleReceiptInReport(int $receiptId): void
+    {
+        $receipt = Receipt::find($receiptId);
+        if (! $receipt) {
+            return;
+        }
+
+        $receipt->include_in_report = ! $receipt->include_in_report;
+        $receipt->saveQuietly();
+
+        Notification::make()
+            ->title($receipt->include_in_report
+                ? 'Beleg wird im Bericht angehängt'
+                : 'Beleg wird nicht im Bericht angehängt')
+            ->success()->send();
+    }
+
     public function detachReceipt(int $receiptId): void
     {
         $transaction = $this->selectedTransaction;
