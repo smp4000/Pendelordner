@@ -61,9 +61,10 @@
         <tr>
             <th style="width:60px;">Datum</th>
             <th>Empfänger / Verwendungszweck</th>
-            <th style="width:90px;">Kategorie</th>
-            <th style="width:80px;">Kostenstelle</th>
-            <th class="num" style="width:80px;">Betrag</th>
+            <th style="width:80px;">Kategorie</th>
+            <th style="width:70px;">Kostenstelle</th>
+            <th style="width:85px;">Konto (SKR/edtas)</th>
+            <th class="num" style="width:75px;">Betrag</th>
         </tr>
     </thead>
     <tbody>
@@ -89,6 +90,14 @@
                 </td>
                 <td>{{ $t->category?->name ?? '—' }}</td>
                 <td>{{ $t->costCenter?->name ?? '—' }}</td>
+                <td>
+                    @if ($t->ledgerAccount)
+                        <strong>{{ $t->ledgerAccount->number }}</strong>
+                        <br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->ledgerAccount->name, 22) }}</span>
+                    @else
+                        —
+                    @endif
+                </td>
                 <td class="num {{ $t->amount < 0 ? 'neg' : 'pos' }}">{{ $money($t->amount) }}</td>
             </tr>
         @endforeach
