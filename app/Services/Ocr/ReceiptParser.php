@@ -22,6 +22,7 @@ class ReceiptParser
     {
         return [
             'invoice_number' => $this->invoiceNumber($text),
+            'customer_number' => $this->customerNumber($text),
             'invoice_date' => $this->date($text, ['rechnungsdatum', 'rechnung vom', 'datum', 'belegdatum']),
             'service_date' => $this->date($text, ['leistungsdatum', 'lieferdatum', 'leistungszeitraum']),
             'iban' => $this->iban($text),
@@ -29,6 +30,24 @@ class ReceiptParser
             'gross_amount' => $this->grossAmount($text),
             'tax_amount' => $this->taxAmount($text),
         ];
+    }
+
+    /** Kundennummer beim Lieferanten, z. B. "Kundennummer  A8319" oder "Kd.-Nr.: 12345". */
+    private function customerNumber(string $text): ?string
+    {
+        $patterns = [
+            '/kunden(?:nummer|nr)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
+            '/kd\.?[\s\-]*nr\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
+            '/debitor(?:en)?[\s\-]*(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text, $m)) {
+                return trim($m[1]);
+            }
+        }
+
+        return null;
     }
 
     private function invoiceNumber(string $text): ?string

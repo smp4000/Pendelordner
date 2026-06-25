@@ -23,3 +23,13 @@ Schedule::command('bank:fetch')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+/*
+| Rechnungseingang per E-Mail (Modul 3): fragt alle 15 Minuten das IMAP-Postfach
+| ab. Der Befehl bricht selbst ab, wenn MAIL_INGEST_ENABLED=false ist.
+*/
+Schedule::command('belege:fetch-mail')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();

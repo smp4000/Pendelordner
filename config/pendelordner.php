@@ -84,4 +84,32 @@ return [
         'default_days' => 90,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Rechnungseingang per E-Mail (Modul 3)
+    |--------------------------------------------------------------------------
+    | Ein IMAP-Postfach (z. B. belege@deinedomain.de) wird per Zeitplan
+    | abgefragt; PDF-/Bild-Anhänge werden als Belege gespeichert und per OCR
+    | ausgewertet. Leite deine Rechnungs-Mails per Weiterleitungsregel an dieses
+    | Postfach. Abruf: "php artisan belege:fetch-mail" (im Scheduler hinterlegt).
+    */
+    'mail_ingest' => [
+        'enabled' => (bool) env('MAIL_INGEST_ENABLED', false),
+        'host' => env('MAIL_INGEST_HOST'),
+        'port' => (int) env('MAIL_INGEST_PORT', 993),
+        'encryption' => env('MAIL_INGEST_ENCRYPTION', 'ssl'), // ssl|tls|null
+        'validate_cert' => (bool) env('MAIL_INGEST_VALIDATE_CERT', true),
+        'username' => env('MAIL_INGEST_USERNAME'),
+        'password' => env('MAIL_INGEST_PASSWORD'),
+        'folder' => env('MAIL_INGEST_FOLDER', 'INBOX'),
+        // Verarbeitete Mails hierhin verschieben (leer = nur als gelesen markieren).
+        'processed_folder' => env('MAIL_INGEST_PROCESSED_FOLDER', ''),
+        // Welcher Betrieb neuen Mail-Belegen zugeordnet wird (leer = keiner).
+        'business_id' => env('MAIL_INGEST_BUSINESS_ID') ?: null,
+        // Zugelassene Anhang-Endungen.
+        'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff'],
+        // Abrufzeit (HH:MM) bzw. -frequenz im Scheduler.
+        'fetch_time' => env('MAIL_INGEST_FETCH_TIME', '*/15'), // alle 15 Min
+    ],
+
 ];

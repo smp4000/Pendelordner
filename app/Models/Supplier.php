@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -46,5 +47,19 @@ class Supplier extends Model
     public function matchingRules(): HasMany
     {
         return $this->hasMany(MatchingRule::class);
+    }
+
+    /** Verknüpfungen zu Tankstellen (Betrieben) inkl. Kundennummer. */
+    public function customerNumbers(): HasMany
+    {
+        return $this->hasMany(SupplierCustomerNumber::class);
+    }
+
+    /** Tankstellen (Betriebe), die diesem Lieferanten zugeordnet sind. */
+    public function businesses(): BelongsToMany
+    {
+        return $this->belongsToMany(Business::class, 'supplier_customer_numbers')
+            ->withPivot(['customer_number', 'note'])
+            ->withTimestamps();
     }
 }

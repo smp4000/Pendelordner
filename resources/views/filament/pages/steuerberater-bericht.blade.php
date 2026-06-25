@@ -2,13 +2,13 @@
     <div class="mx-auto w-full max-w-4xl space-y-6">
 
         {{-- Header-Banner --}}
-        <div class="flex items-start gap-4 rounded-xl border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-5 dark:border-primary-900/40 dark:from-primary-950/40 dark:to-gray-900">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white shadow-sm">
-                <x-filament::icon icon="heroicon-o-document-arrow-down" class="h-7 w-7" />
+        <div style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem;border:1px solid rgba(16,185,129,.25);border-radius:.85rem;background:rgba(16,185,129,.06);">
+            <div style="display:flex;align-items:center;justify-content:center;width:3rem;height:3rem;flex-shrink:0;border-radius:.6rem;background:#059669;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.1);">
+                <x-filament::icon icon="heroicon-o-document-arrow-down" style="width:1.65rem;height:1.65rem;" />
             </div>
-            <div class="space-y-1">
-                <h2 class="text-base font-semibold text-gray-950 dark:text-white">Pendelordner für den Steuerberater</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+            <div style="display:flex;flex-direction:column;gap:.25rem;">
+                <h2 style="font-size:1rem;font-weight:600;margin:0;">Pendelordner für den Steuerberater</h2>
+                <p style="font-size:.875rem;margin:0;color:rgb(107,114,128);line-height:1.45;">
                     Deckblatt, Zusammenfassung, chronologische Umsatzliste und – in exakter
                     Umsatzreihenfolge – die Original-Belege hinter dem jeweiligen Umsatz.
                 </p>
@@ -22,16 +22,16 @@
 
             {{ $this->form }}
 
-            <div class="mt-6 flex flex-col gap-4 border-t border-gray-100 pt-5 dark:border-white/10">
-                <div class="flex flex-wrap items-center gap-3">
+            <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid rgba(120,120,120,.15);display:flex;flex-direction:column;gap:1rem;">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;">
                     {{ $this->generateAction }}
                     {{ $this->generatePerAccountAction }}
                 </div>
 
-                <div class="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                    <x-filament::icon icon="heroicon-o-information-circle" class="h-4 w-4 shrink-0 text-gray-400" />
+                <div style="display:flex;align-items:flex-start;gap:.6rem;padding:.75rem .9rem;border-radius:.6rem;background:rgba(120,120,120,.07);font-size:.8rem;line-height:1.45;color:rgb(107,114,128);">
+                    <x-filament::icon icon="heroicon-o-information-circle" style="width:1.1rem;height:1.1rem;flex-shrink:0;margin-top:.05rem;opacity:.6;" />
                     <span>
-                        <strong class="font-medium text-gray-700 dark:text-gray-300">Pro Konto je PDF (ZIP)</strong>
+                        <strong style="font-weight:600;color:rgb(75,85,99);">Pro Konto je PDF (ZIP)</strong>
                         erzeugt für jedes Konto mit Umsätzen im Zeitraum einen eigenen Pendelordner und
                         bündelt sie als ZIP. Die Konto-Auswahl oben wird dabei ignoriert.
                     </span>

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Suppliers\Schemas;
 
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -24,6 +25,24 @@ class SupplierForm
                         TextInput::make('bic')->label('BIC'),
                         TextInput::make('vat_id')->label('USt-IdNr.'),
                         TextInput::make('tax_number')->label('Steuernummer'),
+                    ]),
+
+                Section::make('Tankstellen & Kundennummern')
+                    ->description('Verknüpfe diesen Lieferanten mit deinen Tankstellen und hinterlege je Tankstelle die Kundennummer. Über mehrere Tankstellen darf die Kundennummer gleich oder unterschiedlich sein. Wird zur automatischen Zuordnung von Rechnungen genutzt.')
+                    ->schema([
+                        Repeater::make('customerNumbers')
+                            ->relationship()
+                            ->label('')
+                            ->addActionLabel('Tankstelle verknüpfen')
+                            ->columns(2)
+                            ->itemLabel(fn (array $state): ?string => $state['customer_number'] ? 'Kd.-Nr. ' . $state['customer_number'] : null)
+                            ->collapsible()
+                            ->schema([
+                                Select::make('business_id')->label('Tankstelle')
+                                    ->relationship('business', 'name')
+                                    ->searchable()->preload()->required(),
+                                TextInput::make('customer_number')->label('Kundennummer'),
+                            ]),
                     ]),
 
                 Section::make('Standard-Zuordnung')

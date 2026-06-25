@@ -5,6 +5,10 @@ namespace App\Filament\Resources\Receipts\Schemas;
 use App\Enums\OcrStatus;
 use App\Enums\ReceiptStatus;
 use App\Enums\ReceiptType;
+use App\Models\Business;
+use App\Models\Supplier;
+use App\Models\SupplierCustomerNumber;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -12,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class ReceiptForm
@@ -54,9 +59,33 @@ class ReceiptForm
                             ->label('Lieferant')
                             ->relationship('supplier', 'name')
                             ->searchable()->preload()
+                            ->helperText('Wird über die Kundennummer automatisch erkannt. Fehlt der Lieferant, hier neu anlegen.')
                             ->createOptionForm([
-                                TextInput::make('name')->required(),
-                            ]),
+                                TextInput::make('name')->label('Lieferantenname')->required(),
+                                Select::make('link_business_id')->label('Tankstelle')
+                                    ->options(fn () => Business::orderBy('name')->pluck('name', 'id'))
+                                    ->helperText('Verknüpft den neuen Lieferanten mit dieser Tankstelle.'),
+                                TextInput::make('link_customer_number')->label('Kundennummer'),
+                            ])
+                            ->createOptionUsing(function (array $data): int {
+                                $supplier = Supplier::create(['name' => $data['name']]);
+
+                                if (! empty($data['link_business_id'])) {
+                                    SupplierCustomerNumber::create([
+                                        'supplier_id' => $supplier->id,
+                                        'business_id' => $data['link_business_id'],
+                                        'customer_number' => $data['link_customer_number'] ?: null,
+                                    ]);
+                                }
+
+                                return $supplier->id;
+                            })
+                            ->createOptionAction(fn (Action $action) => $action->fillForm(fn (Get $get): array => [
+                                'link_customer_number' => $get('customer_number'),
+                                'link_business_id' => $get('business_id'),
+                            ])),
+                        TextInput::make('customer_number')->label('Kundennummer')
+                            ->helperText('Aus der Rechnung erkannt – Basis der Lieferanten-Zuordnung.'),
                         TextInput::make('invoice_number')->label('Rechnungsnummer'),
                         DatePicker::make('invoice_date')
                             ->label('Rechnungsdatum')->native(false)->displayFormat('d.m.Y'),

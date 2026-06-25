@@ -122,5 +122,33 @@ class OcrService
             $receipt->net_amount = $net;
             $receipt->tax_amount = round((float) $receipt->gross_amount - $net, 2);
         }
+
+        $this->matchSupplierByCustomerNumber($receipt);
+    }
+
+    /**
+     * Ordnet Lieferant + Tankstelle (Betrieb) anhand der erkannten Kundennummer
+     * über die Verknüpfungstabelle zu – nur wenn eindeutig.
+     */
+    private function matchSupplierByCustomerNumber(Receipt $receipt): void
+    {
+        if (blank($receipt->customer_number) || filled($receipt->supplier_id)) {
+            return;
+        }
+
+        $links = \App\Models\SupplierCustomerNumber::query()
+            ->where('customer_number', $receipt->customer_number)
+            ->get();
+
+        // Eindeutiger Lieferant? Dann zuordnen (Tankstelle ebenfalls, falls eindeutig).
+        $supplierIds = $links->pluck('supplier_id')->unique();
+        if ($supplierIds->count() === 1) {
+            $receipt->supplier_id = $supplierIds->first();
+
+            $businessIds = $links->pluck('business_id')->unique();
+            if (blank($receipt->business_id) && $businessIds->count() === 1) {
+                $receipt->business_id = $businessIds->first();
+            }
+        }
     }
 }
