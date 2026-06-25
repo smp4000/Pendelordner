@@ -43,6 +43,19 @@ class Kontoumsatzdetails extends Page
 
     public ?int $selectedReceiptId = null;
 
+    // Filterkontext aus der Umsatzliste (beschränkt die Navigation).
+    public ?int $filterAccountId = null;
+
+    public ?string $filterFrom = null;
+
+    public ?string $filterTo = null;
+
+    public ?string $filterStatus = null;
+
+    public ?string $filterReviewed = null;
+
+    public ?string $filterWithoutReceipt = null;
+
     /** Aktiver Tab in der Mitte: assigned | suggestions | search | upload */
     public string $activeTab = 'assigned';
 
@@ -62,11 +75,42 @@ class Kontoumsatzdetails extends Page
 
     public function mount(): void
     {
-        $this->selectedTransactionId = BankTransaction::query()
-            ->expense()
-            ->open()
-            ->orderBy('booking_date')
-            ->value('id');
+        // Filterkontext aus der Umsatzliste übernehmen (Query-Parameter).
+        $this->filterAccountId = request('account_id') ? (int) request('account_id') : null;
+        $this->filterFrom = request('from') ?: null;
+        $this->filterTo = request('to') ?: null;
+        $this->filterStatus = request('status') ?: null;
+        $this->filterReviewed = request()->has('reviewed') ? (string) request('reviewed') : null;
+        $this->filterWithoutReceipt = request()->has('without_receipt') ? (string) request('without_receipt') : null;
+
+        $this->selectedTransactionId = request('tx')
+            ? (int) request('tx')
+            : $this->navigationQuery()->value('id');
+    }
+
+    /** Basisquery der Navigation – gefiltert (aus der Liste) oder Standard (offene Ausgaben). */
+    private function navigationQuery()
+    {
+        if ($this->hasFilterContext()) {
+            return BankTransaction::query()
+                ->when($this->filterAccountId, fn ($q) => $q->where('bank_account_id', $this->filterAccountId))
+                ->when($this->filterFrom, fn ($q) => $q->whereDate('booking_date', '>=', $this->filterFrom))
+                ->when($this->filterTo, fn ($q) => $q->whereDate('booking_date', '<=', $this->filterTo))
+                ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
+                ->when($this->filterReviewed !== null, fn ($q) => $q->where('reviewed', $this->filterReviewed === '1'))
+                ->when($this->filterWithoutReceipt !== null, fn ($q) => $this->filterWithoutReceipt === '1'
+                    ? $q->whereDoesntHave('receipts')
+                    : $q->whereHas('receipts'))
+                ->orderBy('booking_date');
+        }
+
+        return BankTransaction::query()->expense()->open()->orderBy('booking_date');
+    }
+
+    private function hasFilterContext(): bool
+    {
+        return $this->filterAccountId || $this->filterFrom || $this->filterTo
+            || $this->filterStatus || $this->filterReviewed !== null || $this->filterWithoutReceipt !== null;
     }
 
     /** Seite über die volle Panelbreite anzeigen. */
@@ -114,19 +158,20 @@ class Kontoumsatzdetails extends Page
 
     public function getOpenTransactionsProperty(): Collection
     {
-        return BankTransaction::query()
+        $list = $this->navigationQuery()
             ->with(['receipts'])
-            // offene Umsätze + den aktuell gewählten (auch wenn schon geprüft),
-            // damit Navigation/Position stimmen.
-            ->where(function ($q) {
-                $q->open();
-                if ($this->selectedTransactionId) {
-                    $q->orWhere('id', $this->selectedTransactionId);
-                }
-            })
-            ->orderBy('booking_date')
-            ->limit(100)
+            ->limit(500)
             ->get();
+
+        // Den aktuell gewählten Umsatz sicher enthalten (z. B. wenn er nach
+        // "geprüft" aus der Standardliste fiele), damit die Position stimmt.
+        if ($this->selectedTransactionId && ! $list->contains('id', $this->selectedTransactionId)) {
+            if ($sel = BankTransaction::with('receipts')->find($this->selectedTransactionId)) {
+                $list = $list->push($sel)->sortBy('booking_date')->values();
+            }
+        }
+
+        return $list;
     }
 
     public function getSelectedTransactionProperty(): ?BankTransaction

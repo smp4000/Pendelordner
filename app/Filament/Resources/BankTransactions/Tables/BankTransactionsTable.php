@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BankTransactions\Tables;
 
 use App\Enums\TransactionStatus;
+use App\Filament\Pages\Kontoumsatzdetails;
 use App\Models\BankTransaction;
 use App\Services\Accounting\KontierungService;
 use Filament\Actions\BulkAction;
@@ -194,6 +195,9 @@ class BankTransactionsTable
             // Filter dauerhaft oberhalb der Tabelle anzeigen (mehrspaltig).
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersFormColumns(4)
+            // Klick auf die Zeile öffnet die Kontoumsatzdetails – mit den aktuell
+            // gesetzten Filterkriterien (Navigation bleibt auf die Auswahl beschränkt).
+            ->recordUrl(fn (BankTransaction $record, $livewire): string => self::detailsUrl($record, $livewire))
             ->recordActions([
                 EditAction::make(),
             ])
@@ -218,11 +222,51 @@ class BankTransactionsTable
     }
 
     /**
+     * Baut die URL zur Kontoumsatzdetail-Seite und übergibt die aktuell aktiven
+     * Filter (Konto, Zeitraum, Status, Geprüft, Beleglage), damit die Navigation
+     * dort auf die gefilterte Menge beschränkt bleibt.
+     */
+    private static function detailsUrl(BankTransaction $record, $livewire): string
+    {
+        $params = ['tx' => $record->id];
+
+        $account = $livewire->getTableFilterState('bank_account_id')['value'] ?? null;
+        if ($account) {
+            $params['account_id'] = $account;
+        }
+        $status = $livewire->getTableFilterState('status')['value'] ?? null;
+        if ($status) {
+            $params['status'] = $status;
+        }
+        $reviewed = $livewire->getTableFilterState('reviewed')['value'] ?? null;
+        if ($reviewed !== null && $reviewed !== '') {
+            $params['reviewed'] = $reviewed ? 1 : 0;
+        }
+        $withoutReceipt = $livewire->getTableFilterState('without_receipt')['value'] ?? null;
+        if ($withoutReceipt !== null && $withoutReceipt !== '') {
+            $params['without_receipt'] = $withoutReceipt ? 1 : 0;
+        }
+
+        $zeitraum = $livewire->getTableFilterState('zeitraum') ?? [];
+        [$from, $to] = self::resolvePeriod($zeitraum['preset'] ?? null);
+        $from = ($zeitraum['from'] ?? null) ?: $from;
+        $to = ($zeitraum['until'] ?? null) ?: $to;
+        if ($from) {
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $params['to'] = $to;
+        }
+
+        return Kontoumsatzdetails::getUrl($params);
+    }
+
+    /**
      * Wandelt ein Zeitraum-Preset in [von, bis] (Y-m-d) um.
      *
      * @return array{0: ?string, 1: ?string}
      */
-    private static function resolvePeriod(?string $preset): array
+    public static function resolvePeriod(?string $preset): array
     {
         if (! $preset) {
             return [null, null];
