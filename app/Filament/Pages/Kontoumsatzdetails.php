@@ -9,6 +9,7 @@ use App\Services\Ocr\OcrService;
 use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -66,6 +67,47 @@ class Kontoumsatzdetails extends Page
             ->open()
             ->orderBy('booking_date')
             ->value('id');
+    }
+
+    /** Seite über die volle Panelbreite anzeigen. */
+    public function getMaxContentWidth(): Width
+    {
+        return Width::Full;
+    }
+
+    // --- Navigation (Umsatz X von Y, vor/zurück) ----------------------------
+
+    public function getPositionProperty(): int
+    {
+        $ids = $this->openTransactions->pluck('id')->all();
+        $i = array_search($this->selectedTransactionId, $ids, true);
+
+        return $i === false ? 0 : $i + 1;
+    }
+
+    public function getTotalProperty(): int
+    {
+        return $this->openTransactions->count();
+    }
+
+    public function goTo(string $where): void
+    {
+        $ids = $this->openTransactions->pluck('id')->all();
+        if (empty($ids)) {
+            return;
+        }
+        $i = array_search($this->selectedTransactionId, $ids, true);
+        $i = $i === false ? 0 : $i;
+
+        $target = match ($where) {
+            'first' => $ids[0],
+            'last' => $ids[count($ids) - 1],
+            'prev' => $ids[max(0, $i - 1)],
+            'next' => $ids[min(count($ids) - 1, $i + 1)],
+            default => $ids[$i],
+        };
+
+        $this->selectTransaction($target);
     }
 
     // --- Daten ---------------------------------------------------------------

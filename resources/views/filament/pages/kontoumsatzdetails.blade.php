@@ -13,7 +13,20 @@
             . ($active ? '#10b981;font-weight:600;color:#059669;' : 'transparent;opacity:.7;');
     @endphp
 
-    <div style="display:grid;grid-template-columns:3fr 6fr 3fr;gap:1rem;align-items:start;">
+    @php
+        $navBtn = 'padding:.25rem .5rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;background:transparent;cursor:pointer;font-size:.9rem;line-height:1;';
+    @endphp
+
+    {{-- Kompakte Navigation (Umsatz X von Y) --}}
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:.4rem;margin-bottom:.75rem;">
+        <button wire:click="goTo('first')" style="{{ $navBtn }}" title="Erster">&#124;&#9664;</button>
+        <button wire:click="goTo('prev')" style="{{ $navBtn }}" title="Zurück">&#9664;</button>
+        <span style="font-size:.85rem;min-width:9rem;text-align:center;">Umsatz <strong>{{ $this->position }}</strong> von {{ $this->total }}</span>
+        <button wire:click="goTo('next')" style="{{ $navBtn }}" title="Weiter">&#9654;</button>
+        <button wire:click="goTo('last')" style="{{ $navBtn }}" title="Letzter">&#9654;&#124;</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:2.5fr 5fr 4.5fr;gap:1rem;align-items:start;">
 
         {{-- LINKS: offene Umsätze --}}
         <x-filament::section style="padding:0;overflow:hidden;">
