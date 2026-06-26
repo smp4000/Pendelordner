@@ -33,7 +33,9 @@ class AdminPanelProvider extends PanelProvider
                 AppAuthentication::make()
                     ->recoverable()
                     ->brandName('Pendelordner'),
-                isRequired: true,
+                // Live und lokal verpflichtend; nur in der automatisierten
+                // Testumgebung deaktiviert (dort kann kein QR-Code gescannt werden).
+                isRequired: ! app()->environment('testing'),
             )
             ->brandName('Pendelordner')
             ->colors([
