@@ -50,6 +50,12 @@ class Kontoumsatzdetails extends Page
     // Filterkontext aus der Umsatzliste (beschränkt die Navigation).
     public ?int $filterAccountId = null;
 
+    public ?int $filterBusinessId = null;
+
+    public ?int $filterCategoryId = null;
+
+    public ?int $filterCostCenterId = null;
+
     public ?string $filterFrom = null;
 
     public ?string $filterTo = null;
@@ -121,6 +127,9 @@ class Kontoumsatzdetails extends Page
     {
         // Filterkontext aus der Umsatzliste übernehmen (Query-Parameter).
         $this->filterAccountId = request('account_id') ? (int) request('account_id') : null;
+        $this->filterBusinessId = request('business_id') ? (int) request('business_id') : null;
+        $this->filterCategoryId = request('category_id') ? (int) request('category_id') : null;
+        $this->filterCostCenterId = request('cost_center_id') ? (int) request('cost_center_id') : null;
         $this->filterFrom = request('from') ?: null;
         $this->filterTo = request('to') ?: null;
         $this->filterStatus = request('status') ?: null;
@@ -463,6 +472,9 @@ class Kontoumsatzdetails extends Page
         if ($this->hasFilterContext()) {
             return BankTransaction::query()
                 ->when($this->filterAccountId, fn ($q) => $q->where('bank_account_id', $this->filterAccountId))
+                ->when($this->filterBusinessId, fn ($q) => $q->where('business_id', $this->filterBusinessId))
+                ->when($this->filterCategoryId, fn ($q) => $q->where('category_id', $this->filterCategoryId))
+                ->when($this->filterCostCenterId, fn ($q) => $q->where('cost_center_id', $this->filterCostCenterId))
                 ->when($this->filterFrom, fn ($q) => $q->whereDate('booking_date', '>=', $this->filterFrom))
                 ->when($this->filterTo, fn ($q) => $q->whereDate('booking_date', '<=', $this->filterTo))
                 ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
@@ -483,7 +495,8 @@ class Kontoumsatzdetails extends Page
 
     private function hasFilterContext(): bool
     {
-        return $this->filterAccountId || $this->filterFrom || $this->filterTo
+        return $this->filterAccountId || $this->filterBusinessId || $this->filterCategoryId
+            || $this->filterCostCenterId || $this->filterFrom || $this->filterTo
             || $this->filterStatus || $this->filterReviewed !== null || $this->filterWithoutReceipt !== null;
     }
 

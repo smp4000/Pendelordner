@@ -234,6 +234,18 @@ class BankTransactionsTable
         if ($account) {
             $params['account_id'] = $account;
         }
+        $business = $livewire->getTableFilterState('business_id')['value'] ?? null;
+        if ($business) {
+            $params['business_id'] = $business;
+        }
+        $category = $livewire->getTableFilterState('category_id')['value'] ?? null;
+        if ($category) {
+            $params['category_id'] = $category;
+        }
+        $costCenter = $livewire->getTableFilterState('cost_center_id')['value'] ?? null;
+        if ($costCenter) {
+            $params['cost_center_id'] = $costCenter;
+        }
         $status = $livewire->getTableFilterState('status')['value'] ?? null;
         if ($status) {
             $params['status'] = $status;
