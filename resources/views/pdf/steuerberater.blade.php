@@ -10,6 +10,7 @@
         .cover { text-align: center; padding-top: 220px; }
         .cover h1 { font-size: 30px; color: #059669; margin-bottom: 8px; }
         .cover h2 { font-size: 20px; color: #374151; font-weight: normal; }
+        .cover .addr { margin-top: 6px; font-size: 15px; color: #374151; line-height: 1.4; }
         .cover .meta { margin-top: 40px; font-size: 14px; color: #6b7280; }
         h3 { color: #059669; border-bottom: 2px solid #059669; padding-bottom: 4px; }
         table { width: 100%; border-collapse: collapse; margin-top: 8px; }
@@ -33,8 +34,13 @@
 
 {{-- Seite 1: Deckblatt --}}
 <div class="cover page-break">
-    <h1>Pendelordner</h1>
     <h2>{{ $business?->name ?? 'Alle Betriebe' }}</h2>
+    @if ($business && ($business->street || $business->postal_code || $business->city))
+        <div class="addr">
+            @if ($business->street){{ $business->street }}<br>@endif
+            {{ trim(($business->postal_code ?? '') . ' ' . ($business->city ?? '')) }}
+        </div>
+    @endif
     @if (! empty($account))
         <h2 style="font-size:16px;margin-top:4px;">Konto: {{ $account->label }}@if($account->iban) ({{ $account->iban }})@endif</h2>
     @endif
