@@ -489,8 +489,16 @@ class Kontoumsatzdetails extends Page
                 ->orderBy('booking_date');
         }
 
-        // In der Bearbeitung werden ausschließlich ungeprüfte Umsätze angezeigt.
-        return BankTransaction::query()->where('reviewed', false)->orderBy('booking_date');
+        // In der Bearbeitung werden vorrangig ungeprüfte Umsätze angezeigt.
+        $offene = BankTransaction::query()->where('reviewed', false)->orderBy('booking_date');
+
+        // Sind alle Umsätze bereits geprüft, wäre die Seite leer – dann zur
+        // besseren Übersicht alle Umsätze (neueste zuerst) anzeigen.
+        if (! (clone $offene)->exists()) {
+            return BankTransaction::query()->orderByDesc('booking_date');
+        }
+
+        return $offene;
     }
 
     private function hasFilterContext(): bool
