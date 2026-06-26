@@ -217,9 +217,9 @@ class Kontoumsatzdetails extends Page
         }
 
         $rows = array_values(array_filter($this->splits, function ($row) {
-            return ! empty($row['category_id'])
-                || ! empty($row['cost_center_id'])
-                || ! empty($row['ledger_account_id'])
+            return ! empty($row['category_id'] ?? null)
+                || ! empty($row['cost_center_id'] ?? null)
+                || ! empty($row['ledger_account_id'] ?? null)
                 || $this->parseAmount($row['amount'] ?? '') != 0.0;
         }));
 
@@ -238,9 +238,9 @@ class Kontoumsatzdetails extends Page
         foreach ($rows as $row) {
             $t->accountAssignments()->create([
                 'chart_of_accounts' => $chart,
-                'category_id' => $row['category_id'] ?: null,
-                'cost_center_id' => $row['cost_center_id'] ?: null,
-                'ledger_account_id' => $row['ledger_account_id'] ?: null,
+                'category_id' => ($row['category_id'] ?? null) ?: null,
+                'cost_center_id' => ($row['cost_center_id'] ?? null) ?: null,
+                'ledger_account_id' => ($row['ledger_account_id'] ?? null) ?: null,
                 'amount' => $this->parseAmount($row['amount'] ?? ''),
                 'booking_text' => trim((string) ($row['booking_text'] ?? '')) ?: null,
                 'booking_date' => $t->booking_date,
