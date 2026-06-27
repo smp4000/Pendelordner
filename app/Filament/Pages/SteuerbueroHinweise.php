@@ -10,6 +10,7 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -98,9 +99,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
                                 TextInput::make('amount')
                                     ->label('Betrag')
                                     ->placeholder('z. B. 120 € S'),
-                                TextInput::make('text')
+                                Textarea::make('text')
                                     ->label('Text')
-                                    ->placeholder('z. B. Firmenwagen'),
+                                    ->placeholder('z. B. Firmenwagen (mehrzeilig möglich)')
+                                    ->rows(2)
+                                    ->autosize(),
                             ]),
                     ]),
             ])

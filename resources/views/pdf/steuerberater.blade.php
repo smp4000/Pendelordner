@@ -79,7 +79,7 @@
                         @foreach ($note->lines as $line)
                             <tr>
                                 <td class="note-amount">{{ $line->amount }}</td>
-                                <td>{{ $line->text }}</td>
+                                <td>{!! nl2br(e($line->text)) !!}</td>
                             </tr>
                         @endforeach
                     </table>
