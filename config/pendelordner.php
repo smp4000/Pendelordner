@@ -112,4 +112,13 @@ return [
         'fetch_time' => env('MAIL_INGEST_FETCH_TIME', '*/15'), // alle 15 Min
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cron-Token
+    |--------------------------------------------------------------------------
+    | Geheimer Schlüssel, mit dem die per URL aufgerufenen Cron-Endpunkte
+    | (/cron/...) abgesichert sind (z. B. für den all-inkl-URL-Cronjob).
+    */
+    'cron_token' => env('CRON_TOKEN'),
+
 ];
