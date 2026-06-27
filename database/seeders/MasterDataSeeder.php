@@ -54,18 +54,8 @@ class MasterDataSeeder extends Seeder
             );
         }
 
-        // ---- Kostenstellen (betriebsübergreifend) --------------------------
-        $costCenters = [
-            ['number' => '100', 'name' => 'Tankstelle', 'color' => '#1e6cff', 'sort_order' => 1],
-            ['number' => '110', 'name' => 'Shop', 'color' => '#8b5cf6', 'sort_order' => 2],
-            ['number' => '120', 'name' => 'Lotto', 'color' => '#ec4899', 'sort_order' => 3],
-            ['number' => '130', 'name' => 'Waschanlage', 'color' => '#06b6d4', 'sort_order' => 4],
-            ['number' => '200', 'name' => 'Werkstatt', 'color' => '#f59e0b', 'sort_order' => 5],
-            ['number' => '300', 'name' => 'Sachverständigenbüro', 'color' => '#10b981', 'sort_order' => 6],
-        ];
-        foreach ($costCenters as $c) {
-            CostCenter::firstOrCreate(['name' => $c['name']], $c);
-        }
+        // ---- Kostenstellen je Standort (eigener Seeder) --------------------
+        $this->call(CostCenterSeeder::class);
 
         // ---- Kategorien mit Default-Kontierung (eigener Seeder) -------------
         $this->call(CategorySeeder::class);
