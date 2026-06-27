@@ -219,7 +219,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         ])->values()->all();
     }
 
-    /** @return array<string, string> letzte 24 Monate als YYYY-MM => "Juni 2026" */
+    /** @return array<string, string> laufender + letzte 11 Monate als YYYY-MM => "Juni 2026" */
     private function monthOptions(): array
     {
         $names = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
@@ -227,7 +227,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
         $options = [];
         $start = Carbon::now()->startOfMonth();
-        for ($i = 0; $i < 24; $i++) {
+        for ($i = 0; $i < 12; $i++) {
             $m = $start->copy()->subMonths($i);
             $options[$m->format('Y-m')] = $names[$m->month] . ' ' . $m->year;
         }
