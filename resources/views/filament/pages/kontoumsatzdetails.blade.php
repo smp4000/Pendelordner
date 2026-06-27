@@ -195,46 +195,66 @@
                         </div>
                     @endif
 
-                    {{-- Aufklappbarer Editor: Betrag auf Kategorien aufteilen (G&V) --}}
+                    {{-- Aufklappbarer Editor: Betrag auf Sachkonten aufteilen (G&V) --}}
                     @if ($showSplit)
                         <div style="margin-top:.8rem;padding:.7rem;border:1px solid rgba(14,165,233,.35);border-radius:.5rem;background:rgba(14,165,233,.06);">
-                            <div style="font-weight:600;font-size:.85rem;margin-bottom:.2rem;">Betrag auf Kategorien aufteilen</div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.2rem;">
+                                <div style="font-weight:600;font-size:.85rem;">Betrag auf Sachkonten aufteilen</div>
+                                {{-- Netto/Brutto-Schalter --}}
+                                <div style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;">
+                                    <span style="opacity:.6;">Beträge:</span>
+                                    <button type="button" wire:click="$set('splitMode','brutto')"
+                                        style="padding:.2rem .6rem;border-radius:.35rem;border:1px solid rgba(120,120,120,.3);cursor:pointer;{{ $splitMode==='brutto' ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:transparent;' }}">Brutto</button>
+                                    <button type="button" wire:click="$set('splitMode','netto')"
+                                        style="padding:.2rem .6rem;border-radius:.35rem;border:1px solid rgba(120,120,120,.3);cursor:pointer;{{ $splitMode==='netto' ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:transparent;' }}">Netto + USt</button>
+                                </div>
+                            </div>
                             <p style="font-size:.78rem;opacity:.7;margin:0 0 .6rem;">
-                                Für die Gewinn- und Verlustrechnung: den Umsatzbetrag auf mehrere Positionen
-                                aufteilen – je Position mit Kategorie, Sachkonto (Kontenrahmen) und Kostenstelle
-                                (z. B. Kosten, Lotto neutral, Provision).
+                                Kategorie und Kostenstelle werden aus der Zuordnung oben übernommen.
+                                Im Modus „Netto + USt" wird je Position die Umsatzsteuer aufgeschlagen.
                             </p>
 
-                            <div style="display:grid;grid-template-columns:1.3fr 1.7fr 1.2fr .8fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">
-                                <span>Kategorie</span>
+                            <div style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">
                                 <span>Sachkonto (Kontenrahmen)</span>
-                                <span>Kostenstelle</span>
-                                <span>Betrag €</span>
+                                <span>USt %</span>
+                                <span>Betrag € ({{ $splitMode==='netto' ? 'netto' : 'brutto' }})</span>
                                 <span></span>
                             </div>
 
                             @foreach ($splits as $i => $row)
-                                <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:1.3fr 1.7fr 1.2fr .8fr auto;gap:.4rem;align-items:center;margin-bottom:.4rem;">
-                                    <x-filament::input.select wire:model="splits.{{ $i }}.category_id">
-                                        <option value="">Kategorie wählen…</option>
-                                        @foreach ($this->categories as $cat)
-                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                        @endforeach
-                                    </x-filament::input.select>
-                                    <x-filament::input.select wire:model="splits.{{ $i }}.ledger_account_id">
-                                        <option value="">Sachkonto wählen…</option>
-                                        @foreach ($this->ledgerAccounts as $la)
-                                            <option value="{{ $la->id }}">{{ $la->number }} – {{ $la->name }}</option>
-                                        @endforeach
-                                    </x-filament::input.select>
-                                    <x-filament::input.select wire:model="splits.{{ $i }}.cost_center_id">
-                                        <option value="">Keine</option>
-                                        @foreach ($this->costCenters as $cc)
-                                            <option value="{{ $cc->id }}">{{ $cc->name }}</option>
-                                        @endforeach
+                                <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;align-items:start;margin-bottom:.4rem;">
+                                    {{-- Sachkonto durchsuchbar --}}
+                                    <div>
+                                        @if (! empty($row['ledger_account_id']))
+                                            <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;padding:.3rem 0;">
+                                                <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;">{{ $row['ledger_label'] }}</span>
+                                                <button type="button" wire:click="clearSplitLedger({{ $i }})" style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:.78rem;">ändern</button>
+                                            </div>
+                                        @else
+                                            <x-filament::input.wrapper>
+                                                <x-filament::input type="text" wire:model.live.debounce.350ms="splits.{{ $i }}.ledger_search" placeholder="Konto suchen (Nummer/Bezeichnung)…" />
+                                            </x-filament::input.wrapper>
+                                            @php $res = $this->splitLedgerResults($row['ledger_search'] ?? ''); @endphp
+                                            @if ($res->isNotEmpty())
+                                                <div style="margin-top:.2rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:160px;overflow-y:auto;background:var(--fi-color-white,#fff);">
+                                                    @foreach ($res as $la)
+                                                        <div wire:click="setSplitLedger({{ $i }}, {{ $la->id }})"
+                                                            style="padding:.3rem .55rem;cursor:pointer;font-size:.8rem;border-bottom:1px solid rgba(120,120,120,.1);">
+                                                            <strong>{{ $la->number }}</strong> – {{ \Illuminate\Support\Str::limit($la->name, 40) }}
+                                                            <span style="opacity:.5;">· {{ $la->chart }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        @endif
+                                    </div>
+                                    <x-filament::input.select wire:model.live="splits.{{ $i }}.tax_rate">
+                                        <option value="19">19</option>
+                                        <option value="7">7</option>
+                                        <option value="0">0</option>
                                     </x-filament::input.select>
                                     <x-filament::input.wrapper>
-                                        <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.amount" placeholder="Betrag €" />
+                                        <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.amount" placeholder="0,00" />
                                     </x-filament::input.wrapper>
                                     <button type="button" wire:click="removeSplit({{ $i }})" title="Position entfernen"
                                         style="color:#dc2626;background:none;border:none;cursor:pointer;padding:.3rem;">✕</button>
@@ -243,7 +263,7 @@
 
                             @php $rest = $this->splitRemaining; @endphp
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.4rem;font-size:.82rem;">
-                                <span>Aufgeteilt: <strong>{{ number_format($this->splitTotal, 2, ',', '.') }} €</strong>
+                                <span>Aufgeteilt (brutto): <strong>{{ number_format($this->splitTotal, 2, ',', '.') }} €</strong>
                                     von {{ number_format(abs((float) $tx->amount), 2, ',', '.') }} €</span>
                                 <span style="color:{{ abs($rest) < 0.005 ? '#059669' : '#d97706' }};">
                                     Rest: {{ number_format($rest, 2, ',', '.') }} €

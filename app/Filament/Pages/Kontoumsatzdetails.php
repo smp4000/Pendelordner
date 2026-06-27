@@ -102,13 +102,17 @@ class Kontoumsatzdetails extends Page
 
     public string $accountantNote = '';
 
-    // --- Aufteilung nach Kategorie (für die G&V) -----------------------------
+    // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
+
+    /** Eingabe der Split-Beträge als 'brutto' oder 'netto'. */
+    public string $splitMode = 'brutto';
 
     /**
      * Split-Positionen des aktuellen Umsatzes – Aufteilung des Betrags auf
-     * mehrere Kategorien (G&V). Jede Zeile:
-     * ['category_id' => 5, 'amount' => '100,00', 'booking_text' => '...'].
+     * mehrere Sachkonten. Kategorie/Kostenstelle kommen aus der Haupt-
+     * Zuordnung des Umsatzes. Jede Zeile:
+     * ['ledger_account_id', 'ledger_label', 'ledger_search', 'tax_rate', 'amount'].
      *
      * @var array<int, array<string, mixed>>
      */
@@ -185,13 +189,15 @@ class Kontoumsatzdetails extends Page
         $t = $this->selectedTransaction;
         $this->splits = $t
             ? $t->accountAssignments->map(fn (\App\Models\AccountAssignment $a) => [
-                'category_id' => $a->category_id,
-                'cost_center_id' => $a->cost_center_id,
                 'ledger_account_id' => $a->ledger_account_id,
+                'ledger_label' => $a->ledgerAccount ? $a->ledgerAccount->number . ' – ' . $a->ledgerAccount->name : '',
+                'ledger_search' => '',
+                'tax_rate' => $a->tax_rate !== null ? rtrim(rtrim(number_format((float) $a->tax_rate, 2, ',', ''), '0'), ',') : '19',
                 'amount' => $a->amount !== null ? number_format((float) $a->amount, 2, ',', '') : '',
-                'booking_text' => (string) ($a->booking_text ?? ''),
             ])->values()->all()
             : [];
+        // Gespeicherte Beträge sind brutto (sie summieren sich zum Umsatzbetrag).
+        $this->splitMode = 'brutto';
         $this->showSplit = ! empty($this->splits);
     }
 
@@ -199,13 +205,12 @@ class Kontoumsatzdetails extends Page
     public function addSplit(): void
     {
         $rest = $this->splitRemaining;
-        $t = $this->selectedTransaction;
         $this->splits[] = [
-            'category_id' => null,
-            'cost_center_id' => $t?->cost_center_id,
-            'ledger_account_id' => $t?->ledger_account_id,
+            'ledger_account_id' => null,
+            'ledger_label' => '',
+            'ledger_search' => '',
+            'tax_rate' => '19',
             'amount' => $rest > 0.005 ? number_format($rest, 2, ',', '') : '',
-            'booking_text' => '',
         ];
     }
 
@@ -215,18 +220,67 @@ class Kontoumsatzdetails extends Page
         $this->splits = array_values($this->splits);
     }
 
-    /** Summe der erfassten Split-Beträge. */
-    public function getSplitTotalProperty(): float
+    /** Bruttobetrag einer Zeile (im Netto-Modus inkl. USt hochgerechnet). */
+    private function splitGross(array $row): float
     {
-        return array_reduce($this->splits, fn ($c, $row) => $c + $this->parseAmount($row['amount'] ?? ''), 0.0);
+        $amount = $this->parseAmount($row['amount'] ?? '');
+        if ($this->splitMode === 'netto') {
+            $rate = $this->parseAmount($row['tax_rate'] ?? '0');
+
+            return round($amount * (1 + $rate / 100), 2);
+        }
+
+        return $amount;
     }
 
-    /** Noch zu verteilender Restbetrag bezogen auf den Umsatzbetrag (absolut). */
+    /** Summe der Split-Positionen als Brutto (vergleichbar mit dem Umsatzbetrag). */
+    public function getSplitTotalProperty(): float
+    {
+        return array_reduce($this->splits, fn ($c, $row) => $c + $this->splitGross($row), 0.0);
+    }
+
+    /** Noch zu verteilender (Brutto-)Restbetrag bezogen auf den Umsatzbetrag. */
     public function getSplitRemainingProperty(): float
     {
         $total = abs((float) ($this->selectedTransaction?->amount ?? 0));
 
         return round($total - $this->splitTotal, 2);
+    }
+
+    /** Sachkonto-Treffer für die Suche einer Split-Zeile. */
+    public function splitLedgerResults(string $search): Collection
+    {
+        $s = trim($search);
+        if (mb_strlen($s) < 2) {
+            return collect();
+        }
+
+        return LedgerAccount::query()
+            ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+            ->orderBy('number')
+            ->limit(15)
+            ->get();
+    }
+
+    public function setSplitLedger(int $index, int $ledgerId): void
+    {
+        $la = LedgerAccount::find($ledgerId);
+        if (! $la || ! isset($this->splits[$index])) {
+            return;
+        }
+        $this->splits[$index]['ledger_account_id'] = $la->id;
+        $this->splits[$index]['ledger_label'] = $la->number . ' – ' . $la->name;
+        $this->splits[$index]['ledger_search'] = '';
+    }
+
+    public function clearSplitLedger(int $index): void
+    {
+        if (! isset($this->splits[$index])) {
+            return;
+        }
+        $this->splits[$index]['ledger_account_id'] = null;
+        $this->splits[$index]['ledger_label'] = '';
+        $this->splits[$index]['ledger_search'] = '';
     }
 
     /** Aufteilung speichern (ersetzt die bisherigen Positionen des Umsatzes). */
@@ -238,9 +292,7 @@ class Kontoumsatzdetails extends Page
         }
 
         $rows = array_values(array_filter($this->splits, function ($row) {
-            return ! empty($row['category_id'] ?? null)
-                || ! empty($row['cost_center_id'] ?? null)
-                || ! empty($row['ledger_account_id'] ?? null)
+            return ! empty($row['ledger_account_id'] ?? null)
                 || $this->parseAmount($row['amount'] ?? '') != 0.0;
         }));
 
@@ -254,16 +306,17 @@ class Kontoumsatzdetails extends Page
 
         $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'skr03');
 
-        // Alte Positionen ersetzen
+        // Alte Positionen ersetzen. Kategorie/Kostenstelle vom Umsatz übernehmen,
+        // Betrag immer als Brutto speichern (Summe = Umsatzbetrag).
         $t->accountAssignments()->delete();
         foreach ($rows as $row) {
             $t->accountAssignments()->create([
                 'chart_of_accounts' => $chart,
-                'category_id' => ($row['category_id'] ?? null) ?: null,
-                'cost_center_id' => ($row['cost_center_id'] ?? null) ?: null,
+                'category_id' => $t->category_id,
+                'cost_center_id' => $t->cost_center_id,
                 'ledger_account_id' => ($row['ledger_account_id'] ?? null) ?: null,
-                'amount' => $this->parseAmount($row['amount'] ?? ''),
-                'booking_text' => trim((string) ($row['booking_text'] ?? '')) ?: null,
+                'tax_rate' => ($row['tax_rate'] ?? '') !== '' ? $this->parseAmount($row['tax_rate']) : null,
+                'amount' => $this->splitGross($row),
                 'booking_date' => $t->booking_date,
             ]);
         }
@@ -274,7 +327,7 @@ class Kontoumsatzdetails extends Page
         Notification::make()
             ->title('Aufteilung gespeichert (' . count($rows) . ' Positionen)')
             ->body(abs($diff) < 0.005
-                ? 'Betrag vollständig auf Kategorien aufgeteilt.'
+                ? 'Betrag vollständig auf Sachkonten aufgeteilt.'
                 : 'Achtung: Restbetrag ' . number_format($diff, 2, ',', '.') . ' € nicht zugeordnet.')
             ->success()->send();
     }
@@ -587,7 +640,7 @@ class Kontoumsatzdetails extends Page
             return null;
         }
 
-        return BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.costCenter'])
+        return BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])
             ->find($this->selectedTransactionId);
     }
 

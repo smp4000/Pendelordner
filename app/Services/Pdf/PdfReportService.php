@@ -51,7 +51,7 @@ class PdfReportService
     public function generate(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): string
     {
         $transactions = BankTransaction::query()
-            ->with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.category'])
+            ->with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])
             ->when($business, fn ($q) => $q->where('business_id', $business->id))
             ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
             ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
