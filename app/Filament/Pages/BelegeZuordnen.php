@@ -3,10 +3,20 @@
 namespace App\Filament\Pages;
 
 use App\Models\BankTransaction;
+use App\Models\Business;
 use App\Models\Receipt;
+use App\Models\Supplier;
 use App\Services\Matching\MatchingEngine;
 use App\Services\Ocr\OcrService;
+use App\Services\Ocr\ReceiptParser;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
@@ -23,8 +33,10 @@ use UnitEnum;
  * nicht zugeordneten) Beleg den passenden Bankumsatz und schlägt ihn vor.
  * Ein Klick ordnet den Beleg dem vorgeschlagenen Umsatz zu.
  */
-class BelegeZuordnen extends Page
+class BelegeZuordnen extends Page implements HasActions, HasForms
 {
+    use InteractsWithActions;
+    use InteractsWithForms;
     use WithFileUploads;
 
     protected string $view = 'filament.pages.belege-zuordnen';
@@ -103,6 +115,74 @@ class BelegeZuordnen extends Page
             ->title($count . ' Beleg(e) hochgeladen')
             ->body('OCR ausgeführt. Vorschläge zur Zuordnung werden unten angezeigt.')
             ->success()->send();
+    }
+
+    /**
+     * Modal zum Anlegen eines neuen Lieferanten – vorbefüllt aus den
+     * OCR-Daten des Belegs (Name, USt-IdNr, IBAN, Kundennummer). Nach dem
+     * Speichern wird der Lieferant dem Beleg zugeordnet.
+     */
+    public function createSupplierAction(): Action
+    {
+        return Action::make('createSupplier')
+            ->label('Lieferant anlegen')
+            ->icon('heroicon-o-user-plus')
+            ->modalHeading('Neuen Lieferanten anlegen')
+            ->modalSubmitActionLabel('Anlegen & zuordnen')
+            ->fillForm(function (array $arguments): array {
+                $receipt = Receipt::find($arguments['receipt'] ?? null);
+                $parser = new ReceiptParser();
+                $text = (string) ($receipt?->ocr_text ?? '');
+
+                return [
+                    'name' => $parser->supplierNameGuess($text),
+                    'vat_id' => $parser->vatId($text),
+                    'iban' => $receipt?->iban,
+                    'business_id' => $receipt?->business_id,
+                    'customer_number' => $receipt?->customer_number,
+                ];
+            })
+            ->schema([
+                TextInput::make('name')->label('Name')->required(),
+                TextInput::make('vat_id')->label('USt-IdNr.'),
+                TextInput::make('iban')->label('IBAN'),
+                Select::make('business_id')->label('Tankstelle')
+                    ->options(Business::orderBy('sort_order')->get()->pluck('display_label', 'id'))
+                    ->helperText('Für die Kundennummer-Verknüpfung.'),
+                TextInput::make('customer_number')->label('Kundennummer'),
+            ])
+            ->action(function (array $data, array $arguments): void {
+                $receipt = Receipt::find($arguments['receipt'] ?? null);
+                if (! $receipt) {
+                    return;
+                }
+
+                $supplier = Supplier::create([
+                    'name' => $data['name'],
+                    'display_name' => $data['name'],
+                    'vat_id' => $data['vat_id'] ?: null,
+                    'iban' => $data['iban'] ?: null,
+                    'active' => true,
+                ]);
+
+                // Kundennummer je Tankstelle verknüpfen (für künftige Auto-Zuordnung).
+                if (! empty($data['business_id'])) {
+                    $supplier->customerNumbers()->create([
+                        'business_id' => $data['business_id'],
+                        'customer_number' => $data['customer_number'] ?: null,
+                    ]);
+                }
+
+                $receipt->supplier_id = $supplier->id;
+                if (! empty($data['business_id']) && blank($receipt->business_id)) {
+                    $receipt->business_id = $data['business_id'];
+                }
+                $receipt->saveQuietly();
+
+                Notification::make()
+                    ->title('Lieferant „' . $supplier->name . '" angelegt und zugeordnet')
+                    ->success()->send();
+            });
     }
 
     /** Beleg dem (vorgeschlagenen) Umsatz zuordnen. */

@@ -40,7 +40,8 @@ class SupplierForm
                             ->schema([
                                 Select::make('business_id')->label('Tankstelle')
                                     ->relationship('business', 'name')
-                                    ->searchable()->preload()->required(),
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->display_label)
+                                    ->searchable(['name', 'postal_code', 'city'])->preload()->required(),
                                 TextInput::make('customer_number')->label('Kundennummer'),
                             ]),
                     ]),
@@ -54,7 +55,9 @@ class SupplierForm
                         Select::make('default_cost_center_id')->label('Kostenstelle')
                             ->relationship('defaultCostCenter', 'name')->searchable()->preload(),
                         Select::make('default_business_id')->label('Betrieb')
-                            ->relationship('defaultBusiness', 'name')->searchable()->preload(),
+                            ->relationship('defaultBusiness', 'name')
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->display_label)
+                            ->searchable(['name', 'postal_code', 'city'])->preload(),
                     ]),
 
                 Section::make('Kontierung & DATEV')

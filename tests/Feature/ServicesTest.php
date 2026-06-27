@@ -165,6 +165,16 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(10.37, $data['gross_amount'], 0.001);
     }
 
+    public function test_parser_erkennt_ustidnr_und_lieferantennamen(): void
+    {
+        $text = "Haufe Service Center GmbH\nMunzinger Straße 9\n79111 Freiburg\n"
+            . "USt-IdNr.: DE 812499727\nRechnungsnummer lx2026060362760";
+
+        $parser = new ReceiptParser();
+        $this->assertSame('DE812499727', $parser->vatId($text));
+        $this->assertSame('Haufe Service Center GmbH', $parser->supplierNameGuess($text));
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [

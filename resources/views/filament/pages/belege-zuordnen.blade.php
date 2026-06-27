@@ -69,6 +69,20 @@
                         @if ($r->preview_url)
                             <a href="{{ $r->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
                         @endif
+
+                        {{-- Lieferant: erkannt anzeigen, sonst vorbefülltes Anlege-Modal --}}
+                        <div style="margin-top:.35rem;">
+                            @if ($r->supplier)
+                                <span style="font-size:.78rem;padding:.1rem .45rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;">
+                                    Lieferant: {{ $r->supplier->display_name ?: $r->supplier->name }}
+                                </span>
+                            @else
+                                <x-filament::button size="xs" color="warning" icon="heroicon-o-user-plus"
+                                    wire:click="mountAction('createSupplier', { receipt: {{ $r->id }} })">
+                                    Lieferant anlegen
+                                </x-filament::button>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Vorschlag --}}
@@ -100,4 +114,6 @@
         </x-filament::section>
 
     </div>
+
+    <x-filament-actions::modals />
 </x-filament-panels::page>

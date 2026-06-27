@@ -54,6 +54,34 @@ class ReceiptParser
         return null;
     }
 
+    /** USt-IdNr. (z. B. "DE812499727") aus dem Text – separat, da keine Beleg-Spalte. */
+    public function vatId(string $text): ?string
+    {
+        if (preg_match('/ust[-.\s]*id[-.\s]*nr\.?\s*[:#]?\s*([A-Z]{2}\s?\d{8,12})/i', $text, $m)) {
+            return strtoupper(preg_replace('/\s+/', '', $m[1]));
+        }
+        // Fallback: irgendeine DE-USt-IdNr im Text
+        if (preg_match('/\b(DE\s?\d{9})\b/i', $text, $m)) {
+            return strtoupper(preg_replace('/\s+/', '', $m[1]));
+        }
+
+        return null;
+    }
+
+    /** Bester Namensvorschlag für den Lieferanten (Zeile mit Rechtsform). */
+    public function supplierNameGuess(string $text): ?string
+    {
+        $text = str_replace('<>', '', $text);
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            $line = trim($line);
+            if ($line !== '' && preg_match('/\b(GmbH|AG|KG|UG|GbR|mbH|e\.\s?K\.|e\.\s?V\.|OHG|SE)\b/', $line)) {
+                return mb_substr($line, 0, 120);
+            }
+        }
+
+        return null;
+    }
+
     private function invoiceNumber(string $text): ?string
     {
         $patterns = [

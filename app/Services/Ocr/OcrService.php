@@ -123,7 +123,42 @@ class OcrService
             $receipt->tax_amount = round((float) $receipt->gross_amount - $net, 2);
         }
 
+        $this->matchSupplier($receipt, $text);
+    }
+
+    /**
+     * Versucht, den Lieferanten zu erkennen: zuerst über die Kundennummer,
+     * dann über USt-IdNr, dann über die IBAN. Nur bei eindeutigem Treffer.
+     */
+    private function matchSupplier(Receipt $receipt, string $text): void
+    {
         $this->matchSupplierByCustomerNumber($receipt);
+        if (filled($receipt->supplier_id)) {
+            return;
+        }
+
+        // USt-IdNr
+        $vat = $this->extractor->vatId($text);
+        if ($vat) {
+            $supplier = \App\Models\Supplier::query()
+                ->whereRaw("UPPER(REPLACE(vat_id, ' ', '')) = ?", [$vat])
+                ->first();
+            if ($supplier) {
+                $receipt->supplier_id = $supplier->id;
+
+                return;
+            }
+        }
+
+        // IBAN
+        if (filled($receipt->iban)) {
+            $supplier = \App\Models\Supplier::query()
+                ->whereRaw("REPLACE(iban, ' ', '') = ?", [preg_replace('/\s+/', '', (string) $receipt->iban)])
+                ->first();
+            if ($supplier) {
+                $receipt->supplier_id = $supplier->id;
+            }
+        }
     }
 
     /**
