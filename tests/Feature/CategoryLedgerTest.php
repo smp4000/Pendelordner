@@ -159,6 +159,36 @@ class CategoryLedgerTest extends TestCase
         $this->assertFalse($again->contains('id', $la->id));
     }
 
+    /** „Als geprüft markieren" speichert nur und bleibt auf dem Umsatz (kein Weiterspringen). */
+    public function test_als_geprueft_bleibt_auf_dem_umsatz(): void
+    {
+        $this->bootPanel();
+
+        $account = BankAccount::create([
+            'label' => 'Geschäftskonto',
+            'business_id' => Business::first()->id,
+            'currency' => 'EUR',
+        ]);
+
+        $first = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-01', 'counterparty' => 'A', 'amount' => -10.00,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+        BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-02', 'counterparty' => 'B', 'amount' => -20.00,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $first->id)
+            ->call('markReviewed')
+            ->assertSet('selectedTransactionId', $first->id); // bleibt stehen
+
+        $this->assertTrue($first->refresh()->reviewed);
+    }
+
     /** Die operative Sachkonto-Suche blendet SKR03/04 aus (nur edtas/gastro/kfz). */
     public function test_sachkonto_suche_ohne_skr(): void
     {
