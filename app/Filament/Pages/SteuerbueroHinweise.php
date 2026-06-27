@@ -91,7 +91,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
                     ->reorderableWithDragAndDrop()
                     ->collapsible()
                     ->cloneable()
-                    ->itemLabel(fn (array $state): string => $state['heading'] ?? 'Hinweis')
+                    ->itemLabel(fn (array $state): ?string => $state['heading'] ?? null)
                     ->schema([
                         TextInput::make('heading')
                             ->label('Überschrift')
@@ -152,9 +152,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             ->delete();
 
         $cardCount = 0;
-        foreach (($state['cards'] ?? []) as $i => $card) {
+        // array_values: Sortierung ergibt sich aus der (ggf. verschobenen)
+        // Reihenfolge, nicht aus den Schlüsseln.
+        foreach (array_values($state['cards'] ?? []) as $i => $card) {
             $heading = trim((string) ($card['heading'] ?? ''));
-            $lines = $card['lines'] ?? [];
+            $lines = array_values($card['lines'] ?? []);
             $hasLine = collect($lines)->contains(
                 fn ($l) => trim((string) ($l['amount'] ?? '')) !== '' || trim((string) ($l['text'] ?? '')) !== ''
             );
@@ -200,26 +202,32 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         $accId = $this->data['bank_account_id'] ?? null;
         $month = $this->selectedMonth($this->data);
 
-        if (! $accId || ! $month) {
-            $this->data['cards'] = [];
+        $cards = [];
+        if ($accId && $month) {
+            $notes = ReportNote::with('lines')
+                ->where('bank_account_id', $accId)
+                ->whereYear('period', $month->year)
+                ->whereMonth('period', $month->month)
+                ->orderBy('sort_order')
+                ->get();
 
-            return;
+            $cards = $notes->map(fn (ReportNote $n) => [
+                'heading' => $n->heading,
+                'lines' => $n->lines->map(fn ($l) => [
+                    'amount' => $l->amount,
+                    'text' => $l->text,
+                ])->values()->all(),
+            ])->values()->all();
         }
 
-        $notes = ReportNote::with('lines')
-            ->where('bank_account_id', $accId)
-            ->whereYear('period', $month->year)
-            ->whereMonth('period', $month->month)
-            ->orderBy('sort_order')
-            ->get();
-
-        $this->data['cards'] = $notes->map(fn (ReportNote $n) => [
-            'heading' => $n->heading,
-            'lines' => $n->lines->map(fn ($l) => [
-                'amount' => $l->amount,
-                'text' => $l->text,
-            ])->values()->all(),
-        ])->values()->all();
+        // Über form->fill() laden, damit Filament gültige Schlüssel für die
+        // Repeater-Einträge vergibt – nötig fürs korrekte Sortieren (Drag & Drop).
+        $this->form->fill([
+            'bank_account_id' => $accId,
+            'year' => $this->data['year'] ?? null,
+            'month' => $this->data['month'] ?? null,
+            'cards' => $cards,
+        ]);
     }
 
     /** Aus den gewählten Werten (Monat + Jahr) den ersten Tag des Monats bilden. */
