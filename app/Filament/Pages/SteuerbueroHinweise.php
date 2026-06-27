@@ -51,7 +51,8 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     {
         $this->form->fill([
             'bank_account_id' => BankAccount::orderBy('label')->value('id'),
-            'period' => Carbon::now()->format('Y-m'),
+            'year' => (string) Carbon::now()->year,
+            'month' => (string) Carbon::now()->month,
             'cards' => [],
         ]);
 
@@ -63,16 +64,22 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         return $schema
             ->components([
                 Section::make('Auswahl')
-                    ->columns(2)
+                    ->columns(4)
                     ->schema([
                         Select::make('bank_account_id')
                             ->label('Bankkonto')
+                            ->columnSpan(2)
                             ->options(BankAccount::orderBy('label')->pluck('label', 'id'))
                             ->live()
                             ->required(),
-                        Select::make('period')
+                        Select::make('month')
                             ->label('Monat')
-                            ->options($this->monthOptions())
+                            ->options($this->monthNames())
+                            ->live()
+                            ->required(),
+                        Select::make('year')
+                            ->label('Jahr')
+                            ->options($this->yearOptions())
                             ->live()
                             ->required(),
                     ]),
@@ -112,8 +119,8 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
     public function updatedData(mixed $value, string $key): void
     {
-        // Bei Wechsel von Konto oder Monat die Karten neu laden.
-        if ($key === 'bank_account_id' || $key === 'period') {
+        // Bei Wechsel von Konto, Monat oder Jahr die Karten neu laden.
+        if (in_array($key, ['bank_account_id', 'month', 'year'], true)) {
             $this->loadCards();
         }
     }
@@ -130,15 +137,13 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     {
         $state = $this->form->getState();
         $accId = $state['bank_account_id'] ?? null;
-        $period = $state['period'] ?? null;
+        $month = $this->selectedMonth($state);
 
-        if (! $accId || ! $period) {
-            Notification::make()->title('Bitte Konto und Monat wählen')->warning()->send();
+        if (! $accId || ! $month) {
+            Notification::make()->title('Bitte Konto, Monat und Jahr wählen')->warning()->send();
 
             return;
         }
-
-        $month = Carbon::parse($period . '-01')->startOfMonth();
 
         // Bestehende Karten dieses Konto/Monats ersetzen (Zeilen via FK-Cascade).
         ReportNote::where('bank_account_id', $accId)
@@ -185,7 +190,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
         Notification::make()
             ->title('Hinweise gespeichert')
-            ->body($cardCount . ' Karte(n) für ' . $this->monthOptions()[$period] . ' gespeichert.')
+            ->body($cardCount . ' Karte(n) für ' . $this->monthNames()[(int) $month->month] . ' ' . $month->year . ' gespeichert.')
             ->success()->send();
     }
 
@@ -193,15 +198,13 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     private function loadCards(): void
     {
         $accId = $this->data['bank_account_id'] ?? null;
-        $period = $this->data['period'] ?? null;
+        $month = $this->selectedMonth($this->data);
 
-        if (! $accId || ! $period) {
+        if (! $accId || ! $month) {
             $this->data['cards'] = [];
 
             return;
         }
-
-        $month = Carbon::parse($period . '-01')->startOfMonth();
 
         $notes = ReportNote::with('lines')
             ->where('bank_account_id', $accId)
@@ -219,17 +222,33 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         ])->values()->all();
     }
 
-    /** @return array<string, string> laufender + letzte 11 Monate als YYYY-MM => "Juni 2026" */
-    private function monthOptions(): array
+    /** Aus den gewählten Werten (Monat + Jahr) den ersten Tag des Monats bilden. */
+    private function selectedMonth(array $state): ?Carbon
     {
-        $names = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+        $year = (int) ($state['year'] ?? 0);
+        $month = (int) ($state['month'] ?? 0);
 
+        if ($year < 2000 || $month < 1 || $month > 12) {
+            return null;
+        }
+
+        return Carbon::create($year, $month, 1)->startOfMonth();
+    }
+
+    /** @return array<int, string> Monatsnamen 1..12 */
+    private function monthNames(): array
+    {
+        return [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni',
+            7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
+    }
+
+    /** @return array<int, string> Jahre vom aktuellen bis 6 Jahre zurück */
+    private function yearOptions(): array
+    {
+        $current = Carbon::now()->year;
         $options = [];
-        $start = Carbon::now()->startOfMonth();
-        for ($i = 0; $i < 12; $i++) {
-            $m = $start->copy()->subMonths($i);
-            $options[$m->format('Y-m')] = $names[$m->month] . ' ' . $m->year;
+        for ($y = $current; $y >= $current - 6; $y--) {
+            $options[$y] = (string) $y;
         }
 
         return $options;
