@@ -34,8 +34,8 @@
                     </div>
                 </x-filament::section>
 
-                {{-- Umsatzdetails --}}
-                <x-filament::section>
+                {{-- Umsatzdetails – wire:key pro Umsatz: erzwingt frische Felder beim Blättern --}}
+                <x-filament::section wire:key="detail-{{ $tx->id }}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
                         <div>
                             <div style="font-size:1.1rem;font-weight:600;">{{ $tx->counterparty ?: 'Bankumsatz' }}</div>
@@ -260,7 +260,7 @@
                 </x-filament::section>
 
                 {{-- Tabs --}}
-                <x-filament::section style="padding:0;overflow:hidden;">
+                <x-filament::section style="padding:0;overflow:hidden;" wire:key="tabs-{{ $tx->id }}">
                     <div style="display:flex;gap:.25rem;border-bottom:1px solid rgba(120,120,120,.2);padding:0 .5rem;flex-wrap:wrap;">
                         <button wire:click="setTab('assigned')" style="{{ $tabBtn($activeTab==='assigned') }}">Zugeordnete Belege ({{ $tx->receipts->count() }})</button>
                         <button wire:click="setTab('suggestions')" style="{{ $tabBtn($activeTab==='suggestions') }}">Vorschläge ({{ $this->suggestions->count() }})</button>

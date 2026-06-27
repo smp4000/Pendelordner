@@ -156,6 +156,18 @@ class Kontoumsatzdetails extends Page
         $this->loadSplits();
     }
 
+    /** Sichert noch nicht gespeicherte Eingaben des aktuellen Umsatzes (Mitteilung). */
+    private function persistPending(): void
+    {
+        if (! $this->selectedTransactionId) {
+            return;
+        }
+
+        $note = trim($this->accountantNote);
+        BankTransaction::whereKey($this->selectedTransactionId)
+            ->update(['accountant_note' => $note !== '' ? $note : null]);
+    }
+
     // --- Aufteilung nach Kategorie (für die G&V) -----------------------------
 
     public function toggleSplit(): void
@@ -641,6 +653,9 @@ class Kontoumsatzdetails extends Page
 
     public function selectTransaction(int $id): void
     {
+        // Offene Eingaben des bisherigen Umsatzes sichern, bevor gewechselt wird.
+        $this->persistPending();
+
         $this->selectedTransactionId = $id;
         $this->selectedReceiptId = $this->selectedTransaction?->receipts->first()?->id;
         $this->activeTab = 'assigned';
@@ -738,6 +753,8 @@ class Kontoumsatzdetails extends Page
         // statt den geprüften Satz neu einzusortieren.
         $nextId = $this->neighbourId();
 
+        // Mitteilung direkt am Modell sichern (recalculateStatus speichert mit).
+        $transaction->accountant_note = trim($this->accountantNote) ?: null;
         $transaction->reviewed = true;
         $transaction->recalculateStatus();
 
@@ -766,6 +783,8 @@ class Kontoumsatzdetails extends Page
         if (! $transaction) {
             return;
         }
+        // Mitteilung mitsichern, falls sie noch nicht gespeichert wurde.
+        $transaction->accountant_note = trim($this->accountantNote) ?: null;
         $transaction->fully_paid = ! $transaction->fully_paid;
         $transaction->saveQuietly();
     }
