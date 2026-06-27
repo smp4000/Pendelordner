@@ -858,20 +858,29 @@ class Kontoumsatzdetails extends Page
 
         try {
             $diskName = config('pendelordner.belege_disk', 'belege');
-            $path = $this->uploadFile->store(date('Y/m'), $diskName);
 
-            $receipt = Receipt::create([
-                'type' => $this->uploadType,
-                'business_id' => $transaction->business_id,
-                'file_path' => $path,
-                'file_name' => $this->uploadFile->getClientOriginalName(),
-                'mime_type' => $this->uploadFile->getMimeType(),
-                'file_size' => $this->uploadFile->getSize(),
-                'status' => 'new',
-            ]);
+            // Dublettenprüfung: existiert der Beleg schon, den vorhandenen
+            // verwenden (statt eine zweite Kopie anzulegen).
+            $hash = hash('sha256', $this->uploadFile->get());
+            $receipt = Receipt::where('file_hash', $hash)->first();
 
-            // OCR ausführen (füllt Rechnungsnummer, Datum, Beträge …)
-            (new OcrService())->process($receipt->refresh());
+            if (! $receipt) {
+                $path = $this->uploadFile->store(date('Y/m'), $diskName);
+
+                $receipt = Receipt::create([
+                    'type' => $this->uploadType,
+                    'business_id' => $transaction->business_id,
+                    'file_path' => $path,
+                    'file_name' => $this->uploadFile->getClientOriginalName(),
+                    'mime_type' => $this->uploadFile->getMimeType(),
+                    'file_size' => $this->uploadFile->getSize(),
+                    'file_hash' => $hash,
+                    'status' => 'new',
+                ]);
+
+                // OCR ausführen (füllt Rechnungsnummer, Datum, Beträge …)
+                (new OcrService())->process($receipt->refresh());
+            }
             $receipt->refresh();
 
             // Betrag zuordnen

@@ -88,9 +88,18 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
 
         $diskName = config('pendelordner.belege_disk', 'belege');
         $count = 0;
+        $skipped = 0;
 
         foreach ($this->uploadFiles as $file) {
             try {
+                // Dublettenprüfung über den Datei-Hash.
+                $hash = hash('sha256', $file->get());
+                if (Receipt::withTrashed()->where('file_hash', $hash)->exists()) {
+                    $skipped++;
+
+                    continue;
+                }
+
                 $path = $file->store(date('Y/m'), $diskName);
 
                 $receipt = Receipt::create([
@@ -99,6 +108,7 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
                     'file_name' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
                     'file_size' => $file->getSize(),
+                    'file_hash' => $hash,
                     'status' => 'new',
                 ]);
 
@@ -113,7 +123,8 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
 
         Notification::make()
             ->title($count . ' Beleg(e) hochgeladen')
-            ->body('OCR ausgeführt. Vorschläge zur Zuordnung werden unten angezeigt.')
+            ->body('OCR ausgeführt.' . ($skipped > 0 ? ' ' . $skipped . ' Dublette(n) übersprungen.' : '')
+                . ' Vorschläge zur Zuordnung werden unten angezeigt.')
             ->success()->send();
     }
 

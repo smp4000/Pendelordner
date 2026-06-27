@@ -88,6 +88,14 @@ class FetchInvoiceEmails extends Command
                         continue;
                     }
 
+                    // Dublettenprüfung über den Datei-Hash (gleiche Datei doppelt).
+                    $hash = hash('sha256', $content);
+                    if (Receipt::withTrashed()->where('file_hash', $hash)->exists()) {
+                        $this->line('  = Dublette übersprungen: ' . $name);
+
+                        continue;
+                    }
+
                     $path = date('Y/m') . '/' . Str::random(40) . '.' . $ext;
                     $disk->put($path, $content);
 
@@ -98,6 +106,7 @@ class FetchInvoiceEmails extends Command
                         'file_name' => $name ?: ('mail-beleg.' . $ext),
                         'mime_type' => $attachment->getMimeType(),
                         'file_size' => strlen($content),
+                        'file_hash' => $hash,
                         'status' => 'new',
                         'note' => 'Per E-Mail empfangen: ' . Str::limit((string) $message->getSubject(), 120),
                     ]);
