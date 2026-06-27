@@ -22,9 +22,22 @@ class BankAccountForm
                     ->schema([
                         TextInput::make('label')->label('Bezeichnung')->required(),
                         Select::make('business_id')->label('Betrieb')
-                            ->relationship('business', 'name')->searchable()->preload(),
+                            ->relationship('business', 'name')
+                            // Eindeutiges Label mit Adresse, da Betriebe gleich heißen können.
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->display_label)
+                            ->searchable(['name', 'postal_code', 'city'])->preload(),
                         TextInput::make('bank_name')->label('Bank'),
-                        TextInput::make('iban')->label('IBAN'),
+                        TextInput::make('iban')->label('IBAN')
+                            ->live(onBlur: true)
+                            // Aus einer deutschen IBAN automatisch BLZ + Kontonummer ableiten.
+                            ->afterStateUpdated(function ($state, callable $set): void {
+                                $iban = strtoupper(preg_replace('/\s+/', '', (string) $state));
+                                if (preg_match('/^DE\d{20}$/', $iban)) {
+                                    $set('bank_code', substr($iban, 4, 8));
+                                    $set('account_number', ltrim(substr($iban, 12, 10), '0'));
+                                }
+                            })
+                            ->helperText('Bei deutscher IBAN werden BLZ und Kontonummer automatisch gefüllt.'),
                         TextInput::make('bic')->label('BIC'),
                         TextInput::make('account_number')->label('Kontonummer'),
                         TextInput::make('bank_code')->label('BLZ'),
