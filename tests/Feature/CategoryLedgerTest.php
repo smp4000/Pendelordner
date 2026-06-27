@@ -89,6 +89,36 @@ class CategoryLedgerTest extends TestCase
         $this->assertSame($edtas->id, $tx->ledger_account_id);
     }
 
+    /** Die Kategorie-Suche findet per Name UND per SKR03-Konto (Nummer/Bezeichnung). */
+    public function test_kategorie_suche_per_name_und_skr03(): void
+    {
+        $this->bootPanel();
+
+        LedgerAccount::firstOrCreate(['chart' => 'skr03', 'number' => '4360'], ['name' => 'Versicherungen']);
+        $category = Category::firstOrCreate(
+            ['name' => 'Versicherung'],
+            ['active' => true, 'skr03_account' => '4360'],
+        );
+
+        // Treffer über den Kategorienamen
+        $byName = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', 'Versich')
+            ->instance()->categoryResults;
+        $this->assertTrue($byName->contains('id', $category->id));
+
+        // Treffer über die SKR03-Kontonummer
+        $byNumber = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', '4360')
+            ->instance()->categoryResults;
+        $this->assertTrue($byNumber->contains('id', $category->id));
+
+        // Treffer über die SKR03-Kontobezeichnung
+        $byLedgerName = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', 'Versicherungen')
+            ->instance()->categoryResults;
+        $this->assertTrue($byLedgerName->contains('id', $category->id));
+    }
+
     /** Die operative Sachkonto-Suche blendet SKR03/04 aus (nur edtas/gastro/kfz). */
     public function test_sachkonto_suche_ohne_skr(): void
     {

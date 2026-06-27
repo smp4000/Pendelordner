@@ -50,16 +50,37 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;">
                         <div>
                             <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Kategorie</label>
-                            <div style="display:flex;gap:.35rem;align-items:center;">
+                            <div style="display:flex;gap:.35rem;align-items:flex-start;">
                                 <div style="flex:1;">
-                                    <x-filament::input.wrapper>
-                                        <x-filament::input.select wire:model.live="assignCategoryId">
-                                            <option value="">—</option>
-                                            @foreach ($this->categories as $cat)
-                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                            @endforeach
-                                        </x-filament::input.select>
-                                    </x-filament::input.wrapper>
+                                    @if ($this->currentCategory && ! $editingCategory)
+                                        {{-- Gewählte Kategorie als Badge, mit „ändern" zum erneuten Suchen --}}
+                                        <x-filament::input.wrapper>
+                                            <div style="padding:.4rem .6rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+                                                <span style="font-weight:500;">{{ $this->currentCategory->name }}</span>
+                                                <button type="button" wire:click="editCategory"
+                                                    style="color:#10b981;background:none;border:none;cursor:pointer;font-size:.78rem;white-space:nowrap;">ändern</button>
+                                            </div>
+                                        </x-filament::input.wrapper>
+                                    @else
+                                        {{-- Durchsuchbar: Kategoriename ODER SKR03-Konto (Nummer/Bezeichnung) --}}
+                                        <x-filament::input.wrapper>
+                                            <x-filament::input type="text" wire:model.live.debounce.250ms="categorySearch"
+                                                placeholder="Kategorie suchen (Name oder SKR03-Konto)…" />
+                                        </x-filament::input.wrapper>
+                                        <div style="margin-top:.25rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:240px;overflow-y:auto;">
+                                            @forelse ($this->categoryResults as $cat)
+                                                <div wire:click="setCategory({{ $cat->id }})"
+                                                    style="padding:.35rem .6rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid rgba(120,120,120,.1);display:flex;justify-content:space-between;gap:.5rem;{{ $cat->id === $assignCategoryId ? 'background:rgba(16,185,129,.12);' : '' }}">
+                                                    <span>{{ $cat->name }}</span>
+                                                    @if ($cat->skr03_account)
+                                                        <span style="opacity:.55;white-space:nowrap;">SKR03 {{ $cat->skr03_account }}</span>
+                                                    @endif
+                                                </div>
+                                            @empty
+                                                <div style="padding:.4rem .6rem;font-size:.82rem;opacity:.6;">Keine Kategorie gefunden.</div>
+                                            @endforelse
+                                        </div>
+                                    @endif
                                 </div>
                                 <button type="button" wire:click="toggleNewCategory" title="Neue Kategorie anlegen"
                                     style="flex:0 0 auto;width:2.25rem;height:2.25rem;border:1px solid #10b981;color:#10b981;background:transparent;border-radius:.4rem;cursor:pointer;font-size:1.1rem;line-height:1;">+</button>

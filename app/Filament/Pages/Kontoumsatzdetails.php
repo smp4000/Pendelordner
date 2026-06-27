@@ -86,6 +86,11 @@ class Kontoumsatzdetails extends Page
     // --- Inline-Zuordnung (Kategorie / Kostenstelle / Sachkonto) -------------
     public ?int $assignCategoryId = null;
 
+    // Durchsuchbare Kategorie-Auswahl (Name oder SKR03-Konto).
+    public string $categorySearch = '';
+
+    public bool $editingCategory = false;
+
     public ?int $assignCostCenterId = null;
 
     public ?int $assignLedgerAccountId = null;
@@ -155,6 +160,8 @@ class Kontoumsatzdetails extends Page
         $this->assignCostCenterId = $t?->cost_center_id;
         $this->assignLedgerAccountId = $t?->ledger_account_id;
         $this->ledgerSearch = '';
+        $this->categorySearch = '';
+        $this->editingCategory = false;
         $this->accountantNote = (string) ($t?->accountant_note ?? '');
         $this->showNote = $this->accountantNote !== '';
         $this->loadSplits();
@@ -382,6 +389,66 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
+     * Treffer der durchsuchbaren Kategorie-Auswahl. Findet per Kategoriename
+     * sowie per SKR03-Konto (Nummer oder Bezeichnung). Ohne Suchbegriff werden
+     * alle aktiven Kategorien angezeigt (wie ein filterbares Aufklappmenü).
+     *
+     * @return Collection<int, Category>
+     */
+    public function getCategoryResultsProperty(): Collection
+    {
+        $s = trim($this->categorySearch);
+
+        $query = Category::where('active', true);
+
+        if ($s !== '') {
+            // SKR03-Konten, deren Nummer/Bezeichnung passt – deren Nummern dienen
+            // als zusätzliches Suchkriterium für die Kategorie.
+            $skrNumbers = LedgerAccount::where('chart', 'skr03')
+                ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+                ->pluck('number')->all();
+
+            $query->where(function ($q) use ($s, $skrNumbers) {
+                $q->where('name', 'like', '%' . $s . '%')
+                    ->orWhere('skr03_account', 'like', $s . '%');
+                if (! empty($skrNumbers)) {
+                    $q->orWhereIn('skr03_account', $skrNumbers);
+                }
+            });
+        }
+
+        return $query->orderBy('name')->limit(25)->get();
+    }
+
+    /** Die aktuell gewählte Kategorie (für die Badge-Anzeige). */
+    public function getCurrentCategoryProperty(): ?Category
+    {
+        return $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
+    }
+
+    public function setCategory(int $id): void
+    {
+        $this->assignCategoryId = $id;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
+        $this->saveAssign('category_id', $id);
+    }
+
+    public function editCategory(): void
+    {
+        $this->editingCategory = true;
+        $this->categorySearch = '';
+    }
+
+    public function clearCategory(): void
+    {
+        $this->assignCategoryId = null;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
+        $this->saveAssign('category_id', null);
+    }
+
+    /**
      * SKR03/04-Konten der gewählten Kategorie (für die Steuerberater-Auswertung).
      * Das operative Sachkonto (edtas) bleibt davon unberührt.
      *
@@ -430,6 +497,8 @@ class Kontoumsatzdetails extends Page
 
         $this->newCategory = '';
         $this->showNewCategory = false;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
 
         Notification::make()->title('Kategorie „' . $category->name . '" angelegt')->success()->send();
     }
