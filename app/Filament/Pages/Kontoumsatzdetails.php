@@ -378,6 +378,48 @@ class Kontoumsatzdetails extends Page
     public function updatedAssignCategoryId($value): void
     {
         $this->saveAssign('category_id', $value);
+
+        // Sachkonto aus der Kategorie übernehmen: Das in der Kategorie hinterlegte
+        // SKR03/04-Konto (je nach Standard-Kontenrahmen) wird automatisch als
+        // Sachkonto am Umsatz gebucht – Grundlage für die spätere Auswertung.
+        $this->applyLedgerFromCategory($value ? (int) $value : null);
+    }
+
+    /**
+     * Übernimmt das Default-Sachkonto der Kategorie (SKR03 bzw. SKR04 je nach
+     * konfiguriertem Standard-Kontenrahmen) auf den aktuellen Umsatz. Hat die
+     * Kategorie kein Konto hinterlegt, bleibt ein bereits gesetztes Konto erhalten.
+     */
+    private function applyLedgerFromCategory(?int $categoryId): void
+    {
+        if (! $categoryId) {
+            return;
+        }
+
+        $category = Category::find($categoryId);
+        if (! $category) {
+            return;
+        }
+
+        $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'skr03');
+        $number = $chart === 'skr04' ? $category->skr04_account : $category->skr03_account;
+        if (! $number) {
+            return; // Kategorie ohne Kontierung (z. B. Lotto) – Konto unverändert lassen.
+        }
+
+        $ledger = LedgerAccount::where('chart', $chart)->where('number', $number)->first();
+        if (! $ledger) {
+            return;
+        }
+
+        $this->assignLedgerAccountId = $ledger->id;
+        $this->ledgerSearch = '';
+
+        // Still speichern – die Kategorie-Zuordnung hat bereits eine Meldung gezeigt.
+        if ($this->selectedTransactionId) {
+            BankTransaction::whereKey($this->selectedTransactionId)
+                ->update(['ledger_account_id' => $ledger->id]);
+        }
     }
 
     public function updatedAssignCostCenterId($value): void
