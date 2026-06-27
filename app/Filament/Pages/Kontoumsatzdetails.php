@@ -426,12 +426,58 @@ class Kontoumsatzdetails extends Page
         return $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
     }
 
+    /**
+     * Zusätzliche Vorschläge aus dem SKR03-Kontenrahmen (Nummer oder Text),
+     * für die es noch keine Kategorie gibt. So lassen sich Konten wie
+     * „4130 – Gesetzliche soziale Aufwendungen" direkt finden und übernehmen.
+     *
+     * @return Collection<int, LedgerAccount>
+     */
+    public function getSkrResultsProperty(): Collection
+    {
+        $s = trim($this->categorySearch);
+        if (mb_strlen($s) < 2) {
+            return collect();
+        }
+
+        // SKR03-Nummern, die bereits einer Kategorie zugeordnet sind, ausblenden.
+        $existing = Category::whereNotNull('skr03_account')->pluck('skr03_account')->all();
+
+        return LedgerAccount::where('chart', 'skr03')
+            ->when($existing, fn ($q) => $q->whereNotIn('number', $existing))
+            ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+            ->orderBy('number')
+            ->limit(10)
+            ->get();
+    }
+
     public function setCategory(int $id): void
     {
         $this->assignCategoryId = $id;
         $this->categorySearch = '';
         $this->editingCategory = false;
         $this->saveAssign('category_id', $id);
+    }
+
+    /**
+     * Übernimmt ein SKR03-Konto als Kategorie: legt (oder findet) eine Kategorie
+     * mit dieser SKR03-Zuordnung an und weist sie dem Umsatz zu.
+     */
+    public function setCategoryFromSkr(int $ledgerId): void
+    {
+        $la = LedgerAccount::where('chart', 'skr03')->find($ledgerId);
+        if (! $la) {
+            return;
+        }
+
+        $category = Category::firstOrCreate(
+            ['skr03_account' => $la->number],
+            ['name' => $la->name, 'active' => true],
+        );
+
+        $this->setCategory($category->id);
+
+        Notification::make()->title('Kategorie „' . $category->name . '" (SKR03 ' . $la->number . ') zugeordnet')->success()->send();
     }
 
     public function editCategory(): void

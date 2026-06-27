@@ -119,6 +119,46 @@ class CategoryLedgerTest extends TestCase
         $this->assertTrue($byLedgerName->contains('id', $category->id));
     }
 
+    /**
+     * Ein SKR03-Konto ohne Kategorie (z. B. 4130) wird in der Suche per Nummer
+     * UND per Text vorgeschlagen und legt bei Auswahl eine Kategorie an.
+     */
+    public function test_skr03_konto_ohne_kategorie_vorschlagen_und_uebernehmen(): void
+    {
+        $this->bootPanel();
+
+        $la = LedgerAccount::firstOrCreate(['chart' => 'skr03', 'number' => '4130'], ['name' => 'Gesetzliche soziale Aufwendungen']);
+
+        // Vorschlag per Nummer-Teil
+        $byNumber = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', '413')
+            ->instance()->skrResults;
+        $this->assertTrue($byNumber->contains('id', $la->id));
+
+        // Vorschlag per Text-Teil
+        $byText = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', 'soziale')
+            ->instance()->skrResults;
+        $this->assertTrue($byText->contains('id', $la->id));
+
+        // Übernahme legt Kategorie mit SKR03-Zuordnung an und wählt sie
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', '4130')
+            ->call('setCategoryFromSkr', $la->id);
+
+        $category = Category::where('skr03_account', '4130')->first();
+        $this->assertNotNull($category);
+        $this->assertSame('Gesetzliche soziale Aufwendungen', $category->name);
+        $this->assertSame($category->id, $component->get('assignCategoryId'));
+
+        // Ist die Kategorie einmal angelegt, taucht das Konto nicht mehr als
+        // SKR-Vorschlag auf (sondern als Kategorie-Treffer).
+        $again = Livewire::test(Kontoumsatzdetails::class)
+            ->set('categorySearch', '4130')
+            ->instance()->skrResults;
+        $this->assertFalse($again->contains('id', $la->id));
+    }
+
     /** Die operative Sachkonto-Suche blendet SKR03/04 aus (nur edtas/gastro/kfz). */
     public function test_sachkonto_suche_ohne_skr(): void
     {

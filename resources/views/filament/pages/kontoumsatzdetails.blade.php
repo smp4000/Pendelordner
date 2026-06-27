@@ -65,10 +65,11 @@
                                         {{-- Durchsuchbar: Kategoriename ODER SKR03-Konto (Nummer/Bezeichnung) --}}
                                         <x-filament::input.wrapper>
                                             <x-filament::input type="text" wire:model.live.debounce.250ms="categorySearch"
-                                                placeholder="Kategorie suchen (Name oder SKR03-Konto)…" />
+                                                placeholder="Suchen: Kategorie oder SKR03-Konto (Nr. oder Text)…" />
                                         </x-filament::input.wrapper>
-                                        <div style="margin-top:.25rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:240px;overflow-y:auto;">
-                                            @forelse ($this->categoryResults as $cat)
+                                        @php $catRes = $this->categoryResults; $skrRes = $this->skrResults; @endphp
+                                        <div style="margin-top:.25rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:260px;overflow-y:auto;">
+                                            @foreach ($catRes as $cat)
                                                 <div wire:click="setCategory({{ $cat->id }})"
                                                     style="padding:.35rem .6rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid rgba(120,120,120,.1);display:flex;justify-content:space-between;gap:.5rem;{{ $cat->id === $assignCategoryId ? 'background:rgba(16,185,129,.12);' : '' }}">
                                                     <span>{{ $cat->name }}</span>
@@ -76,9 +77,24 @@
                                                         <span style="opacity:.55;white-space:nowrap;">SKR03 {{ $cat->skr03_account }}</span>
                                                     @endif
                                                 </div>
-                                            @empty
-                                                <div style="padding:.4rem .6rem;font-size:.82rem;opacity:.6;">Keine Kategorie gefunden.</div>
-                                            @endforelse
+                                            @endforeach
+
+                                            @if ($skrRes->isNotEmpty())
+                                                <div style="padding:.3rem .6rem;font-size:.7rem;opacity:.6;background:rgba(99,102,241,.07);border-bottom:1px solid rgba(120,120,120,.1);">
+                                                    SKR03-Konto übernehmen (legt Kategorie an)
+                                                </div>
+                                                @foreach ($skrRes as $la)
+                                                    <div wire:click="setCategoryFromSkr({{ $la->id }})"
+                                                        style="padding:.35rem .6rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid rgba(120,120,120,.1);display:flex;justify-content:space-between;gap:.5rem;">
+                                                        <span>{{ $la->name }}</span>
+                                                        <span style="opacity:.55;white-space:nowrap;color:#4f46e5;">SKR03 {{ $la->number }}</span>
+                                                    </div>
+                                                @endforeach
+                                            @endif
+
+                                            @if ($catRes->isEmpty() && $skrRes->isEmpty())
+                                                <div style="padding:.4rem .6rem;font-size:.82rem;opacity:.6;">Nichts gefunden.</div>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>
