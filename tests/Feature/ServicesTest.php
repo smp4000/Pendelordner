@@ -175,6 +175,19 @@ class ServicesTest extends TestCase
         $this->assertSame('Haufe Service Center GmbH', $parser->supplierNameGuess($text));
     }
 
+    public function test_parser_erkennt_zahlbetrag_in_summentabelle(): void
+    {
+        // Lekkerland-Stil: mehrspaltige Summenzeile, Zahlbetrag steht zuletzt
+        // vor "EUR" (1.946,57), nicht der Warenwert (2.010,00).
+        $text = "Gesamtbetrag\n  2.010,00     0,00%  2.010,00       0,00      0,00  2.010,00\n"
+            . "  2.010,00  1.956,70       0,00     10,13-   1.946,57 EUR\n"
+            . "der Lekkerland SE * Europaallee 57";
+
+        $parser = new ReceiptParser();
+        $this->assertEqualsWithDelta(1946.57, $parser->extract($text)['gross_amount'], 0.001);
+        $this->assertSame('Lekkerland SE', $parser->supplierNameGuess($text));
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [

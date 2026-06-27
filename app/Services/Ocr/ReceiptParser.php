@@ -68,15 +68,18 @@ class ReceiptParser
         return null;
     }
 
-    /** Bester Namensvorschlag für den Lieferanten (Zeile mit Rechtsform). */
+    /** Bester Namensvorschlag für den Lieferanten: Firmenname inkl. Rechtsform. */
     public function supplierNameGuess(string $text): ?string
     {
         $text = str_replace('<>', '', $text);
-        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
-            $line = trim($line);
-            if ($line !== '' && preg_match('/\b(GmbH|AG|KG|UG|GbR|mbH|e\.\s?K\.|e\.\s?V\.|OHG|SE)\b/', $line)) {
-                return mb_substr($line, 0, 120);
-            }
+
+        // Bis zu 3 großgeschriebene Wörter direkt vor der Rechtsform; dadurch
+        // wird z. B. aus "... der Lekkerland SE" sauber "Lekkerland SE".
+        $pattern = '/((?:[A-ZÄÖÜ][\wÄÖÜäöüß.\-&]*\s+){0,3}'
+            . '(?:GmbH(?:\s*&\s*Co\.?\s*KG)?|AG|SE|KG|UG(?:\s*\(haftungsbeschränkt\))?|GbR|mbH|OHG|e\.\s?K\.|e\.\s?V\.))/u';
+
+        if (preg_match($pattern, $text, $m)) {
+            return trim(preg_replace('/\s+/', ' ', $m[1]));
         }
 
         return null;
@@ -156,6 +159,17 @@ class ReceiptParser
         // Das "=" liegt unmittelbar vor dem Betrag und ist damit eindeutig.
         if (preg_match('/betrag[^0-9\-]{0,15}=\s*(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
             return $this->parseAmount($m[1]);
+        }
+
+        // Summen-/Steuertabellen-Zeile, die mit "<Betrag> EUR" endet und mehrere
+        // Beträge enthält (z. B. Lekkerland: "2.010,00 … 1.946,57 EUR"). Der
+        // letzte Betrag vor "EUR" ist der Zahlbetrag.
+        $amountRe = '\d{1,3}(?:[.\s]\d{3})*,\d{2}';
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            if (preg_match('/(' . $amountRe . ')-?\s*EUR\s*$/u', $line, $lm)
+                && preg_match_all('/' . $amountRe . '/u', $line) >= 3) {
+                return $this->parseAmount($lm[1]);
+            }
         }
 
         // Starke, eindeutige Gesamtbetrags-Schlüsselwörter zuerst (in Reihenfolge).
