@@ -256,6 +256,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
+            ->whereNotIn('chart', ['skr03', 'skr04'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)
@@ -378,48 +379,29 @@ class Kontoumsatzdetails extends Page
     public function updatedAssignCategoryId($value): void
     {
         $this->saveAssign('category_id', $value);
-
-        // Sachkonto aus der Kategorie übernehmen: Das in der Kategorie hinterlegte
-        // SKR03/04-Konto (je nach Standard-Kontenrahmen) wird automatisch als
-        // Sachkonto am Umsatz gebucht – Grundlage für die spätere Auswertung.
-        $this->applyLedgerFromCategory($value ? (int) $value : null);
     }
 
     /**
-     * Übernimmt das Default-Sachkonto der Kategorie (SKR03 bzw. SKR04 je nach
-     * konfiguriertem Standard-Kontenrahmen) auf den aktuellen Umsatz. Hat die
-     * Kategorie kein Konto hinterlegt, bleibt ein bereits gesetztes Konto erhalten.
+     * SKR03/04-Konten der gewählten Kategorie (für die Steuerberater-Auswertung).
+     * Das operative Sachkonto (edtas) bleibt davon unberührt.
+     *
+     * @return array{skr03: ?LedgerAccount, skr04: ?LedgerAccount}
      */
-    private function applyLedgerFromCategory(?int $categoryId): void
+    public function getCategorySkrProperty(): array
     {
-        if (! $categoryId) {
-            return;
-        }
-
-        $category = Category::find($categoryId);
+        $category = $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
         if (! $category) {
-            return;
+            return ['skr03' => null, 'skr04' => null];
         }
 
-        $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'skr03');
-        $number = $chart === 'skr04' ? $category->skr04_account : $category->skr03_account;
-        if (! $number) {
-            return; // Kategorie ohne Kontierung (z. B. Lotto) – Konto unverändert lassen.
-        }
-
-        $ledger = LedgerAccount::where('chart', $chart)->where('number', $number)->first();
-        if (! $ledger) {
-            return;
-        }
-
-        $this->assignLedgerAccountId = $ledger->id;
-        $this->ledgerSearch = '';
-
-        // Still speichern – die Kategorie-Zuordnung hat bereits eine Meldung gezeigt.
-        if ($this->selectedTransactionId) {
-            BankTransaction::whereKey($this->selectedTransactionId)
-                ->update(['ledger_account_id' => $ledger->id]);
-        }
+        return [
+            'skr03' => $category->skr03_account
+                ? LedgerAccount::where('chart', 'skr03')->where('number', $category->skr03_account)->first()
+                : null,
+            'skr04' => $category->skr04_account
+                ? LedgerAccount::where('chart', 'skr04')->where('number', $category->skr04_account)->first()
+                : null,
+        ];
     }
 
     public function updatedAssignCostCenterId($value): void
@@ -540,7 +522,11 @@ class Kontoumsatzdetails extends Page
         return LedgerAccount::orderBy('number')->get(['id', 'number', 'name']);
     }
 
-    /** Treffer für die Sachkonto-Suche (Nummer oder Bezeichnung). */
+    /**
+     * Treffer für die operative Sachkonto-Suche (Nummer oder Bezeichnung).
+     * SKR03/04 sind hier ausgeschlossen – die dienen nur der Kategorie-
+     * Zuordnung (Steuerberater), nicht der operativen Buchung (edtas/gastro/kfz).
+     */
     public function getLedgerResultsProperty(): Collection
     {
         $s = trim($this->ledgerSearch);
@@ -549,6 +535,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
+            ->whereNotIn('chart', ['skr03', 'skr04'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)

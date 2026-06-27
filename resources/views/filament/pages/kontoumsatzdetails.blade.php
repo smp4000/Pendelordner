@@ -87,9 +87,29 @@
                         </div>
                     </div>
 
-                    {{-- Sachkonto (Kontenrahmen) mit Suche --}}
+                    {{-- SKR03/04-Konto der gewählten Kategorie (für die Steuerberater-Auswertung) --}}
+                    @php $skr = $this->categorySkr; @endphp
+                    @if ($skr['skr03'] || $skr['skr04'])
+                        <div style="margin-top:.6rem;padding:.4rem .6rem;border:1px solid rgba(99,102,241,.35);border-radius:.45rem;background:rgba(99,102,241,.06);">
+                            <div style="font-size:.72rem;opacity:.6;margin-bottom:.2rem;">Steuerberater-Konto (aus Kategorie)</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:.4rem;font-size:.82rem;">
+                                @if ($skr['skr03'])
+                                    <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(99,102,241,.15);color:#4f46e5;font-weight:600;">
+                                        SKR03 · {{ $skr['skr03']->number }} – {{ $skr['skr03']->name }}
+                                    </span>
+                                @endif
+                                @if ($skr['skr04'])
+                                    <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(99,102,241,.1);color:#6366f1;">
+                                        SKR04 · {{ $skr['skr04']->number }} – {{ $skr['skr04']->name }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Operatives Sachkonto (edtas/gastro/kfz) mit Suche --}}
                     <div style="margin-top:.6rem;">
-                        <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Konto (Sachkonto / Kontenrahmen)</label>
+                        <label style="display:block;font-size:.78rem;opacity:.6;margin-bottom:.15rem;">Konto (Sachkonto · edtas)</label>
                         @if ($this->currentLedger)
                             <div style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;">
                                 <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;font-weight:500;">

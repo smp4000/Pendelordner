@@ -19,38 +19,62 @@ class CategoryLedgerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Beim Wählen einer Kategorie wird das hinterlegte Sachkonto des
-     * Standard-Kontenrahmens (SKR03) automatisch auf den Umsatz gebucht –
-     * Grundlage für die Auswertung beim Steuerberater.
-     */
-    public function test_kategorie_setzt_skr03_sachkonto_am_umsatz(): void
+    private function bootPanel(): void
     {
         $this->seed(DatabaseSeeder::class);
         $this->actingAs(User::firstOrFail());
         Filament::setCurrentPanel(Filament::getPanel('admin'));
+    }
+
+    /**
+     * Die Kategorie liefert ihr SKR03/04-Konto für die Steuerberater-Anzeige
+     * (categorySkr) – das operative Sachkonto (edtas) bleibt davon unberührt.
+     */
+    public function test_kategorie_zeigt_skr03_und_skr04_konto(): void
+    {
+        $this->bootPanel();
+
+        LedgerAccount::firstOrCreate(['chart' => 'skr03', 'number' => '4360'], ['name' => 'Versicherungen']);
+        LedgerAccount::firstOrCreate(['chart' => 'skr04', 'number' => '6400'], ['name' => 'Versicherungen']);
+        $category = Category::firstOrCreate(
+            ['name' => 'Versicherung'],
+            ['active' => true, 'skr03_account' => '4360', 'skr04_account' => '6400'],
+        );
+
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('assignCategoryId', $category->id);
+
+        $skr = $component->instance()->categorySkr;
+        $this->assertSame('4360', $skr['skr03']?->number);
+        $this->assertSame('6400', $skr['skr04']?->number);
+    }
+
+    /**
+     * Das Wählen einer Kategorie überschreibt NICHT das operative Sachkonto
+     * (edtas). Beides ist getrennt: Konto = operativ, Kategorie = SKR (Steuerbüro).
+     */
+    public function test_kategorie_laesst_operatives_konto_unberuehrt(): void
+    {
+        $this->bootPanel();
 
         $account = BankAccount::create([
             'label' => 'Geschäftskonto',
             'business_id' => Business::first()->id,
             'currency' => 'EUR',
         ]);
-
-        $ledger = LedgerAccount::firstOrCreate(
-            ['chart' => 'skr03', 'number' => '4500'],
-            ['name' => 'Fahrzeugkosten'],
-        );
+        $edtas = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '4800'], ['name' => 'Planmäßige Abschreibung']);
         $category = Category::firstOrCreate(
-            ['name' => 'Fahrzeuge'],
-            ['active' => true, 'skr03_account' => '4500', 'skr04_account' => '6500'],
+            ['name' => 'Versicherung'],
+            ['active' => true, 'skr03_account' => '4360', 'skr04_account' => '6400'],
         );
 
         $tx = BankTransaction::create([
             'bank_account_id' => $account->id,
             'business_id' => $account->business_id,
-            'booking_date' => '2026-06-03',
-            'counterparty' => 'Tankstelle',
-            'amount' => -80.00,
+            'ledger_account_id' => $edtas->id,
+            'booking_date' => '2026-06-26',
+            'counterparty' => 'BKK Linde',
+            'amount' => -1033.44,
             'reviewed' => false,
             'dedup_hash' => bin2hex(random_bytes(16)),
         ]);
@@ -61,43 +85,24 @@ class CategoryLedgerTest extends TestCase
 
         $tx->refresh();
         $this->assertSame($category->id, $tx->category_id);
-        $this->assertSame($ledger->id, $tx->ledger_account_id);
+        // Operatives edtas-Konto unverändert.
+        $this->assertSame($edtas->id, $tx->ledger_account_id);
     }
 
-    /** Kategorie ohne Kontierung (z. B. Lotto) lässt ein bestehendes Konto unangetastet. */
-    public function test_kategorie_ohne_konto_aendert_sachkonto_nicht(): void
+    /** Die operative Sachkonto-Suche blendet SKR03/04 aus (nur edtas/gastro/kfz). */
+    public function test_sachkonto_suche_ohne_skr(): void
     {
-        $this->seed(DatabaseSeeder::class);
-        $this->actingAs(User::firstOrFail());
-        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->bootPanel();
 
-        $account = BankAccount::create([
-            'label' => 'Geschäftskonto',
-            'business_id' => Business::first()->id,
-            'currency' => 'EUR',
-        ]);
+        LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '4800'], ['name' => 'Planmäßige Abschreibung auf Anlagevermögen']);
+        LedgerAccount::firstOrCreate(['chart' => 'skr03', 'number' => '4800'], ['name' => 'Reparaturen und Instandhaltungen']);
 
-        $ledger = LedgerAccount::firstOrCreate(['chart' => 'skr03', 'number' => '4980'], ['name' => 'Sonstiger Betriebsbedarf']);
-        $lotto = Category::firstOrCreate(['name' => 'Lotto'], ['active' => true, 'skr03_account' => null, 'skr04_account' => null]);
+        $results = Livewire::test(Kontoumsatzdetails::class)
+            ->set('ledgerSearch', '4800')
+            ->instance()->ledgerResults;
 
-        $tx = BankTransaction::create([
-            'bank_account_id' => $account->id,
-            'business_id' => $account->business_id,
-            'ledger_account_id' => $ledger->id,
-            'booking_date' => '2026-06-03',
-            'counterparty' => 'Lotto Toto',
-            'amount' => -50.00,
-            'reviewed' => false,
-            'dedup_hash' => bin2hex(random_bytes(16)),
-        ]);
-
-        Livewire::test(Kontoumsatzdetails::class)
-            ->set('selectedTransactionId', $tx->id)
-            ->set('assignCategoryId', $lotto->id);
-
-        $tx->refresh();
-        $this->assertSame($lotto->id, $tx->category_id);
-        // Bestehendes Konto bleibt erhalten, da die Kategorie kein Konto vorgibt.
-        $this->assertSame($ledger->id, $tx->ledger_account_id);
+        $this->assertTrue($results->isNotEmpty());
+        $this->assertEmpty($results->where('chart', 'skr03')->all(), 'SKR03 darf in der operativen Konto-Suche nicht erscheinen.');
+        $this->assertNotEmpty($results->where('chart', 'edtas')->all());
     }
 }
