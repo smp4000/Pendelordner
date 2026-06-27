@@ -26,6 +26,11 @@
         .beleg-nr { display: inline-block; margin-top: 2px; background: #059669; color: #fff;
                     font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
         .memo { margin-top: 3px; font-weight: bold; color: #b45309; font-size: 10px; }
+        .note-card { border: 1px solid #a7f3d0; border-radius: 5px; padding: 6px 9px; margin-top: 8px; background: #f0fdf4; }
+        .note-head { font-weight: bold; color: #065f46; font-size: 11px; margin-bottom: 3px; }
+        .note-lines { width: 100%; border-collapse: collapse; }
+        .note-lines td { border: none; padding: 1px 4px; font-size: 10px; color: #1f2937; vertical-align: top; }
+        .note-lines .note-amount { width: 90px; white-space: nowrap; font-weight: bold; }
         .splits { width: 100%; margin-top: 3px; border-collapse: collapse; }
         .splits td { border: none; border-bottom: 1px dotted #e5e7eb; padding: 1px 4px; font-size: 9px; color: #4b5563; }
     </style>
@@ -63,6 +68,25 @@
         <tr><td class="label">Umsätze ohne Beleg</td><td class="value neg">{{ $stats['withoutReceipt'] }}</td></tr>
         <tr><td class="label">Nicht geprüfte Umsätze</td><td class="value">{{ $stats['unreviewed'] }}</td></tr>
     </table>
+
+    @if (! empty($reportNotes) && $reportNotes->isNotEmpty())
+        <h3 style="margin-top:26px;">Hinweise an das Steuerbüro</h3>
+        @foreach ($reportNotes as $note)
+            <div class="note-card">
+                @if ($note->heading)<div class="note-head">{{ $note->heading }}</div>@endif
+                @if ($note->lines->isNotEmpty())
+                    <table class="note-lines">
+                        @foreach ($note->lines as $line)
+                            <tr>
+                                <td class="note-amount">{{ $line->amount }}</td>
+                                <td>{{ $line->text }}</td>
+                            </tr>
+                        @endforeach
+                    </table>
+                @endif
+            </div>
+        @endforeach
+    @endif
 </div>
 
 {{-- Seite 3 ff.: Chronologische Umsatzliste --}}

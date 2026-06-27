@@ -29,6 +29,7 @@ class PanelSmokeTest extends TestCase
             '/admin/matching-rules',     // Modul 4
             '/admin/fints-connections',  // Modul 1
             '/admin/steuerberater-bericht', // Modul 12 (Berichts-Seite)
+            '/admin/steuerbuero-hinweise',  // Modul 12 (Hinweise an Steuerbüro)
             '/admin/kontoumsatzdetails',    // Modul 6 (3-Spalten-Ansicht)
             '/admin/account-assignments',   // Modul 13 (Kontierungen)
             '/admin/datev-export-seite',    // Modul 14 (DATEV-Export)

@@ -80,6 +80,16 @@ class PdfReportService
         // Tatsächlich angehängte Belege = Anzahl vergebener Beleg-Nummern.
         $stats['appendedFiles'] = count($receiptNumbers);
 
+        // Hinweise an das Steuerbüro (Karten) für dieses Konto im Zeitraum.
+        $reportNotes = $account
+            ? \App\Models\ReportNote::with('lines')
+                ->where('bank_account_id', $account->id)
+                ->whereBetween('period', [$from->copy()->startOfMonth()->toDateString(), $to->copy()->endOfMonth()->toDateString()])
+                ->orderBy('period')
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
+
         // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
         $frontMatter = DomPdf::loadView('pdf.steuerberater', [
             'business' => $business,
@@ -89,6 +99,7 @@ class PdfReportService
             'transactions' => $transactions,
             'stats' => $stats,
             'receiptNumbers' => $receiptNumbers,
+            'reportNotes' => $reportNotes,
             'money' => $this->money,
         ])->setPaper('a4')->output();
         $this->importPdfString($pdf, $frontMatter);
