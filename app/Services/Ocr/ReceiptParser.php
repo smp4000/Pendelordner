@@ -20,6 +20,10 @@ class ReceiptParser
      */
     public function extract(string $text): array
     {
+        // Manche PDF-Reader streuen Pseudo-Marker "<>" zwischen Buchstaben ein
+        // (z. B. "Gesamtbetr<>ag"); entfernen, sonst greifen Schlüsselwörter nicht.
+        $text = str_replace('<>', '', $text);
+
         return [
             'invoice_number' => $this->invoiceNumber($text),
             'customer_number' => $this->customerNumber($text),

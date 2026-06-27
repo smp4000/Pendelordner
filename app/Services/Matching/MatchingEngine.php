@@ -123,6 +123,17 @@ class MatchingEngine
 
         $score = 0.0;
 
+        // Belegnummer im Verwendungszweck/in der Bankreferenz – sehr starkes
+        // Signal (z. B. SEPA-Verwendungszweck enthält die Rechnungsnummer).
+        $invoiceNo = preg_replace('/\s+/', '', (string) $receipt->invoice_number);
+        if ($invoiceNo !== null && mb_strlen($invoiceNo) >= 4) {
+            $haystack = mb_strtolower(preg_replace('/\s+/', '',
+                (string) $transaction->purpose . (string) $transaction->bank_reference));
+            if (str_contains($haystack, mb_strtolower($invoiceNo))) {
+                $score += (float) ($weights['belegnummer'] ?? 50);
+            }
+        }
+
         // Betrag (absolut, da Umsätze negativ sein können)
         $amount = abs((float) $transaction->amount);
         $gross = (float) ($receipt->gross_amount ?? 0);

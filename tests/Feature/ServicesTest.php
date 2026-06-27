@@ -128,6 +128,43 @@ class ServicesTest extends TestCase
         $this->assertNull($geprueft->refresh()->category_id); // geprüfte bleiben unberührt
     }
 
+    public function test_matching_per_belegnummer_im_verwendungszweck(): void
+    {
+        $account = $this->account();
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'business_id' => $account->business_id,
+            'booking_date' => '2026-06-26',
+            'counterparty' => 'Haufe Service Center GmbH via Mollie',
+            'purpose' => 'lx2026060362760 MZKZ-KWXR Lexware Office EREF: SD04-9895',
+            'amount' => -10.37,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $receipt = Receipt::create([
+            'type' => 'incoming_invoice',
+            'invoice_number' => 'lx2026060362760',
+            'gross_amount' => 10.37,
+            'invoice_date' => '2026-06-24',
+        ]);
+
+        $score = (new MatchingEngine())->scoreReceipt($tx, $receipt);
+
+        // Belegnummer im Verwendungszweck (+50) und Betrag exakt (+50) -> sehr hoch.
+        $this->assertGreaterThanOrEqual(90.0, $score);
+    }
+
+    public function test_receipt_parser_ignoriert_pdf_marker(): void
+    {
+        // "<>"-Pseudomarker dürfen Schlüsselwörter nicht zerstören; der
+        // Gesamtbetrag (10,37) muss vor "Gesamt Netto" (8,71) gewinnen.
+        $text = "Gesamt Netto 8,71\nMwSt. 19% von 8,71 EUR 1,66\nGesamtbetr<>ag EUR 10,37";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertEqualsWithDelta(10.37, $data['gross_amount'], 0.001);
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [
