@@ -50,14 +50,20 @@ class PdfReportService
     /** Bericht für einen beliebigen Zeitraum. */
     public function generate(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): string
     {
+        // Ist ein Konto gewählt, definiert es den Betrieb -> nur nach Konto
+        // filtern (verhindert 0 Treffer, falls die business_id der Umsätze noch
+        // nicht zum aktuell zugeordneten Betrieb des Kontos passt).
         $transactions = BankTransaction::query()
             ->with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])
-            ->when($business, fn ($q) => $q->where('business_id', $business->id))
             ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
+            ->when(! $account && $business, fn ($q) => $q->where('business_id', $business->id))
             ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
             ->orderBy('booking_date')
             ->orderBy('id')
             ->get();
+
+        // Betrieb fürs Deckblatt: bei Konto-Auswahl vom Konto ableiten.
+        $business = $business ?: $account?->business;
 
         $pdf = new ReportPdf();
 
