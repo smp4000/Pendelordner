@@ -55,6 +55,12 @@
                     <input type="text" wire:model.blur="stamm.loan_amount" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Privatentnahme / Jahr (€)</label>
                     <input type="text" wire:model.blur="stamm.private_draw" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Anfangsbestand Liquidität (€)</label>
+                    <input type="text" wire:model.blur="stamm.opening_balance" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">USt-Satz (%)</label>
+                    <input type="text" wire:model.blur="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Tilgung / Jahr (€)</label>
+                    <input type="text" wire:model.blur="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
             </div>
         </x-filament::section>
 
@@ -84,7 +90,7 @@
                             <tr style="border-bottom:1px solid rgba(120,120,120,.15);{{ $bold ? 'font-weight:700;' : '' }}">
                                 <td style="{{ $tdL }}">{{ $lbl }}</td>
                                 @foreach ($years as $y)
-                                    @php($val = $ov[$y][$key])
+                                    @php $val = $ov[$y][$key]; @endphp
                                     <td style="padding:.3rem .5rem;text-align:right;white-space:nowrap;{{ $key === 'gewinn' ? ($val < 0 ? 'color:#dc2626;' : 'color:#059669;') : '' }}">
                                         {{ $money($val) }} €
                                     </td>
@@ -122,7 +128,7 @@
                         @foreach ($revRows->groupBy('category') as $group => $grows)
                             <tr><td colspan="{{ 1 + count($years) * 3 }}" style="padding:.5rem .5rem .2rem;font-weight:700;font-size:.8rem;opacity:.8;">{{ $group }}</td></tr>
                             @foreach ($grows as $row)
-                                @php($id = $row['id'])
+                                @php $id = $row['id']; @endphp
                                 <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
                                     <td style="{{ $tdL }}">{{ $row['label'] }}</td>
                                     @foreach ($years as $y)
@@ -135,8 +141,8 @@
                             <tr style="border-bottom:1px solid rgba(120,120,120,.25);font-size:.8rem;font-weight:600;opacity:.85;">
                                 <td style="{{ $tdL }};text-align:right;">Summe {{ $group }}</td>
                                 @foreach ($years as $y)
-                                    @php($sU = $grows->sum(fn ($r) => (float) str_replace(['.', ','], ['', '.'], $r['values'][$y]['amount'] ?: '0')))
-                                    @php($sR = $grows->sum(fn ($r) => $this->rowRohertrag($r, $y)))
+                                    @php $sU = $grows->sum(fn ($r) => (float) str_replace(['.', ','], ['', '.'], $r['values'][$y]['amount'] ?: '0')); @endphp
+                                    @php $sR = $grows->sum(fn ($r) => $this->rowRohertrag($r, $y)); @endphp
                                     <td style="padding:.2rem .25rem;text-align:right;">{{ $money($sU) }}</td>
                                     <td></td>
                                     <td style="padding:.2rem .35rem;text-align:right;">{{ $money($sR) }}</td>
@@ -163,7 +169,7 @@
                     </thead>
                     <tbody>
                         @foreach ($costRows as $row)
-                            @php($id = $row['id'])
+                            @php $id = $row['id']; @endphp
                             <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
                                 <td style="{{ $tdL }}">{{ $row['label'] }}</td>
                                 @foreach ($years as $y)
@@ -180,6 +186,77 @@
                     </tbody>
                 </table>
             </div>
+        </x-filament::section>
+        {{-- Liquiditätsplanung --}}
+        @php
+            $liq = $this->liquidity;
+            $months = [1 => 'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+            $flow = [
+                ['Einnahmen (inkl. USt)', 'einnahmen', ''],
+                ['+ Darlehensaufnahme', 'darlehen', ''],
+                ['./. Wareneinsatz (inkl. VSt)', 'ware', '-'],
+                ['./. Personalkosten', 'personal', '-'],
+                ['./. sonstige Kosten', 'sonstige', '-'],
+                ['./. USt-Zahllast', 'ust', '-'],
+                ['./. Tilgung', 'tilgung', '-'],
+                ['./. Privatentnahme', 'privat', '-'],
+            ];
+        @endphp
+        <x-filament::section>
+            <x-slot name="heading">Liquiditätsplanung</x-slot>
+            <x-slot name="description">Vereinfachtes Modell: gleichmäßige Verteilung auf 12 Monate, pauschaler USt-Satz, Vorsteuer auf den Wareneinsatz, USt-Zahllast monatlich. Anfangsbestand & Annahmen oben in den Stammdaten.</x-slot>
+            @foreach ($years as $y)
+                @php $L = $liq[$y]; @endphp
+                <div style="margin-bottom:1.25rem;">
+                    <div style="font-weight:700;margin-bottom:.35rem;">Jahr {{ $y }}</div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.72rem;white-space:nowrap;">
+                            <thead>
+                                <tr style="border-bottom:2px solid rgba(120,120,120,.3);">
+                                    <th style="{{ $th }};text-align:left;min-width:170px;">Position</th>
+                                    @foreach ($months as $mn)
+                                        <th style="{{ $th }}">{{ $mn }}</th>
+                                    @endforeach
+                                    <th style="{{ $th }};border-left:1px solid rgba(120,120,120,.3);">Summe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($flow as [$lbl, $key, $sign])
+                                    <tr style="border-bottom:1px solid rgba(120,120,120,.1);">
+                                        <td style="{{ $tdL }};font-size:.72rem;">{{ $lbl }}</td>
+                                        @foreach ($months as $m => $mn)
+                                            <td style="padding:.15rem .35rem;text-align:right;">{{ $money($L['months'][$m][$key]) }}</td>
+                                        @endforeach
+                                        <td style="padding:.15rem .35rem;text-align:right;font-weight:600;border-left:1px solid rgba(120,120,120,.3);">{{ $money($L['totals'][$key]) }}</td>
+                                    </tr>
+                                @endforeach
+                                <tr style="border-top:1px solid rgba(120,120,120,.3);font-weight:700;">
+                                    <td style="{{ $tdL }}">= Saldo</td>
+                                    @foreach ($months as $m => $mn)
+                                        <td style="padding:.2rem .35rem;text-align:right;">{{ $money($L['months'][$m]['saldo']) }}</td>
+                                    @endforeach
+                                    <td style="padding:.2rem .35rem;text-align:right;border-left:1px solid rgba(120,120,120,.3);">{{ $money($L['totals']['saldo']) }}</td>
+                                </tr>
+                                <tr style="font-weight:700;">
+                                    <td style="{{ $tdL }}">Stand Liquidität</td>
+                                    @foreach ($months as $m => $mn)
+                                        @php $st = $L['months'][$m]['stand']; @endphp
+                                        <td style="padding:.2rem .35rem;text-align:right;{{ $st < 0 ? 'color:#dc2626;' : 'color:#059669;' }}">{{ $money($st) }}</td>
+                                    @endforeach
+                                    <td style="border-left:1px solid rgba(120,120,120,.3);"></td>
+                                </tr>
+                                <tr style="opacity:.7;">
+                                    <td style="{{ $tdL }}">Stand Kredit</td>
+                                    @foreach ($months as $m => $mn)
+                                        <td style="padding:.15rem .35rem;text-align:right;">{{ $money($L['months'][$m]['kredit']) }}</td>
+                                    @endforeach
+                                    <td style="border-left:1px solid rgba(120,120,120,.3);"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endforeach
         </x-filament::section>
     @else
         <x-filament::section>

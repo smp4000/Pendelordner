@@ -23,6 +23,9 @@ class BusinessPlan extends Model
         'year_to' => 'integer',
         'loan_amount' => 'decimal:2',
         'private_draw' => 'decimal:2',
+        'opening_balance' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
+        'annual_repayment' => 'decimal:2',
     ];
 
     public function business(): BelongsTo
@@ -75,5 +78,51 @@ class BusinessPlan extends Model
         }
 
         return $out;
+    }
+
+    /** Summe der Kostenzeilen eines Jahres, deren Bezeichnung mit „Personalkosten" beginnt. */
+    private function personnelCosts(int $year): float
+    {
+        $sum = 0.0;
+        foreach ($this->lines as $line) {
+            if ($line->section === 'cost' && str_starts_with($line->label, 'Personalkosten')) {
+                $value = $line->values->firstWhere('year', $year);
+                $sum += (float) ($value->amount ?? 0);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
+     * Liquiditätsplanung je Jahr und Monat (vereinfachtes, transparentes Modell).
+     *
+     * Annahmen: gleichmäßige Verteilung auf 12 Monate; pauschaler USt-Satz;
+     * Vorsteuer nur auf den Wareneinsatz (Umsatz ./. Rohertrag); USt-Zahllast
+     * monatlich ohne Zeitversatz; Darlehen im ersten Monat des ersten Jahres;
+     * Tilgung und Privatentnahme gleichmäßig über das Jahr.
+     *
+     * @return array<int, array{months: array<int, array<string, float>>, totals: array<string, float>, end: float, credit: float}>
+     */
+    public function liquidity(): array
+    {
+        $overview = $this->overview();
+        $perYear = [];
+        foreach ($this->years() as $year) {
+            $perYear[$year] = [
+                'umsatz' => $overview[$year]['umsatz'],
+                'rohertrag' => $overview[$year]['rohertrag'],
+                'kosten' => $overview[$year]['kosten'],
+                'personal' => $this->personnelCosts($year),
+            ];
+        }
+
+        return \App\Services\Plan\LiquidityCalculator::compute($perYear, [
+            'vat_rate' => (float) $this->vat_rate,
+            'loan_amount' => (float) $this->loan_amount,
+            'annual_repayment' => (float) $this->annual_repayment,
+            'private_draw' => (float) $this->private_draw,
+            'opening_balance' => (float) $this->opening_balance,
+        ]);
     }
 }

@@ -38,6 +38,33 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(59840 - 110940, $ov[2026]['gewinn'], 0.01);
     }
 
+    public function test_liquiditaet_rechnet_monatlich_und_kumuliert(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'Liqui',
+            'year_from' => 2026,
+            'year_to' => 2026,
+            'vat_rate' => 19,
+            'opening_balance' => 1000,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        $plan->lines()->where('label', 'Tabakwaren')->first()
+            ->values()->where('year', 2026)->update(['amount' => 120000, 'margin' => 25]);
+        $plan->lines()->where('label', 'Personalkosten')->first()
+            ->values()->where('year', 2026)->update(['amount' => 24000]);
+
+        $liq = $plan->fresh()->load('lines.values')->liquidity();
+
+        // Umsatz 120.000 / Rohertrag 30.000 / Wareneinsatz 90.000, USt 19 %.
+        // Monatssaldo = 11.900 (Einn.) - 8.925 (Ware) - 2.000 (Personal) - 475 (USt) = 500.
+        $this->assertEqualsWithDelta(500, $liq[2026]['months'][1]['saldo'], 0.01);
+        $this->assertEqualsWithDelta(6000, $liq[2026]['totals']['saldo'], 0.01);
+        $this->assertEqualsWithDelta(7000, $liq[2026]['end'], 0.01); // 1.000 Anfang + 6.000
+    }
+
     public function test_seite_legt_plan_an_und_speichert_werte(): void
     {
         $this->seed(DatabaseSeeder::class);

@@ -119,6 +119,39 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         return $out;
     }
 
+    /**
+     * Liquiditätsplanung – live aus dem Eingabe-Raster + Plan-Annahmen.
+     *
+     * @return array<int, array{months: array<int, array<string, float>>, totals: array<string, float>, end: float, credit: float}>
+     */
+    public function getLiquidityProperty(): array
+    {
+        $overview = $this->overview;
+        $perYear = [];
+        foreach ($this->years as $year) {
+            $personal = 0.0;
+            foreach ($this->rows as $row) {
+                if ($row['section'] === 'cost' && str_starts_with($row['label'], 'Personalkosten')) {
+                    $personal += $this->num($row['values'][$year]['amount'] ?? 0);
+                }
+            }
+            $perYear[$year] = [
+                'umsatz' => $overview[$year]['umsatz'],
+                'rohertrag' => $overview[$year]['rohertrag'],
+                'kosten' => $overview[$year]['kosten'],
+                'personal' => $personal,
+            ];
+        }
+
+        return \App\Services\Plan\LiquidityCalculator::compute($perYear, [
+            'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
+            'loan_amount' => $this->num($this->stamm['loan_amount'] ?? 0),
+            'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
+            'private_draw' => $this->num($this->stamm['private_draw'] ?? 0),
+            'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
+        ]);
+    }
+
     /** Rohertrag einer einzelnen Umsatzzeile in einem Jahr (für die Anzeige). */
     public function rowRohertrag(array $row, int $year): float
     {
@@ -219,6 +252,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'year_to' => $yearTo,
             'loan_amount' => $this->num($this->stamm['loan_amount'] ?? 0),
             'private_draw' => $this->num($this->stamm['private_draw'] ?? 0),
+            'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
+            'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
+            'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
             'notes' => $this->stamm['notes'] ?: null,
         ]);
 
@@ -265,6 +301,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'year_to' => $plan->year_to,
             'loan_amount' => $this->fmt($plan->loan_amount),
             'private_draw' => $this->fmt($plan->private_draw),
+            'opening_balance' => $this->fmt($plan->opening_balance),
+            'vat_rate' => $this->fmt($plan->vat_rate),
+            'annual_repayment' => $this->fmt($plan->annual_repayment),
             'notes' => $plan->notes,
         ];
 
