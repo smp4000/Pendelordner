@@ -46,7 +46,7 @@ return new class extends Migration
             $table->decimal('hourly_wage', 8, 2)->default(0);
             $table->timestamps();
 
-            $table->unique(['business_plan_staff_line_id', 'year']);
+            $table->unique(['business_plan_staff_line_id', 'year'], 'bp_staff_values_line_year_uq');
         });
     }
 
