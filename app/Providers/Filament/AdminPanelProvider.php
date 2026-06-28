@@ -49,6 +49,7 @@ class AdminPanelProvider extends PanelProvider
                 'Bank',
                 'Belege',
                 'Buchhaltung',
+                'Planung',
                 'Stammdaten',
                 'Auswertungen',
             ])
