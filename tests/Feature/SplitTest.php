@@ -8,6 +8,7 @@ use App\Models\BankTransaction;
 use App\Models\Business;
 use App\Models\Category;
 use App\Models\LedgerAccount;
+use App\Models\Receipt;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Filament\Facades\Filament;
@@ -73,5 +74,33 @@ class SplitTest extends TestCase
 
         $this->assertSame(1, $tx->accountAssignments()->count());
         $this->assertEqualsWithDelta(119.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
+    }
+
+    public function test_zugeordnete_belege_lassen_sich_sortieren(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Konto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'booking_date' => '2026-06-01',
+            'amount' => -30.00,
+            'reviewed' => false,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 10]);
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 20]);
+        $tx->receipts()->attach($r1->id, ['amount' => 10, 'sort_order' => 0]);
+        $tx->receipts()->attach($r2->id, ['amount' => 20, 'sort_order' => 1]);
+
+        $this->assertSame([$r1->id, $r2->id], $tx->receipts->pluck('id')->all());
+
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('moveReceipt', $r1->id, 'down');
+
+        $this->assertSame([$r2->id, $r1->id], $tx->fresh()->receipts->pluck('id')->all());
     }
 }

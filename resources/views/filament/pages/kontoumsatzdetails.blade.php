@@ -351,8 +351,19 @@
                             @forelse ($tx->receipts as $r)
                                 <div wire:key="assigned-{{ $r->id }}" wire:click="selectReceipt({{ $r->id }})"
                                     style="{{ $rowBase }}align-items:center;{{ $r->id === $this->selectedReceiptId ? 'background:rgba(16,185,129,.12);' : '' }}">
-                                    <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
-                                        <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
+                                    <span style="display:flex;align-items:center;gap:.4rem;">
+                                        {{-- Reihenfolge ändern (bestimmt auch die Reihenfolge im Bericht) --}}
+                                        <span style="display:flex;flex-direction:column;line-height:.7;">
+                                            <button type="button" wire:click.stop="moveReceipt({{ $r->id }}, 'up')" title="Nach oben"
+                                                @disabled($loop->first)
+                                                style="background:none;border:none;cursor:pointer;font-size:.7rem;padding:0;opacity:{{ $loop->first ? '.25' : '.6' }};">▲</button>
+                                            <button type="button" wire:click.stop="moveReceipt({{ $r->id }}, 'down')" title="Nach unten"
+                                                @disabled($loop->last)
+                                                style="background:none;border:none;cursor:pointer;font-size:.7rem;padding:0;opacity:{{ $loop->last ? '.25' : '.6' }};">▼</button>
+                                        </span>
+                                        <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
+                                            <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
+                                    </span>
                                     <span style="display:flex;gap:.5rem;align-items:center;white-space:nowrap;">
                                         <label wire:click.stop title="Im Steuerberater-Bericht anhängen"
                                             style="display:flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.8;cursor:pointer;">

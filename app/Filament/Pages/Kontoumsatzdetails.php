@@ -886,7 +886,7 @@ class Kontoumsatzdetails extends Page
         }
 
         $transaction->receipts()->syncWithoutDetaching([
-            $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed'],
+            $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed', 'sort_order' => $transaction->receipts()->count()],
         ]);
         $transaction->recalculateStatus();
 
@@ -894,6 +894,33 @@ class Kontoumsatzdetails extends Page
         $this->activeTab = 'assigned';
 
         Notification::make()->title('Beleg zugeordnet')->success()->send();
+    }
+
+    /** Verschiebt einen zugeordneten Beleg in der Reihenfolge (hoch/runter). */
+    public function moveReceipt(int $receiptId, string $direction): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        // Aktuelle Reihenfolge (bereits nach sort_order, dann id) als Id-Liste.
+        $ids = $transaction->receipts->pluck('id')->all();
+        $i = array_search($receiptId, $ids, true);
+        if ($i === false) {
+            return;
+        }
+        $j = $direction === 'up' ? $i - 1 : $i + 1;
+        if ($j < 0 || $j >= count($ids)) {
+            return;
+        }
+
+        [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]];
+
+        // Reihenfolge neu durchnummerieren.
+        foreach ($ids as $pos => $rid) {
+            $transaction->receipts()->updateExistingPivot($rid, ['sort_order' => $pos]);
+        }
     }
 
     /** Zugeordneten (Teil-)Betrag eines Belegs ändern. */
@@ -1019,7 +1046,7 @@ class Kontoumsatzdetails extends Page
                 : ($transaction->difference > 0 ? $transaction->difference : abs((float) $transaction->amount));
 
             $transaction->receipts()->syncWithoutDetaching([
-                $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'manual'],
+                $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'manual', 'sort_order' => $transaction->receipts()->count()],
             ]);
             $transaction->recalculateStatus();
 

@@ -73,8 +73,10 @@ class BankTransaction extends Model
     public function receipts(): BelongsToMany
     {
         return $this->belongsToMany(Receipt::class)
-            ->withPivot(['amount', 'match_type', 'match_score', 'note'])
-            ->withTimestamps();
+            ->withPivot(['amount', 'match_type', 'match_score', 'note', 'sort_order'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order')
+            ->orderBy('receipts.id');
     }
 
     public function costCenters(): BelongsToMany

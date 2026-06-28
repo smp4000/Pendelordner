@@ -210,7 +210,7 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
             : abs((float) $transaction->amount);
 
         $transaction->receipts()->syncWithoutDetaching([
-            $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed'],
+            $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed', 'sort_order' => $transaction->receipts()->count()],
         ]);
         $transaction->recalculateStatus();
 
