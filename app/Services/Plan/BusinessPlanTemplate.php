@@ -82,6 +82,16 @@ class BusinessPlanTemplate
         ['Lotto / Glücksspiel', 'manual'],
     ];
 
+    /** Standard-Kapitalbedarf-Positionen: [Bezeichnung, Art der Finanzierung]. */
+    public const FINANCINGS = [
+        ['Bürgschaft / Sicherheiten', 'Bankbürgschaft'],
+        ['Einstandszahlungen', 'Einstandszahlungen'],
+        ['Warenbestand', 'Warenbestand'],
+        ['Anlagevermögen', 'Anlagevermögen'],
+        ['sonstige Sicherheiten', 'sonstige Sicherheiten'],
+        ['sonstige Anschaffungen', 'sonstige Anschaffungen'],
+    ];
+
     /** Standard-Lohnzeilen der Personalkostenberechnung: [Bezeichnung, Gruppe, ist Abzug]. */
     public const STAFF = [
         ['Kassenschicht Mo.–Do.', 'Kassenschichten', false],
@@ -130,6 +140,16 @@ class BusinessPlanTemplate
             'umsatzpacht_start_year' => $plan->year_from,
             'festpacht_start_year' => $plan->year_from,
         ]);
+
+        // Kapitalbedarf-Positionen (Finanzierung).
+        foreach (self::FINANCINGS as $i => [$label, $type]) {
+            $plan->financings()->create([
+                'label' => $label,
+                'finance_type' => $type,
+                'amount' => 0,
+                'sort_order' => $i,
+            ]);
+        }
 
         foreach (self::REVENUE as $group => $rows) {
             foreach ($rows as [$label, $margin]) {

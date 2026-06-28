@@ -153,6 +153,48 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(21428, $lease[2027]['total'], 0.01);
     }
 
+    public function test_finanzierung_zinsen_aus_kapitalbedarf(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'Fin', 'year_from' => 2026, 'year_to' => 2027,
+            'interest_rate' => 10, 'annual_repayment' => 0,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        $plan->financings()->where('label', 'Warenbestand')->first()->update(['amount' => 30000]);
+        $plan = $plan->fresh()->load('financings');
+
+        $this->assertEqualsWithDelta(30000, $plan->capitalNeed(), 0.01);
+        $int = $plan->interestByYear();
+        $this->assertEqualsWithDelta(3000, $int[2026], 0.01); // 30.000 × 10 %
+        $this->assertEqualsWithDelta(3000, $int[2027], 0.01);
+    }
+
+    public function test_gewerbesteuer_handels_und_steuerrechtlich(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'GewSt', 'year_from' => 2026, 'year_to' => 2026,
+            'gewst_enabled' => true, 'gewst_hebesatz' => 400,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        // Rohertrag 124.500, keine Kosten -> Gewinn 124.500.
+        $plan->lines()->where('label', 'Provision: Vergaserkraftstoffe')->first()
+            ->values()->where('year', 2026)->update(['amount' => 124500, 'margin' => 100]);
+
+        $ov = $plan->fresh()->load('lines.values')->overview();
+        $this->assertEqualsWithDelta(124500, $ov[2026]['gewinn'], 0.01);
+        // Messbetrag (124.500-24.500)×3,5% = 3.500; GewSt ×400% = 14.000.
+        $this->assertEqualsWithDelta(14000, $ov[2026]['gewst'], 0.01);
+        // anrechenbar 3,8×3.500 = 13.300 -> nicht anrechenbar 700.
+        $this->assertEqualsWithDelta(700, $ov[2026]['gewst_na'], 0.01);
+        $this->assertEqualsWithDelta(123800, $ov[2026]['gewinn_nach_steuern'], 0.01);
+    }
+
     public function test_seite_legt_plan_an_und_speichert_werte(): void
     {
         $this->seed(DatabaseSeeder::class);

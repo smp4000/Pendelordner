@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\BusinessPlan;
+use App\Models\BusinessPlanFinancing;
 use App\Models\BusinessPlanLeaseBase;
 use App\Models\BusinessPlanLineValue;
 use App\Models\BusinessPlanStaffValue;
@@ -68,6 +69,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
      * @var array<int, array{id:int, label:string, source:string, rate:string, manual:string}>
      */
     public array $leaseBases = [];
+
+    /**
+     * Kapitalbedarf-Positionen der Finanzierung.
+     *
+     * @var array<int, array{id:int, label:string, finance_type:string, amount:string}>
+     */
+    public array $financings = [];
 
     public function getMaxContentWidth(): Width
     {
@@ -211,6 +219,32 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         ]);
     }
 
+    /** Kapitalbedarf = Summe der Finanzierungspositionen (live). */
+    public function getCapitalNeedProperty(): float
+    {
+        $sum = 0.0;
+        foreach ($this->financings as $f) {
+            $sum += $this->num($f['amount'] ?? 0);
+        }
+
+        return $sum;
+    }
+
+    /**
+     * Jährliche Zinsen auf das Darlehen (live).
+     *
+     * @return array<int, float>
+     */
+    public function getInterestProperty(): array
+    {
+        return \App\Services\Plan\FinanceCalculator::interestByYear(
+            $this->capitalNeed,
+            $this->num($this->stamm['annual_repayment'] ?? 0),
+            $this->num($this->stamm['interest_rate'] ?? 0),
+            $this->years,
+        );
+    }
+
     /**
      * Geschäftsplanübersicht je Jahr – live aus dem Eingabe-Raster berechnet.
      *
@@ -220,6 +254,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     {
         $payroll = $this->payroll;
         $lease = $this->lease;
+        $interest = $this->interest;
+        $hebesatz = $this->num($this->stamm['gewst_hebesatz'] ?? 0);
+        $gewstOn = ! empty($this->stamm['gewst_enabled']);
         $out = [];
         foreach ($this->years as $year) {
             $umsatz = 0.0;
@@ -231,20 +268,26 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
                     $umsatz += $amount;
                     $rohertrag += $amount * $this->num($row['values'][$year]['margin'] ?? 0) / 100;
                 } else {
-                    // Personalkosten aus der Lohnberechnung, Pacht aus der Pachtberechnung.
+                    // Personalkosten/Pacht/Zinsen aus den jeweiligen Berechnungen.
                     $amount = match ($row['label']) {
                         'Personalkosten' => $payroll[$year]['budget'] ?? 0,
                         'Pacht - Station' => $lease[$year]['total'] ?? 0,
+                        'Zinsen- und Geldkosten' => $interest[$year] ?? 0,
                         default => $this->num($row['values'][$year]['amount'] ?? 0),
                     };
                     $kosten += $amount;
                 }
             }
+            $gewinn = $rohertrag - $kosten;
+            $tax = \App\Services\Plan\TaxCalculator::gewst($gewinn, $hebesatz, $gewstOn);
             $out[$year] = [
                 'umsatz' => $umsatz,
                 'rohertrag' => $rohertrag,
                 'kosten' => $kosten,
-                'gewinn' => $rohertrag - $kosten,
+                'gewinn' => $gewinn,
+                'gewst' => $tax['gewst'],
+                'gewst_na' => $tax['nicht_anrechenbar'],
+                'gewinn_nach_steuern' => $gewinn - $tax['nicht_anrechenbar'],
             ];
         }
 
@@ -275,12 +318,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
                 'rohertrag' => $overview[$year]['rohertrag'],
                 'kosten' => $overview[$year]['kosten'],
                 'personal' => $personal,
+                'gewst' => $overview[$year]['gewst'] ?? 0,
             ];
         }
 
         return \App\Services\Plan\LiquidityCalculator::compute($perYear, [
             'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
-            'loan_amount' => $this->num($this->stamm['loan_amount'] ?? 0),
+            'loan_amount' => $this->capitalNeed,
             'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
             'private_draw' => $this->num($this->stamm['private_draw'] ?? 0),
             'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
@@ -385,7 +429,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'city' => $this->stamm['city'] ?: null,
             'year_from' => $yearFrom,
             'year_to' => $yearTo,
-            'loan_amount' => $this->num($this->stamm['loan_amount'] ?? 0),
+            'loan_amount' => $this->capitalNeed,
             'private_draw' => $this->num($this->stamm['private_draw'] ?? 0),
             'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
             'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
@@ -397,6 +441,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'festpacht_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
             'festpacht_start_year' => ($this->stamm['festpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['festpacht_start_year'] : null,
             'festpacht_start_month' => (int) ($this->stamm['festpacht_start_month'] ?? 1) ?: 1,
+            'interest_rate' => $this->num($this->stamm['interest_rate'] ?? 0),
+            'gewst_enabled' => ! empty($this->stamm['gewst_enabled']),
+            'gewst_hebesatz' => $this->num($this->stamm['gewst_hebesatz'] ?? 0),
             'notes' => $this->stamm['notes'] ?: null,
         ]);
 
@@ -408,9 +455,18 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             ]);
         }
 
+        // Kapitalbedarf-Positionen speichern.
+        foreach ($this->financings as $f) {
+            BusinessPlanFinancing::where('id', $f['id'])->update([
+                'amount' => $this->num($f['amount'] ?? 0),
+                'finance_type' => trim((string) ($f['finance_type'] ?? '')) ?: null,
+            ]);
+        }
+
         $years = range($yearFrom, $yearTo);
         $payroll = $this->payroll;   // Personalkostenbudget je Jahr aus der Lohnberechnung
         $lease = $this->lease;       // Stationspacht je Jahr aus der Pachtberechnung
+        $interest = $this->interest; // Zinsen je Jahr aus der Finanzierung
 
         // Lohnzeilen speichern.
         foreach ($this->staff as $s) {
@@ -436,6 +492,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
                     $margin = null;
                 } elseif ($row['section'] === 'cost' && $row['label'] === 'Pacht - Station') {
                     $amount = $lease[$year]['total'] ?? 0;
+                    $margin = null;
+                } elseif ($row['section'] === 'cost' && $row['label'] === 'Zinsen- und Geldkosten') {
+                    $amount = $interest[$year] ?? 0;
                     $margin = null;
                 } else {
                     $amount = $this->num($row['values'][$year]['amount'] ?? 0);
@@ -465,8 +524,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         $this->rows = [];
         $this->staff = [];
         $this->leaseBases = [];
+        $this->financings = [];
 
-        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values', 'leaseBases'])->find($this->planId) : null;
+        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values', 'leaseBases', 'financings'])->find($this->planId) : null;
         if (! $plan) {
             return;
         }
@@ -490,8 +550,20 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'festpacht_monthly' => $this->fmt($plan->festpacht_monthly),
             'festpacht_start_year' => $plan->festpacht_start_year ? (string) $plan->festpacht_start_year : '',
             'festpacht_start_month' => (string) ($plan->festpacht_start_month ?: 1),
+            'interest_rate' => $this->fmt($plan->interest_rate),
+            'gewst_enabled' => (bool) $plan->gewst_enabled,
+            'gewst_hebesatz' => $this->fmt($plan->gewst_hebesatz),
             'notes' => $plan->notes,
         ];
+
+        foreach ($plan->financings as $f) {
+            $this->financings[$f->id] = [
+                'id' => $f->id,
+                'label' => $f->label,
+                'finance_type' => (string) $f->finance_type,
+                'amount' => $this->fmt($f->amount),
+            ];
+        }
 
         foreach ($plan->leaseBases as $base) {
             $this->leaseBases[$base->id] = [

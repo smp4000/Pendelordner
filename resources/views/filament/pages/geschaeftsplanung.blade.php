@@ -51,8 +51,8 @@
                     <input type="number" wire:model.live="stamm.year_from" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Letztes Planjahr</label>
                     <input type="number" wire:model.live="stamm.year_to" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Darlehensaufnahme (€)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.loan_amount" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Zinssatz Finanzierung (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.interest_rate" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Privatentnahme / Jahr (€)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.private_draw" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Anfangsbestand Liquidität (€)</label>
@@ -65,6 +65,12 @@
                     <input type="text" wire:model.live.debounce.400ms="stamm.payroll_overhead_pct" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Urlaub / Krankheit (%)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Gewerbesteuer Hebesatz (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.gewst_hebesatz" style="{{ $inpTxt }};text-align:right;"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.2rem;">
+                    <input type="checkbox" wire:model.live="stamm.gewst_enabled" id="gewst_enabled" style="width:1.1rem;height:1.1rem;">
+                    <label for="gewst_enabled" style="font-size:.8rem;font-weight:600;">Gewerbesteuer einbeziehen</label>
+                </div>
             </div>
         </x-filament::section>
 
@@ -101,6 +107,27 @@
                                 @endforeach
                             </tr>
                         @endforeach
+                        @if (! empty($stamm['gewst_enabled']))
+                            <tr style="font-size:.85rem;">
+                                <td style="{{ $tdL }}">./. Gewerbesteuer (nicht anrechenbar)</td>
+                                @foreach ($years as $y)
+                                    <td style="padding:.25rem .5rem;text-align:right;">{{ $money($ov[$y]['gewst_na'] ?? 0) }} €</td>
+                                @endforeach
+                            </tr>
+                            <tr style="font-weight:700;border-top:1px solid rgba(120,120,120,.25);">
+                                <td style="{{ $tdL }}">= Gewinn nach Steuern</td>
+                                @foreach ($years as $y)
+                                    @php $gns = $ov[$y]['gewinn_nach_steuern'] ?? 0; @endphp
+                                    <td style="padding:.3rem .5rem;text-align:right;{{ $gns < 0 ? 'color:#dc2626;' : 'color:#059669;' }}">{{ $money($gns) }} €</td>
+                                @endforeach
+                            </tr>
+                            <tr style="opacity:.55;font-size:.78rem;">
+                                <td style="{{ $tdL }}">(volle Gewerbesteuer)</td>
+                                @foreach ($years as $y)
+                                    <td style="padding:.15rem .5rem;text-align:right;">{{ $money($ov[$y]['gewst'] ?? 0) }} €</td>
+                                @endforeach
+                            </tr>
+                        @endif
                         <tr style="opacity:.65;font-size:.8rem;">
                             <td style="{{ $tdL }}">Rohertragsmarge</td>
                             @foreach ($years as $y)
@@ -307,16 +334,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php $pay = $this->payroll; $lease = $this->lease; @endphp
+                        @php $pay = $this->payroll; $lease = $this->lease; $interest = $this->interest; @endphp
                         @foreach ($costRows as $row)
-                            @php $id = $row['id']; $derived = in_array($row['label'], ['Personalkosten', 'Pacht - Station'], true); @endphp
+                            @php $id = $row['id']; @endphp
                             <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
-                                <td style="{{ $tdL }}">{{ $row['label'] }}@if ($row['label'] === 'Personalkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Lohnberechnung)</span>@elseif ($row['label'] === 'Pacht - Station')<span style="opacity:.5;font-size:.7rem;"> (aus Pachtberechnung)</span>@endif</td>
+                                <td style="{{ $tdL }}">{{ $row['label'] }}@if ($row['label'] === 'Personalkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Lohnberechnung)</span>@elseif ($row['label'] === 'Pacht - Station')<span style="opacity:.5;font-size:.7rem;"> (aus Pachtberechnung)</span>@elseif ($row['label'] === 'Zinsen- und Geldkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Finanzierung)</span>@endif</td>
                                 @foreach ($years as $y)
                                     @if ($row['label'] === 'Personalkosten')
                                         <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($pay[$y]['budget'] ?? 0) }} €</td>
                                     @elseif ($row['label'] === 'Pacht - Station')
                                         <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($lease[$y]['total'] ?? 0) }} €</td>
+                                    @elseif ($row['label'] === 'Zinsen- und Geldkosten')
+                                        <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($interest[$y] ?? 0) }} €</td>
                                     @else
                                         <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
                                     @endif
@@ -333,6 +362,58 @@
                 </table>
             </div>
         </x-filament::section>
+        {{-- Finanzierung / Kapitalbedarf --}}
+        @php $financeRows = collect($financings); $interest = $this->interest; $capital = $this->capitalNeed; @endphp
+        <x-filament::section>
+            <x-slot name="heading">Finanzierung / Kapitalbedarf</x-slot>
+            <x-slot name="description">Summe des Kapitalbedarfs = Darlehen (Aufnahme im ersten Monat). Der Zinssatz (Stammdaten) erzeugt die jährlichen Zinsen → fließen in „Zinsen- und Geldkosten".</x-slot>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid rgba(120,120,120,.3);">
+                            <th style="{{ $th }};text-align:left;min-width:200px;">Kapitalbedarf für</th>
+                            <th style="{{ $th }};text-align:left;min-width:180px;">Art der Finanzierung</th>
+                            <th style="{{ $th }}">Betrag (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($financeRows as $f)
+                            @php $fid = $f['id']; @endphp
+                            <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                <td style="{{ $tdL }}">{{ $f['label'] }}</td>
+                                <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="financings.{{ $fid }}.finance_type" style="{{ $inpTxt }};text-align:left;"></td>
+                                <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="financings.{{ $fid }}.amount" style="{{ $inp }}"></td>
+                            </tr>
+                        @endforeach
+                        <tr style="font-weight:700;border-top:2px solid rgba(120,120,120,.3);">
+                            <td style="{{ $tdL }};text-align:right;" colspan="2">Kapitalbedarf = Darlehen</td>
+                            <td style="padding:.3rem .25rem;text-align:right;">{{ $money($capital) }} €</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="overflow-x:auto;margin-top:.75rem;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(120,120,120,.2);">
+                            <th style="{{ $th }};text-align:left;">Zinsen p.a. (Restschuld × Zinssatz)</th>
+                            @foreach ($years as $y)
+                                <th style="{{ $th }}">{{ $y }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="{{ $tdL }}">Zinsen</td>
+                            @foreach ($years as $y)
+                                <td style="padding:.2rem .35rem;text-align:right;">{{ $money($interest[$y] ?? 0) }} €</td>
+                            @endforeach
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </x-filament::section>
+
         {{-- Liquiditätsplanung --}}
         @php
             $liq = $this->liquidity;
@@ -344,6 +425,7 @@
                 ['./. Personalkosten', 'personal', '-'],
                 ['./. sonstige Kosten', 'sonstige', '-'],
                 ['./. USt-Zahllast', 'ust', '-'],
+                ['./. Gewerbesteuer', 'gewst', '-'],
                 ['./. Tilgung', 'tilgung', '-'],
                 ['./. Privatentnahme', 'privat', '-'],
             ];

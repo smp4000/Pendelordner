@@ -40,10 +40,11 @@ class LiquidityCalculator
             $mUst = $zahllast / 12;
             $mTilgung = (float) $a['annual_repayment'] / 12;
             $mPrivat = (float) $a['private_draw'] / 12;
+            $mGewst = (float) ($fig['gewst'] ?? 0) / 12;
 
             $months = [];
             $sum = ['einnahmen' => 0.0, 'darlehen' => 0.0, 'ware' => 0.0, 'personal' => 0.0,
-                'sonstige' => 0.0, 'ust' => 0.0, 'tilgung' => 0.0, 'privat' => 0.0, 'saldo' => 0.0];
+                'sonstige' => 0.0, 'ust' => 0.0, 'gewst' => 0.0, 'tilgung' => 0.0, 'privat' => 0.0, 'saldo' => 0.0];
 
             for ($m = 1; $m <= 12; $m++) {
                 $darlehen = ($year === $first && $m === 1) ? (float) $a['loan_amount'] : 0.0;
@@ -53,13 +54,13 @@ class LiquidityCalculator
                 $tilgung = min($mTilgung, $credit);
                 $credit -= $tilgung;
 
-                $saldo = $mEinnahmen + $darlehen - $mWare - $mPersonal - $mSonstige - $mUst - $tilgung - $mPrivat;
+                $saldo = $mEinnahmen + $darlehen - $mWare - $mPersonal - $mSonstige - $mUst - $mGewst - $tilgung - $mPrivat;
                 $stand += $saldo;
 
                 $row = [
                     'einnahmen' => $mEinnahmen, 'darlehen' => $darlehen, 'ware' => $mWare,
                     'personal' => $mPersonal, 'sonstige' => $mSonstige, 'ust' => $mUst,
-                    'tilgung' => $tilgung, 'privat' => $mPrivat, 'saldo' => $saldo,
+                    'gewst' => $mGewst, 'tilgung' => $tilgung, 'privat' => $mPrivat, 'saldo' => $saldo,
                     'stand' => $stand, 'kredit' => $credit,
                 ];
                 $months[$m] = $row;

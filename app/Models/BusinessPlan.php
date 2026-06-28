@@ -33,6 +33,9 @@ class BusinessPlan extends Model
         'festpacht_monthly' => 'decimal:2',
         'festpacht_start_year' => 'integer',
         'festpacht_start_month' => 'integer',
+        'interest_rate' => 'decimal:3',
+        'gewst_enabled' => 'boolean',
+        'gewst_hebesatz' => 'decimal:2',
     ];
 
     public function business(): BelongsTo
@@ -53,6 +56,32 @@ class BusinessPlan extends Model
     public function leaseBases(): HasMany
     {
         return $this->hasMany(BusinessPlanLeaseBase::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function financings(): HasMany
+    {
+        return $this->hasMany(BusinessPlanFinancing::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** Kapitalbedarf = Summe der Finanzierungspositionen (= Darlehensbetrag). */
+    public function capitalNeed(): float
+    {
+        return (float) $this->financings->sum(fn ($f) => (float) $f->amount);
+    }
+
+    /**
+     * Jährliche Zinsen auf das Darlehen (Restschuld zu Jahresbeginn × Zinssatz).
+     *
+     * @return array<int, float>
+     */
+    public function interestByYear(): array
+    {
+        return \App\Services\Plan\FinanceCalculator::interestByYear(
+            $this->capitalNeed(),
+            (float) $this->annual_repayment,
+            (float) $this->interest_rate,
+            $this->years(),
+        );
     }
 
     /** @return list<int> */
@@ -86,11 +115,17 @@ class BusinessPlan extends Model
                 }
             }
 
+            $gewinn = $rohertrag - $kosten;
+            $tax = \App\Services\Plan\TaxCalculator::gewst($gewinn, (float) $this->gewst_hebesatz, (bool) $this->gewst_enabled);
+
             $out[$year] = [
                 'umsatz' => round($umsatz, 2),
                 'rohertrag' => round($rohertrag, 2),
                 'kosten' => round($kosten, 2),
-                'gewinn' => round($rohertrag - $kosten, 2),
+                'gewinn' => round($gewinn, 2),
+                'gewst' => $tax['gewst'],
+                'gewst_na' => $tax['nicht_anrechenbar'],
+                'gewinn_nach_steuern' => round($gewinn - $tax['nicht_anrechenbar'], 2),
             ];
         }
 
@@ -221,12 +256,13 @@ class BusinessPlan extends Model
                 'rohertrag' => $overview[$year]['rohertrag'],
                 'kosten' => $overview[$year]['kosten'],
                 'personal' => $this->personnelCosts($year),
+                'gewst' => $overview[$year]['gewst'] ?? 0,
             ];
         }
 
         return \App\Services\Plan\LiquidityCalculator::compute($perYear, [
             'vat_rate' => (float) $this->vat_rate,
-            'loan_amount' => (float) $this->loan_amount,
+            'loan_amount' => $this->capitalNeed(),
             'annual_repayment' => (float) $this->annual_repayment,
             'private_draw' => (float) $this->private_draw,
             'opening_balance' => (float) $this->opening_balance,
