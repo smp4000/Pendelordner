@@ -346,41 +346,39 @@
                     </div>
 
                     <div style="padding:.5rem;">
-                        {{-- TAB: Zugeordnete Belege --}}
+                        {{-- TAB: Zugeordnete Belege (per Drag & Drop sortierbar) --}}
                         @if ($activeTab === 'assigned')
-                            @forelse ($tx->receipts as $r)
-                                <div wire:key="assigned-{{ $r->id }}" wire:click="selectReceipt({{ $r->id }})"
-                                    style="{{ $rowBase }}align-items:center;{{ $r->id === $this->selectedReceiptId ? 'background:rgba(16,185,129,.12);' : '' }}">
-                                    <span style="display:flex;align-items:center;gap:.4rem;">
-                                        {{-- Reihenfolge ändern (bestimmt auch die Reihenfolge im Bericht) --}}
-                                        <span style="display:flex;flex-direction:column;line-height:.7;">
-                                            <button type="button" wire:click.stop="moveReceipt({{ $r->id }}, 'up')" title="Nach oben"
-                                                @disabled($loop->first)
-                                                style="background:none;border:none;cursor:pointer;font-size:.7rem;padding:0;opacity:{{ $loop->first ? '.25' : '.6' }};">▲</button>
-                                            <button type="button" wire:click.stop="moveReceipt({{ $r->id }}, 'down')" title="Nach unten"
-                                                @disabled($loop->last)
-                                                style="background:none;border:none;cursor:pointer;font-size:.7rem;padding:0;opacity:{{ $loop->last ? '.25' : '.6' }};">▼</button>
-                                        </span>
-                                        <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
-                                            <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
-                                    </span>
-                                    <span style="display:flex;gap:.5rem;align-items:center;white-space:nowrap;">
-                                        <label wire:click.stop title="Im Steuerberater-Bericht anhängen"
-                                            style="display:flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.8;cursor:pointer;">
-                                            <input type="checkbox" wire:click.stop="toggleReceiptInReport({{ $r->id }})"
-                                                @checked($r->include_in_report)>
-                                            im Bericht
-                                        </label>
-                                        <input type="number" step="0.01" value="{{ $r->pivot->amount }}"
-                                            wire:click.stop
-                                            wire:change.stop="updateAllocation({{ $r->id }}, $event.target.value)"
-                                            style="width:7rem;text-align:right;border:1px solid rgba(120,120,120,.3);border-radius:.3rem;padding:.15rem .4rem;"> €
-                                        <button type="button" wire:click.stop="detachReceipt({{ $r->id }})" style="color:#dc2626;background:none;border:none;cursor:pointer;">lösen</button>
-                                    </span>
-                                </div>
-                            @empty
+                            @if ($tx->receipts->isEmpty())
                                 <p style="padding:.75rem;font-size:.85rem;opacity:.6;">Noch kein Beleg zugeordnet.</p>
-                            @endforelse
+                            @else
+                                <div wire:key="assigned-list-{{ $tx->id }}" x-data="receiptSorter()" x-init="init()" x-ref="list">
+                                    @foreach ($tx->receipts as $r)
+                                        <div wire:key="assigned-{{ $r->id }}" data-id="{{ $r->id }}" wire:click="selectReceipt({{ $r->id }})"
+                                            style="{{ $rowBase }}align-items:center;{{ $r->id === $this->selectedReceiptId ? 'background:rgba(16,185,129,.12);' : '' }}">
+                                            <span style="display:flex;align-items:center;gap:.5rem;">
+                                                {{-- Greifer zum Ziehen (bestimmt auch die Reihenfolge im Bericht) --}}
+                                                <span class="receipt-grip" wire:click.stop title="Zum Sortieren ziehen"
+                                                    style="cursor:grab;opacity:.45;font-size:1.05rem;line-height:1;user-select:none;touch-action:none;">⠿</span>
+                                                <span>{{ $r->invoice_number ?: ('Beleg #' . $r->id) }}
+                                                    <span style="opacity:.6;">· {{ $r->supplier?->name }}</span></span>
+                                            </span>
+                                            <span style="display:flex;gap:.5rem;align-items:center;white-space:nowrap;">
+                                                <label wire:click.stop title="Im Steuerberater-Bericht anhängen"
+                                                    style="display:flex;align-items:center;gap:.25rem;font-size:.75rem;opacity:.8;cursor:pointer;">
+                                                    <input type="checkbox" wire:click.stop="toggleReceiptInReport({{ $r->id }})"
+                                                        @checked($r->include_in_report)>
+                                                    im Bericht
+                                                </label>
+                                                <input type="number" step="0.01" value="{{ $r->pivot->amount }}"
+                                                    wire:click.stop
+                                                    wire:change.stop="updateAllocation({{ $r->id }}, $event.target.value)"
+                                                    style="width:7rem;text-align:right;border:1px solid rgba(120,120,120,.3);border-radius:.3rem;padding:.15rem .4rem;"> €
+                                                <button type="button" wire:click.stop="detachReceipt({{ $r->id }})" style="color:#dc2626;background:none;border:none;cursor:pointer;">lösen</button>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
 
                         {{-- TAB: Vorschläge --}}
                         @elseif ($activeTab === 'suggestions')
@@ -522,6 +520,7 @@
     {{-- PDF.js Bibliothek einmalig laden (auch bei SPA-Navigation) --}}
     @assets
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"></script>
     @endassets
 
     {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
@@ -561,6 +560,26 @@
                         console.error(e);
                         this.error = true;
                     }
+                },
+            }));
+
+            // Drag & Drop für die Reihenfolge der zugeordneten Belege.
+            Alpine.data('receiptSorter', () => ({
+                sortable: null,
+                init() {
+                    if (! window.Sortable) {
+                        return;
+                    }
+                    this.sortable = window.Sortable.create(this.$refs.list, {
+                        handle: '.receipt-grip',
+                        animation: 150,
+                        ghostClass: 'opacity-50',
+                        onEnd: () => {
+                            const ids = Array.from(this.$refs.list.querySelectorAll('[data-id]'))
+                                .map((el) => parseInt(el.dataset.id, 10));
+                            this.$wire.reorderReceipts(ids);
+                        },
+                    });
                 },
             }));
         </script>

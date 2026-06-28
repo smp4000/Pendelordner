@@ -896,6 +896,24 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Beleg zugeordnet')->success()->send();
     }
 
+    /** Neue Reihenfolge der zugeordneten Belege per Drag & Drop speichern. */
+    public function reorderReceipts(array $orderedIds): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $valid = $transaction->receipts->pluck('id')->all();
+        $pos = 0;
+        foreach ($orderedIds as $rid) {
+            $rid = (int) $rid;
+            if (in_array($rid, $valid, true)) {
+                $transaction->receipts()->updateExistingPivot($rid, ['sort_order' => $pos++]);
+            }
+        }
+    }
+
     /** Verschiebt einen zugeordneten Beleg in der Reihenfolge (hoch/runter). */
     public function moveReceipt(int $receiptId, string $direction): void
     {

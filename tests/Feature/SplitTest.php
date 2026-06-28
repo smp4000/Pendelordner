@@ -102,5 +102,12 @@ class SplitTest extends TestCase
             ->call('moveReceipt', $r1->id, 'down');
 
         $this->assertSame([$r2->id, $r1->id], $tx->fresh()->receipts->pluck('id')->all());
+
+        // Drag & Drop: komplette neue Reihenfolge speichern.
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('reorderReceipts', [$r1->id, $r2->id]);
+
+        $this->assertSame([$r1->id, $r2->id], $tx->fresh()->receipts->pluck('id')->all());
     }
 }
