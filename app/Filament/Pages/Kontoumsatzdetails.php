@@ -695,16 +695,18 @@ class Kontoumsatzdetails extends Page
                 ->when($this->filterWithoutReceipt !== null, fn ($q) => $this->filterWithoutReceipt === '1'
                     ? $q->whereDoesntHave('receipts')
                     : $q->whereHas('receipts'))
-                ->orderBy('booking_date');
+                // id als stabiles zweites Sortierkriterium -> feste Reihenfolge.
+                ->orderBy('booking_date')->orderBy('id');
         }
 
         // In der Bearbeitung werden vorrangig ungeprüfte Umsätze angezeigt.
-        $offene = BankTransaction::query()->where('reviewed', false)->orderBy('booking_date');
+        $offene = BankTransaction::query()->where('reviewed', false)
+            ->orderBy('booking_date')->orderBy('id');
 
         // Sind alle Umsätze bereits geprüft, wäre die Seite leer – dann zur
         // besseren Übersicht alle Umsätze (neueste zuerst) anzeigen.
         if (! (clone $offene)->exists()) {
-            return BankTransaction::query()->orderByDesc('booking_date');
+            return BankTransaction::query()->orderByDesc('booking_date')->orderByDesc('id');
         }
 
         return $offene;
@@ -771,7 +773,10 @@ class Kontoumsatzdetails extends Page
         // "geprüft" aus der Standardliste fiele), damit die Position stimmt.
         if ($this->selectedTransactionId && ! $list->contains('id', $this->selectedTransactionId)) {
             if ($sel = BankTransaction::with('receipts')->find($this->selectedTransactionId)) {
-                $list = $list->push($sel)->sortBy('booking_date')->values();
+                // Stabil nach Datum + id einsortieren (gleiche Ordnung wie die Query).
+                $list = $list->push($sel)
+                    ->sortBy(fn (BankTransaction $t) => sprintf('%s-%012d', $t->booking_date?->format('Y-m-d'), $t->id))
+                    ->values();
             }
         }
 
