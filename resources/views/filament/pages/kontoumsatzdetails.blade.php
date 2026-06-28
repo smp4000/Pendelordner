@@ -486,7 +486,18 @@
             {{-- RECHTS: Belegvorschau --}}
             <x-filament::section style="padding:0;overflow:hidden;">
                 <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
-                <div style="padding:.5rem;">
+                <div style="padding:.5rem;position:relative;">
+                    {{-- Status-Stempel über der Vorschau: bezahlt / gebucht (wie im Bericht). --}}
+                    @if (($tx->fully_paid || $tx->reviewed) && $receipt && $receipt->preview_url)
+                        <div style="position:absolute;top:1rem;right:1.25rem;z-index:20;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;pointer-events:none;">
+                            @if ($tx->fully_paid)
+                                <span style="transform:rotate(-8deg);border:2.5px solid #d97706;color:#d97706;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Bezahlt</span>
+                            @endif
+                            @if ($tx->reviewed)
+                                <span style="transform:rotate(-8deg);border:2.5px solid #0d9488;color:#0d9488;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Gebucht</span>
+                            @endif
+                        </div>
+                    @endif
                     @if ($receipt && $receipt->preview_url)
                         @if ($receipt->is_pdf)
                             {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}

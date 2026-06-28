@@ -56,6 +56,8 @@ class PdfReportTest extends TestCase
 
         $transaction = $account->bankTransactions()->where('counterparty', 'HBW Sinsheim')->first();
         $transaction->receipts()->attach($receipt->id, ['amount' => 63.70]);
+        // Status setzen, damit die gedrehten Stempel (BEZAHLT/GEBUCHT) gezeichnet werden.
+        $transaction->update(['fully_paid' => true, 'reviewed' => true]);
 
         $path = (new PdfReportService())->generateMonthlyReport(Carbon::parse('2026-01-15'));
 
