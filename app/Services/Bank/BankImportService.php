@@ -53,12 +53,26 @@ class BankImportService
             try {
                 $data = $this->normalize($row, $account, $source);
                 $hash = BankTransaction::makeDedupHash($data);
+                $reference = trim((string) ($data['bank_reference'] ?? ''));
 
-                // Dublettenprüfung inkl. gelöschter Umsätze – der Unique-Index
-                // berücksichtigt Soft-Deletes nicht, deshalb withTrashed().
+                // Dublettenprüfung inkl. gelöschter Umsätze (withTrashed, da der
+                // Unique-Index Soft-Deletes nicht berücksichtigt):
+                //   1. exakter dedup_hash  -> erkennt erneuten Import derselben Datei
+                //   2. Bankreferenz + Datum + Betrag -> erkennt dieselbe Buchung
+                //      auch aus einem anderen Format (CSV/MT940/CAMT), da die
+                //      Referenz eindeutig und formatstabil ist.
                 $existing = BankTransaction::withTrashed()
                     ->where('bank_account_id', $account->id)
-                    ->where('dedup_hash', $hash)
+                    ->where(function ($q) use ($hash, $reference, $data) {
+                        $q->where('dedup_hash', $hash);
+
+                        if ($reference !== '') {
+                            $q->orWhere(fn ($q2) => $q2
+                                ->where('bank_reference', $reference)
+                                ->whereDate('booking_date', $data['booking_date'])
+                                ->where('amount', round((float) ($data['amount'] ?? 0), 2)));
+                        }
+                    })
                     ->first();
 
                 if ($existing) {

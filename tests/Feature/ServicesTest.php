@@ -70,6 +70,57 @@ class ServicesTest extends TestCase
         $this->assertSame(2, $account->bankTransactions()->count());
     }
 
+    public function test_mt940_doppelter_import_erkennt_dubletten(): void
+    {
+        $mt940 = implode("\n", [
+            ':20:STARTUMS',
+            ':25:50010517/0648489890',
+            ':28C:00001/001',
+            ':60F:C260101EUR1000,00',
+            ':61:2601020102D63,70NMSCNONREF',
+            ':86:177?00SEPA-LASTSCHRIFT?20Blumen Lieferung?32HBW Sinsheim',
+            ':62F:C260102EUR936,30',
+        ]);
+        $rows = (new Mt940Parser())->parse($mt940);
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $service->import($account, $rows, ImportSource::Mt940);
+        $log2 = $service->import($account, $rows, ImportSource::Mt940);
+
+        $this->assertSame(1, $account->bankTransactions()->count());
+        $this->assertSame(1, $log2->duplicate_count);
+        $this->assertSame(0, $log2->new_count);
+    }
+
+    public function test_dublette_wird_format_uebergreifend_ueber_referenz_erkannt(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        // 1. Import (z. B. als CSV)
+        $service->import($account, [[
+            'booking_date' => '2026-06-10',
+            'amount' => -50.00,
+            'counterparty' => 'ARAL AG',
+            'purpose' => 'Tankkauf',
+            'bank_reference' => 'NDDR12345',
+        ]], ImportSource::Csv, applyRules: false);
+
+        // 2. Import derselben Buchung aus anderem Format (andere Texte, gleiche
+        // Referenz/Datum/Betrag) -> muss als Dublette erkannt werden.
+        $log2 = $service->import($account, [[
+            'booking_date' => '2026-06-10',
+            'amount' => -50.00,
+            'counterparty' => 'ARAL AKTIENGESELLSCHAFT',
+            'purpose' => 'EREF+NDDR12345 SVWZ+Kraftstoff',
+            'bank_reference' => 'NDDR12345',
+        ]], ImportSource::Mt940, applyRules: false);
+
+        $this->assertSame(1, $account->bankTransactions()->count());
+        $this->assertSame(1, $log2->duplicate_count);
+    }
+
     public function test_reimport_stellt_geloeschte_umsaetze_wieder_her(): void
     {
         $csv = "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;IBAN Zahlungsbeteiligter;Betrag;Waehrung\n"
