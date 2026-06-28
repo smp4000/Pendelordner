@@ -121,6 +121,40 @@ class ServicesTest extends TestCase
         $this->assertSame(1, $log2->duplicate_count);
     }
 
+    public function test_wiederherstellung_behaelt_verknuepfte_belege_und_zuordnung(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+        $row = [
+            'booking_date' => '2026-06-01',
+            'amount' => -63.70,
+            'counterparty' => 'HBW Sinsheim',
+            'purpose' => 'Blumen',
+            'bank_reference' => 'REF-1',
+        ];
+
+        $service->import($account, [$row], ImportSource::Csv, applyRules: false);
+        $tx = $account->bankTransactions()->first();
+
+        // Beleg verknüpfen + Kategorie setzen (manuelle Zuordnung).
+        $receipt = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 63.70]);
+        $tx->receipts()->attach($receipt->id, ['amount' => 63.70]);
+        $category = Category::firstOrCreate(['name' => 'Blumen'], ['active' => true]);
+        $tx->update(['category_id' => $category->id]);
+
+        // Versehentlich löschen (Soft-Delete) und dieselbe Datei erneut importieren.
+        $tx->delete();
+        $this->assertSame(0, $account->bankTransactions()->count());
+
+        $service->import($account, [$row], ImportSource::Csv, applyRules: false);
+
+        $tx->refresh();
+        $this->assertNull($tx->deleted_at);                       // wiederhergestellt
+        $this->assertSame(1, $tx->receipts()->count());           // Beleg weiterhin verknüpft
+        $this->assertSame($category->id, $tx->category_id);       // Kategorie erhalten
+        $this->assertSame(1, $account->bankTransactions()->count()); // kein Duplikat
+    }
+
     public function test_reimport_stellt_geloeschte_umsaetze_wieder_her(): void
     {
         $csv = "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;IBAN Zahlungsbeteiligter;Betrag;Waehrung\n"
