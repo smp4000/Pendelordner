@@ -44,6 +44,7 @@
         </style>
         @php
             $tabs = [
+                'erlaeuterung' => 'Erläuterung',
                 'stammdaten' => 'Stammdaten',
                 'uebersicht' => 'Übersicht',
                 'umsatz' => 'Umsatz',
@@ -54,48 +55,168 @@
                 'liquiditaet' => 'Liquidität',
             ];
         @endphp
-        <div x-data="{ tab: 'stammdaten' }">
+        <div x-data="{ tab: 'erlaeuterung' }">
             <div class="gp-tabs">
                 @foreach ($tabs as $key => $label)
                     <button type="button" class="gp-tab" :class="tab==='{{ $key }}' && 'gp-tab--active'" x-on:click="tab='{{ $key }}'">{{ $label }}</button>
                 @endforeach
             </div>
 
+        <div x-show="tab==='erlaeuterung'" x-cloak>
+        {{-- Erläuterung / Bedienung --}}
+        <x-filament::section>
+            <x-slot name="heading">Bedienung der Geschäftsplanung</x-slot>
+            <x-slot name="description">Version 2024.1 – bitte alle Eingabefelder ausfüllen. Wenn ein Wert nicht vorhanden ist, 0 eintragen.</x-slot>
+
+            <div style="font-size:.9rem;line-height:1.6;max-width:60rem;">
+                <p style="font-weight:700;margin-bottom:.25rem;">Allgemein</p>
+                <ul style="margin:0 0 1rem 1.1rem;list-style:disc;">
+                    <li>Eingabefelder befinden sich in den Tabs <strong>Stammdaten, Umsatz, Lohn, Pacht, Finanzierung, Kosten</strong>.</li>
+                    <li>Türkis hinterlegte/abgeleitete Werte (z. B. Personalkosten, Pacht, Zinsen) werden automatisch berechnet und sind nur lesbar.</li>
+                    <li>Die <strong>Übersicht</strong> und die <strong>Liquidität</strong> rechnen live mit – kein Speichern nötig zum Rechnen, aber zum dauerhaften Sichern auf „Plan speichern".</li>
+                </ul>
+
+                <p style="font-weight:700;margin-bottom:.25rem;">1. Stammdaten ausfüllen</p>
+                <ul style="margin:0 0 1rem 1.1rem;list-style:disc;">
+                    <li><strong>Planjahr</strong> und <strong>Planung ab Monat</strong> – wichtig bei Neugründung, wenn die Station nicht ab 01.01. übernommen wird (das erste Jahr wird anteilig heruntergerechnet).</li>
+                    <li><strong>Gewerbesteuer</strong> einbeziehen + Hebesatz → handels- und steuerrechtlicher Gewinn.</li>
+                    <li><strong>Mehrjahresplanung</strong> über drei Jahre zeigt Potenziale und Entwicklung.</li>
+                    <li><strong>Unternehmer- und Tankstellendaten</strong>: Backshop, Gastronomie, Kaffee, Nebengeschäfte, Unternehmer-PKW, digitale Buchhaltung usw.</li>
+                    <li><strong>Öffnungszeiten</strong> dienen (im nächsten Schritt) der automatischen Berechnung der Personalstunden.</li>
+                </ul>
+
+                <p style="font-weight:700;margin-bottom:.25rem;">2. Umsatzplan</p>
+                <ul style="margin:0 0 1rem 1.1rem;list-style:disc;">
+                    <li>Geplanten Jahresumsatz und die Margen (BVD %) eintragen; kein Umsatz → 0,00.</li>
+                    <li>Bei Mehrjahresplanung können die Folgejahre über Steigerungen fortgeschrieben werden.</li>
+                </ul>
+
+                <p style="font-weight:700;margin-bottom:.25rem;">3. Kosten-, Lohn- und Pachtplan</p>
+                <ul style="margin:0 0 1rem 1.1rem;list-style:disc;">
+                    <li>Geplante Jahreskosten eintragen; Personalkosten, Pacht und Zinsen werden aus Lohn-, Pacht- und Finanzierungs-Tab berechnet.</li>
+                </ul>
+
+                <p style="font-weight:700;margin-bottom:.4rem;">Ø Stundenlohn Einzelhandel nach Bundesland (Richtwert, Stand 2022)</p>
+                <div style="overflow-x:auto;">
+                    <table style="border-collapse:collapse;font-size:.82rem;">
+                        @php
+                            $loehne = [
+                                'Baden-Württemberg' => '16,97', 'Bayern' => '16,23', 'Berlin' => '16,14',
+                                'Brandenburg' => '13,06', 'Bremen' => '16,01', 'Hamburg' => '18,50',
+                                'Hessen' => '17,59', 'Mecklenburg-Vorpommern' => '12,70', 'Niedersachsen' => '15,23',
+                                'Nordrhein-Westfalen' => '16,96', 'Rheinland-Pfalz' => '15,53', 'Saarland' => '15,48',
+                                'Sachsen' => '13,41', 'Sachsen-Anhalt' => '12,26', 'Schleswig-Holstein' => '14,53',
+                                'Thüringen' => '12,72',
+                            ];
+                        @endphp
+                        <tbody>
+                            @foreach ($loehne as $land => $lohn)
+                                <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                    <td style="padding:.2rem .8rem .2rem 0;">{{ $land }}</td>
+                                    <td style="padding:.2rem 0;text-align:right;">{{ $lohn }} €</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <p style="font-size:.8rem;opacity:.6;margin-top:.6rem;">Ø Einzelhandel gesamt 2022: 16,10 €. Backshop-Zusatzstunden richten sich nach dem Umsatz (bis 15.000 € = 1 Std/Tag, je weitere 10.000 € + 1 Std, max. 8).</p>
+            </div>
+        </x-filament::section>
+        </div>
+
         <div x-show="tab==='stammdaten'" x-cloak>
         {{-- Stammdaten --}}
         <x-filament::section>
-            <x-slot name="heading">Stammdaten</x-slot>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;">
-                <div><label style="font-size:.8rem;font-weight:600;">Titel</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.title" style="{{ $inpTxt }}"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">TS-Name</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.ts_name" style="{{ $inpTxt }}"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Adresse</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.address" style="{{ $inpTxt }}"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">PLZ / Ort</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.city" style="{{ $inpTxt }}"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Erstes Planjahr</label>
-                    <input type="number" wire:model.live="stamm.year_from" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Letztes Planjahr</label>
-                    <input type="number" wire:model.live="stamm.year_to" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Zinssatz Finanzierung (%)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.interest_rate" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Privatentnahme / Jahr (€)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.private_draw" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Anfangsbestand Liquidität (€)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.opening_balance" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">USt-Satz (%)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Tilgung / Jahr (€)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Urlaub / Krankheit (%)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Gewerbesteuer Hebesatz (%)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.gewst_hebesatz" style="{{ $inpTxt }};text-align:right;"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.2rem;">
-                    <input type="checkbox" wire:model.live="stamm.gewst_enabled" id="gewst_enabled" style="width:1.1rem;height:1.1rem;">
-                    <label for="gewst_enabled" style="font-size:.8rem;font-weight:600;">Gewerbesteuer einbeziehen</label>
-                </div>
+            <x-slot name="heading">Stammdaten (Eingabe)</x-slot>
+            @php
+                $lbl = 'font-size:.78rem;font-weight:600;display:block;margin-bottom:.15rem;';
+                $grp = 'font-weight:800;font-size:.95rem;margin:1.4rem 0 .6rem;padding-bottom:.25rem;border-bottom:1px solid rgba(120,120,120,.2);';
+                $grid = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.7rem;';
+                $num = $inpTxt . ';text-align:right;';
+            @endphp
+
+            {{-- Allgemein --}}
+            <div style="{{ $grp }};margin-top:0;">Allgemein</div>
+            <div style="{{ $grid }}">
+                <div><label style="{{ $lbl }}">Erstes Planjahr</label><input type="number" wire:model.live="stamm.year_from" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Letztes Planjahr</label><input type="number" wire:model.live="stamm.year_to" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Planung ab Monat (1–12)</label><input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.plan_start_month" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Gewerbesteuer Hebesatz (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.gewst_hebesatz" style="{{ $num }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;">
+                    <input type="checkbox" wire:model.live="stamm.gewst_enabled" id="f_gewst" style="width:1.05rem;height:1.05rem;">
+                    <label for="f_gewst" style="font-size:.8rem;font-weight:600;">Gewerbesteuer einbeziehen</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;">
+                    <input type="checkbox" wire:model.live="stamm.neugruendung" id="f_neu" style="width:1.05rem;height:1.05rem;">
+                    <label for="f_neu" style="font-size:.8rem;font-weight:600;">Neugründung</label></div>
+            </div>
+
+            {{-- Unternehmerdaten --}}
+            <div style="{{ $grp }}">Unternehmerdaten</div>
+            <div style="{{ $grid }}">
+                <div><label style="{{ $lbl }}">Mineralölgesellschaft</label><input type="text" wire:model.live.debounce.400ms="stamm.mineraloel" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Titel des Plans</label><input type="text" wire:model.live.debounce.400ms="stamm.title" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Name Inhaber</label><input type="text" wire:model.live.debounce.400ms="stamm.inhaber" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">TS-Name</label><input type="text" wire:model.live.debounce.400ms="stamm.ts_name" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Straße / Hausnummer</label><input type="text" wire:model.live.debounce.400ms="stamm.address" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">PLZ / Ort</label><input type="text" wire:model.live.debounce.400ms="stamm.city" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Bundesland</label><input type="text" wire:model.live.debounce.400ms="stamm.bundesland" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Telefon</label><input type="text" wire:model.live.debounce.400ms="stamm.telefon" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">E-Mail</label><input type="text" wire:model.live.debounce.400ms="stamm.email" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Unternehmensform</label>
+                    <select wire:model.live="stamm.unternehmensform" style="{{ $inpTxt }};text-align:left;">
+                        @foreach (['Einzelunternehmen','GbR','GmbH','GmbH & Co. KG','UG (haftungsbeschränkt)','OHG','KG'] as $uf)
+                            <option value="{{ $uf }}">{{ $uf }}</option>
+                        @endforeach
+                    </select></div>
+                <div><label style="{{ $lbl }}">Mehrfachbetreiber? / Anz. Stationen</label><input type="text" wire:model.live.debounce.400ms="stamm.mehrfachbetreiber" style="{{ $inpTxt }}"></div>
+            </div>
+
+            {{-- Tankstellendaten --}}
+            <div style="{{ $grp }}">Tankstellendaten</div>
+            <div style="{{ $grid }}">
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.backshop" id="f_backshop" style="width:1.05rem;height:1.05rem;"><label for="f_backshop" style="font-size:.8rem;font-weight:600;">Backshop?</label></div>
+                <div><label style="{{ $lbl }}">% Verderb Backshop</label><input type="text" wire:model.live.debounce.400ms="stamm.verderb_backshop_pct" style="{{ $num }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.gastronomie" id="f_gastro" style="width:1.05rem;height:1.05rem;"><label for="f_gastro" style="font-size:.8rem;font-weight:600;">Gastronomie?</label></div>
+                <div><label style="{{ $lbl }}">% Verderb Gastro</label><input type="text" wire:model.live.debounce.400ms="stamm.verderb_gastro_pct" style="{{ $num }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.pfandschlupf" id="f_pfand" style="width:1.05rem;height:1.05rem;"><label for="f_pfand" style="font-size:.8rem;font-weight:600;">Pfandschlupf berechnen?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.kaffeeautomat" id="f_kaffee" style="width:1.05rem;height:1.05rem;"><label for="f_kaffee" style="font-size:.8rem;font-weight:600;">Kaffeeautomat?</label></div>
+                <div><label style="{{ $lbl }}">Kaffeekonzept</label><input type="text" wire:model.live.debounce.400ms="stamm.kaffeekonzept" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Anzahl Terminal</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_terminal" style="{{ $num }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.mautstation" id="f_maut" style="width:1.05rem;height:1.05rem;"><label for="f_maut" style="font-size:.8rem;font-weight:600;">Mautstation?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.nebengeschaefte" id="f_neben" style="width:1.05rem;height:1.05rem;"><label for="f_neben" style="font-size:.8rem;font-weight:600;">Nebengeschäfte? (außer Lotto/Paket)</label></div>
+                <div><label style="{{ $lbl }}">Art Nebengeschäft 1</label><input type="text" wire:model.live.debounce.400ms="stamm.nebengeschaeft1" style="{{ $inpTxt }}"></div>
+                <div><label style="{{ $lbl }}">Art Nebengeschäft 2</label><input type="text" wire:model.live.debounce.400ms="stamm.nebengeschaeft2" style="{{ $inpTxt }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.unternehmer_pkw" id="f_pkw" style="width:1.05rem;height:1.05rem;"><label for="f_pkw" style="font-size:.8rem;font-weight:600;">Unternehmer-PKW vorhanden?</label></div>
+                <div><label style="{{ $lbl }}">Bruttolistenpreis (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.bruttolistenpreis" style="{{ $num }}"></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.digitale_buchhaltung" id="f_dbh" style="width:1.05rem;height:1.05rem;"><label for="f_dbh" style="font-size:.8rem;font-weight:600;">Digitale Buchhaltung?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.mandant_contax" id="f_contax" style="width:1.05rem;height:1.05rem;"><label for="f_contax" style="font-size:.8rem;font-weight:600;">Mandant Contax?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.verfahrensdoku" id="f_vdoku" style="width:1.05rem;height:1.05rem;"><label for="f_vdoku" style="font-size:.8rem;font-weight:600;">Verfahrensdokumentation nötig?</label></div>
+            </div>
+
+            {{-- Waschgeschäft & Kfz --}}
+            <div style="{{ $grp }}">Waschgeschäft & Kfz-Dienstleistungen</div>
+            <div style="{{ $grid }}">
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.werkstatt" id="f_werk" style="width:1.05rem;height:1.05rem;"><label for="f_werk" style="font-size:.8rem;font-weight:600;">Werkstatt / Kfz-Aufbereitung?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.muenzgeraete" id="f_muenz" style="width:1.05rem;height:1.05rem;"><label for="f_muenz" style="font-size:.8rem;font-weight:600;">Münzgeräte?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.waschanlage" id="f_wasch" style="width:1.05rem;height:1.05rem;"><label for="f_wasch" style="font-size:.8rem;font-weight:600;">Waschanlage?</label></div>
+                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.wasseraufbereitung" id="f_wasser" style="width:1.05rem;height:1.05rem;"><label for="f_wasser" style="font-size:.8rem;font-weight:600;">Wasseraufbereitung?</label></div>
+                <div><label style="{{ $lbl }}">Anzahl Wäschen</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_waeschen" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Ø Waschpreis (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.waschpreis" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Anzahl Wäschen 1</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_waeschen_1" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Waschpreis / Wäsche 1 (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.waschpreis_1" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Anzahl Wäschen 2</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_waeschen_2" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Waschpreis / Wäsche 2 (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.waschpreis_2" style="{{ $num }}"></div>
+            </div>
+
+            {{-- Finanz- & Liquiditätsannahmen --}}
+            <div style="{{ $grp }}">Finanz- & Liquiditätsannahmen</div>
+            <div style="{{ $grid }}">
+                <div><label style="{{ $lbl }}">Zinssatz Finanzierung (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.interest_rate" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Tilgung / Jahr (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.annual_repayment" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Anfangsbestand Liquidität (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.opening_balance" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">USt-Satz (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Privatentnahme / Jahr (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.private_draw" style="{{ $num }}"></div>
+                <div><label style="{{ $lbl }}">Urlaub / Krankheit (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $num }}"></div>
             </div>
         </x-filament::section>
         </div>

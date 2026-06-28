@@ -274,14 +274,26 @@ class BusinessPlanTest extends TestCase
         $this->assertNotNull($plan);
         $this->assertNotEmpty($plan->lines);
 
-        // Deutsche Zahleneingabe setzen und speichern.
+        // Deutsche Zahleneingabe + Eingabe-Maske-Felder setzen und speichern.
         $line = $plan->lines()->where('label', 'Getränke')->first();
         $comp->set("rows.{$line->id}.values.2026.amount", '71.500,00')
             ->set("rows.{$line->id}.values.2026.margin", '52')
+            ->set('stamm.inhaber', 'Christian Welle')
+            ->set('stamm.backshop', true)
+            ->set('stamm.kaffeekonzept', 'Tchibo')
+            ->set('stamm.anzahl_waeschen', '4600')
+            ->set('stamm.plan_start_month', '7')
             ->call('save');
 
         $val = $line->values()->where('year', 2026)->first();
         $this->assertEqualsWithDelta(71500, (float) $val->amount, 0.01);
         $this->assertEqualsWithDelta(52, (float) $val->margin, 0.01);
+
+        $plan->refresh();
+        $this->assertSame('Christian Welle', $plan->inhaber);
+        $this->assertTrue($plan->backshop);
+        $this->assertSame('Tchibo', $plan->kaffeekonzept);
+        $this->assertSame(4600, $plan->anzahl_waeschen);
+        $this->assertSame(7, $plan->plan_start_month);
     }
 }
