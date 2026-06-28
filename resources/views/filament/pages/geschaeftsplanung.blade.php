@@ -129,16 +129,18 @@
         <x-filament::section>
             <x-slot name="heading">Stammdaten (Eingabe)</x-slot>
             @php
-                $lbl = 'font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;opacity:.85;';
-                $grp = 'font-weight:800;font-size:1rem;margin:1.6rem 0 .7rem;padding-bottom:.3rem;border-bottom:2px solid rgba(5,150,105,.35);';
-                $grid = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.9rem 1.1rem;align-items:start;';
-                $toggles = 'display:flex;flex-wrap:wrap;gap:.7rem 1.6rem;margin:.1rem 0 .3rem;';
+                $lbl = 'font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;opacity:.8;';
+                $card = 'background:rgba(125,125,125,.04);border:1px solid rgba(125,125,125,.15);border-radius:.75rem;padding:1.1rem 1.25rem;margin-bottom:1rem;';
+                $grp = 'font-weight:700;font-size:.95rem;color:#059669;margin:0 0 .9rem;';
+                $grid = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem 1.25rem;align-items:start;';
+                $toggles = 'display:flex;flex-wrap:wrap;gap:.6rem 1.6rem;margin:0 0 1rem;';
                 $toggle = 'display:flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:600;cursor:pointer;';
                 $num = $inpTxt . ';text-align:right;';
             @endphp
 
             {{-- Allgemein --}}
-            <div style="{{ $grp }};margin-top:0;">Allgemein</div>
+            <div style="{{ $card }}">
+            <div style="{{ $grp }}">Allgemein</div>
             <div style="{{ $grid }}">
                 <div><label style="{{ $lbl }}">Erstes Planjahr</label><input type="number" wire:model.live="stamm.year_from" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Letztes Planjahr</label><input type="number" wire:model.live="stamm.year_to" style="{{ $num }}"></div>
@@ -150,7 +152,10 @@
                 <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.neugruendung" style="width:1.05rem;height:1.05rem;"> Neugründung</label>
             </div>
 
+            </div>
+
             {{-- Unternehmerdaten --}}
+            <div style="{{ $card }}">
             <div style="{{ $grp }}">Unternehmerdaten</div>
             <div style="{{ $grid }}">
                 <div><label style="{{ $lbl }}">Mineralölgesellschaft</label><input type="text" wire:model.live.debounce.400ms="stamm.mineraloel" style="{{ $inpTxt }}"></div>
@@ -171,7 +176,10 @@
                 <div><label style="{{ $lbl }}">Mehrfachbetreiber? / Anz. Stationen</label><input type="text" wire:model.live.debounce.400ms="stamm.mehrfachbetreiber" style="{{ $inpTxt }}"></div>
             </div>
 
+            </div>
+
             {{-- Tankstellendaten --}}
+            <div style="{{ $card }}">
             <div style="{{ $grp }}">Tankstellendaten</div>
             <div style="{{ $toggles }}">
                 <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.backshop" style="width:1.05rem;height:1.05rem;"> Backshop</label>
@@ -195,7 +203,10 @@
                 <div><label style="{{ $lbl }}">Bruttolistenpreis Unternehmer-PKW (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.bruttolistenpreis" style="{{ $num }}"></div>
             </div>
 
+            </div>
+
             {{-- Waschgeschäft & Kfz --}}
+            <div style="{{ $card }}">
             <div style="{{ $grp }}">Waschgeschäft & Kfz-Dienstleistungen</div>
             <div style="{{ $toggles }}">
                 <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.werkstatt" style="width:1.05rem;height:1.05rem;"> Werkstatt / Kfz-Aufbereitung</label>
@@ -212,7 +223,10 @@
                 <div><label style="{{ $lbl }}">Waschpreis / Wäsche 2 (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.waschpreis_2" style="{{ $num }}"></div>
             </div>
 
+            </div>
+
             {{-- Finanz- & Liquiditätsannahmen --}}
+            <div style="{{ $card }}">
             <div style="{{ $grp }}">Finanz- & Liquiditätsannahmen</div>
             <div style="{{ $grid }}">
                 <div><label style="{{ $lbl }}">Zinssatz Finanzierung (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.interest_rate" style="{{ $num }}"></div>
@@ -221,6 +235,7 @@
                 <div><label style="{{ $lbl }}">USt-Satz (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Privatentnahme / Jahr (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.private_draw" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Urlaub / Krankheit (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $num }}"></div>
+            </div>
             </div>
         </x-filament::section>
         </div>
