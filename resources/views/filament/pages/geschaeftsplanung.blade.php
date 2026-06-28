@@ -40,27 +40,27 @@
             <x-slot name="heading">Stammdaten</x-slot>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;">
                 <div><label style="font-size:.8rem;font-weight:600;">Titel</label>
-                    <input type="text" wire:model.blur="stamm.title" style="{{ $inpTxt }}"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.title" style="{{ $inpTxt }}"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">TS-Name</label>
-                    <input type="text" wire:model.blur="stamm.ts_name" style="{{ $inpTxt }}"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.ts_name" style="{{ $inpTxt }}"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Adresse</label>
-                    <input type="text" wire:model.blur="stamm.address" style="{{ $inpTxt }}"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.address" style="{{ $inpTxt }}"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">PLZ / Ort</label>
-                    <input type="text" wire:model.blur="stamm.city" style="{{ $inpTxt }}"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.city" style="{{ $inpTxt }}"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Erstes Planjahr</label>
                     <input type="number" wire:model.live="stamm.year_from" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Letztes Planjahr</label>
                     <input type="number" wire:model.live="stamm.year_to" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Darlehensaufnahme (€)</label>
-                    <input type="text" wire:model.blur="stamm.loan_amount" style="{{ $inpTxt }};text-align:right;"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.loan_amount" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Privatentnahme / Jahr (€)</label>
-                    <input type="text" wire:model.blur="stamm.private_draw" style="{{ $inpTxt }};text-align:right;"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.private_draw" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Anfangsbestand Liquidität (€)</label>
-                    <input type="text" wire:model.blur="stamm.opening_balance" style="{{ $inpTxt }};text-align:right;"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.opening_balance" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">USt-Satz (%)</label>
-                    <input type="text" wire:model.blur="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Tilgung / Jahr (€)</label>
-                    <input type="text" wire:model.blur="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
             </div>
         </x-filament::section>
 
@@ -132,8 +132,8 @@
                                 <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
                                     <td style="{{ $tdL }}">{{ $row['label'] }}</td>
                                     @foreach ($years as $y)
-                                        <td style="padding:.15rem .25rem;"><input type="text" wire:model.blur="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
-                                        <td style="padding:.15rem .25rem;"><input type="text" wire:model.blur="rows.{{ $id }}.values.{{ $y }}.margin" style="{{ $inp }};min-width:60px;"></td>
+                                        <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
+                                        <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.margin" style="{{ $inp }};min-width:60px;"></td>
                                         <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.7;white-space:nowrap;">{{ $money($this->rowRohertrag($row, $y)) }}</td>
                                     @endforeach
                                 </tr>
@@ -173,7 +173,7 @@
                             <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
                                 <td style="{{ $tdL }}">{{ $row['label'] }}</td>
                                 @foreach ($years as $y)
-                                    <td style="padding:.15rem .25rem;"><input type="text" wire:model.blur="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
+                                    <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
                                 @endforeach
                             </tr>
                         @endforeach
