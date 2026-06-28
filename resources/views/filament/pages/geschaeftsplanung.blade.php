@@ -35,7 +35,13 @@
     </x-filament::section>
 
     @if ($planId && $years)
-        <style>[x-cloak]{display:none!important}</style>
+        <style>
+            [x-cloak]{display:none!important}
+            .gp-tabs{display:flex;flex-wrap:wrap;gap:.25rem;padding:.35rem;background:rgba(125,125,125,.12);border-radius:.75rem;margin-bottom:1.25rem;}
+            .gp-tab{padding:.5rem 1.05rem;border:0;border-radius:.55rem;background:transparent;color:inherit;opacity:.6;font-size:.875rem;font-weight:600;cursor:pointer;transition:background .12s,opacity .12s,color .12s;white-space:nowrap;}
+            .gp-tab:hover{opacity:1;background:rgba(125,125,125,.15);}
+            .gp-tab--active{background:#059669;color:#fff;opacity:1;box-shadow:0 1px 3px rgba(0,0,0,.18);}
+        </style>
         @php
             $tabs = [
                 'stammdaten' => 'Stammdaten',
@@ -49,11 +55,9 @@
             ];
         @endphp
         <div x-data="{ tab: 'stammdaten' }">
-            <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;">
+            <div class="gp-tabs">
                 @foreach ($tabs as $key => $label)
-                    <button type="button" x-on:click="tab='{{ $key }}'"
-                        :style="tab==='{{ $key }}' ? 'background:#059669;color:#fff;border-color:#059669;' : ''"
-                        style="padding:.45rem .9rem;border:1px solid rgba(120,120,120,.3);border-radius:.5rem;font-size:.85rem;font-weight:600;cursor:pointer;background:transparent;">{{ $label }}</button>
+                    <button type="button" class="gp-tab" :class="tab==='{{ $key }}' && 'gp-tab--active'" x-on:click="tab='{{ $key }}'">{{ $label }}</button>
                 @endforeach
             </div>
 
