@@ -129,9 +129,11 @@
         <x-filament::section>
             <x-slot name="heading">Stammdaten (Eingabe)</x-slot>
             @php
-                $lbl = 'font-size:.78rem;font-weight:600;display:block;margin-bottom:.15rem;';
-                $grp = 'font-weight:800;font-size:.95rem;margin:1.4rem 0 .6rem;padding-bottom:.25rem;border-bottom:1px solid rgba(120,120,120,.2);';
-                $grid = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.7rem;';
+                $lbl = 'font-size:.78rem;font-weight:600;display:block;margin-bottom:.2rem;opacity:.85;';
+                $grp = 'font-weight:800;font-size:1rem;margin:1.6rem 0 .7rem;padding-bottom:.3rem;border-bottom:2px solid rgba(5,150,105,.35);';
+                $grid = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.9rem 1.1rem;align-items:start;';
+                $toggles = 'display:flex;flex-wrap:wrap;gap:.7rem 1.6rem;margin:.1rem 0 .3rem;';
+                $toggle = 'display:flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:600;cursor:pointer;';
                 $num = $inpTxt . ';text-align:right;';
             @endphp
 
@@ -142,12 +144,10 @@
                 <div><label style="{{ $lbl }}">Letztes Planjahr</label><input type="number" wire:model.live="stamm.year_to" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Planung ab Monat (1–12)</label><input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.plan_start_month" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Gewerbesteuer Hebesatz (%)</label><input type="text" wire:model.live.debounce.400ms="stamm.gewst_hebesatz" style="{{ $num }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;">
-                    <input type="checkbox" wire:model.live="stamm.gewst_enabled" id="f_gewst" style="width:1.05rem;height:1.05rem;">
-                    <label for="f_gewst" style="font-size:.8rem;font-weight:600;">Gewerbesteuer einbeziehen</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;">
-                    <input type="checkbox" wire:model.live="stamm.neugruendung" id="f_neu" style="width:1.05rem;height:1.05rem;">
-                    <label for="f_neu" style="font-size:.8rem;font-weight:600;">Neugründung</label></div>
+            </div>
+            <div style="{{ $toggles }}">
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.gewst_enabled" style="width:1.05rem;height:1.05rem;"> Gewerbesteuer einbeziehen</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.neugruendung" style="width:1.05rem;height:1.05rem;"> Neugründung</label>
             </div>
 
             {{-- Unternehmerdaten --}}
@@ -173,33 +173,37 @@
 
             {{-- Tankstellendaten --}}
             <div style="{{ $grp }}">Tankstellendaten</div>
+            <div style="{{ $toggles }}">
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.backshop" style="width:1.05rem;height:1.05rem;"> Backshop</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.gastronomie" style="width:1.05rem;height:1.05rem;"> Gastronomie</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.kaffeeautomat" style="width:1.05rem;height:1.05rem;"> Kaffeeautomat</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.pfandschlupf" style="width:1.05rem;height:1.05rem;"> Pfandschlupf berechnen</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.mautstation" style="width:1.05rem;height:1.05rem;"> Mautstation</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.nebengeschaefte" style="width:1.05rem;height:1.05rem;"> Nebengeschäfte (außer Lotto/Paket)</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.unternehmer_pkw" style="width:1.05rem;height:1.05rem;"> Unternehmer-PKW</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.digitale_buchhaltung" style="width:1.05rem;height:1.05rem;"> Digitale Buchhaltung</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.mandant_contax" style="width:1.05rem;height:1.05rem;"> Mandant Contax</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.verfahrensdoku" style="width:1.05rem;height:1.05rem;"> Verfahrensdokumentation nötig</label>
+            </div>
             <div style="{{ $grid }}">
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.backshop" id="f_backshop" style="width:1.05rem;height:1.05rem;"><label for="f_backshop" style="font-size:.8rem;font-weight:600;">Backshop?</label></div>
                 <div><label style="{{ $lbl }}">% Verderb Backshop</label><input type="text" wire:model.live.debounce.400ms="stamm.verderb_backshop_pct" style="{{ $num }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.gastronomie" id="f_gastro" style="width:1.05rem;height:1.05rem;"><label for="f_gastro" style="font-size:.8rem;font-weight:600;">Gastronomie?</label></div>
                 <div><label style="{{ $lbl }}">% Verderb Gastro</label><input type="text" wire:model.live.debounce.400ms="stamm.verderb_gastro_pct" style="{{ $num }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.pfandschlupf" id="f_pfand" style="width:1.05rem;height:1.05rem;"><label for="f_pfand" style="font-size:.8rem;font-weight:600;">Pfandschlupf berechnen?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.kaffeeautomat" id="f_kaffee" style="width:1.05rem;height:1.05rem;"><label for="f_kaffee" style="font-size:.8rem;font-weight:600;">Kaffeeautomat?</label></div>
                 <div><label style="{{ $lbl }}">Kaffeekonzept</label><input type="text" wire:model.live.debounce.400ms="stamm.kaffeekonzept" style="{{ $inpTxt }}"></div>
                 <div><label style="{{ $lbl }}">Anzahl Terminal</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_terminal" style="{{ $num }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.mautstation" id="f_maut" style="width:1.05rem;height:1.05rem;"><label for="f_maut" style="font-size:.8rem;font-weight:600;">Mautstation?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.nebengeschaefte" id="f_neben" style="width:1.05rem;height:1.05rem;"><label for="f_neben" style="font-size:.8rem;font-weight:600;">Nebengeschäfte? (außer Lotto/Paket)</label></div>
                 <div><label style="{{ $lbl }}">Art Nebengeschäft 1</label><input type="text" wire:model.live.debounce.400ms="stamm.nebengeschaeft1" style="{{ $inpTxt }}"></div>
                 <div><label style="{{ $lbl }}">Art Nebengeschäft 2</label><input type="text" wire:model.live.debounce.400ms="stamm.nebengeschaeft2" style="{{ $inpTxt }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.unternehmer_pkw" id="f_pkw" style="width:1.05rem;height:1.05rem;"><label for="f_pkw" style="font-size:.8rem;font-weight:600;">Unternehmer-PKW vorhanden?</label></div>
-                <div><label style="{{ $lbl }}">Bruttolistenpreis (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.bruttolistenpreis" style="{{ $num }}"></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.digitale_buchhaltung" id="f_dbh" style="width:1.05rem;height:1.05rem;"><label for="f_dbh" style="font-size:.8rem;font-weight:600;">Digitale Buchhaltung?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.mandant_contax" id="f_contax" style="width:1.05rem;height:1.05rem;"><label for="f_contax" style="font-size:.8rem;font-weight:600;">Mandant Contax?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.verfahrensdoku" id="f_vdoku" style="width:1.05rem;height:1.05rem;"><label for="f_vdoku" style="font-size:.8rem;font-weight:600;">Verfahrensdokumentation nötig?</label></div>
+                <div><label style="{{ $lbl }}">Bruttolistenpreis Unternehmer-PKW (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.bruttolistenpreis" style="{{ $num }}"></div>
             </div>
 
             {{-- Waschgeschäft & Kfz --}}
             <div style="{{ $grp }}">Waschgeschäft & Kfz-Dienstleistungen</div>
+            <div style="{{ $toggles }}">
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.werkstatt" style="width:1.05rem;height:1.05rem;"> Werkstatt / Kfz-Aufbereitung</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.muenzgeraete" style="width:1.05rem;height:1.05rem;"> Münzgeräte</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.waschanlage" style="width:1.05rem;height:1.05rem;"> Waschanlage</label>
+                <label style="{{ $toggle }}"><input type="checkbox" wire:model.live="stamm.wasseraufbereitung" style="width:1.05rem;height:1.05rem;"> Wasseraufbereitung</label>
+            </div>
             <div style="{{ $grid }}">
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.werkstatt" id="f_werk" style="width:1.05rem;height:1.05rem;"><label for="f_werk" style="font-size:.8rem;font-weight:600;">Werkstatt / Kfz-Aufbereitung?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.muenzgeraete" id="f_muenz" style="width:1.05rem;height:1.05rem;"><label for="f_muenz" style="font-size:.8rem;font-weight:600;">Münzgeräte?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.waschanlage" id="f_wasch" style="width:1.05rem;height:1.05rem;"><label for="f_wasch" style="font-size:.8rem;font-weight:600;">Waschanlage?</label></div>
-                <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.4rem;"><input type="checkbox" wire:model.live="stamm.wasseraufbereitung" id="f_wasser" style="width:1.05rem;height:1.05rem;"><label for="f_wasser" style="font-size:.8rem;font-weight:600;">Wasseraufbereitung?</label></div>
                 <div><label style="{{ $lbl }}">Anzahl Wäschen</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_waeschen" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Ø Waschpreis (€)</label><input type="text" wire:model.live.debounce.400ms="stamm.waschpreis" style="{{ $num }}"></div>
                 <div><label style="{{ $lbl }}">Anzahl Wäschen 1</label><input type="text" wire:model.live.debounce.400ms="stamm.anzahl_waeschen_1" style="{{ $num }}"></div>
