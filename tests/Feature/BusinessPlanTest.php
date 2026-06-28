@@ -128,10 +128,13 @@ class BusinessPlanTest extends TestCase
         $plan = BusinessPlan::create(['title' => 'Pacht', 'year_from' => 2026, 'year_to' => 2027]);
         (new BusinessPlanTemplate())->apply($plan);
 
-        // Umsatzpacht ab Juli 2026, Festpacht 500 €/Monat ab 2027.
-        $plan->update([
-            'umsatzpacht_start_year' => 2026, 'umsatzpacht_start_month' => 7,
-            'festpacht_monthly' => 500, 'festpacht_start_year' => 2027, 'festpacht_start_month' => 1,
+        // Staffelung: Stufe 1 ab Juli 2026 (Faktor 100 %, Festpacht 0),
+        //             Stufe 2 ab Januar 2027 (Faktor 100 %, Festpacht 500 €/Monat).
+        $plan->leaseStages()->where('stage_no', 1)->update([
+            'start_year' => 2026, 'start_month' => 7, 'rate_factor_pct' => 100, 'festpacht_monthly' => 0,
+        ]);
+        $plan->leaseStages()->where('stage_no', 2)->update([
+            'start_year' => 2027, 'start_month' => 1, 'rate_factor_pct' => 100, 'festpacht_monthly' => 500,
         ]);
 
         $setRev = function (string $label, int $year, float $amount) use ($plan) {
@@ -147,7 +150,7 @@ class BusinessPlanTest extends TestCase
         $plan->leaseBases()->where('source', 'wasch')->update(['rate_pct' => 6]);
         $plan->leaseBases()->where('source', 'manual')->update(['rate_pct' => 1, 'manual_amount' => 150000]);
 
-        $lease = $plan->fresh()->load(['lines.values', 'leaseBases'])->lease();
+        $lease = $plan->fresh()->load(['lines.values', 'leaseBases', 'leaseStages'])->lease();
 
         // 2026: (440.000×2,5% + 43.700×6% + 150.000×1%) = 15.122 → ×6/12 = 7.561; Festpacht 0.
         $this->assertEqualsWithDelta(7561, $lease[2026]['total'], 0.01);

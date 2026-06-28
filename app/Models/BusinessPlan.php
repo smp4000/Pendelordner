@@ -68,6 +68,11 @@ class BusinessPlan extends Model
         return $this->hasMany(BusinessPlanLeaseBase::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function leaseStages(): HasMany
+    {
+        return $this->hasMany(BusinessPlanLeaseStage::class)->orderBy('stage_no');
+    }
+
     public function financings(): HasMany
     {
         return $this->hasMany(BusinessPlanFinancing::class)->orderBy('sort_order')->orderBy('id');
@@ -242,13 +247,16 @@ class BusinessPlan extends Model
             $basesByYear[$year] = $rows;
         }
 
-        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, [
-            'up_start_year' => $this->umsatzpacht_start_year,
-            'up_start_month' => (int) ($this->umsatzpacht_start_month ?: 1),
-            'fest_monthly' => (float) $this->festpacht_monthly,
-            'fest_start_year' => $this->festpacht_start_year,
-            'fest_start_month' => (int) ($this->festpacht_start_month ?: 1),
-        ]);
+        $stages = $this->leaseStages
+            ->filter(fn ($s) => $s->start_year)
+            ->map(fn ($s) => [
+                'start_year' => (int) $s->start_year,
+                'start_month' => (int) ($s->start_month ?: 1),
+                'rate_factor' => (float) $s->rate_factor_pct,
+                'festpacht' => (float) $s->festpacht_monthly,
+            ])->values()->all();
+
+        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, $stages);
     }
 
     /** Summe der Kostenzeilen eines Jahres, deren Bezeichnung mit „Personalkosten" beginnt. */

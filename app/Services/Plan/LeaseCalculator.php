@@ -3,32 +3,43 @@
 namespace App\Services\Plan;
 
 /**
- * Berechnet die Stationspacht je Jahr:
- *   Shopumsatzpacht = Summe (Bemessungs-Umsatz × Satz %), anteilig ab Startmonat
- *   Festpacht       = €/Monat × aktive Monate ab Startstufe
- *   Pacht gesamt    = Shopumsatzpacht + Festpacht
+ * Berechnet die Stationspacht je Jahr monatsgenau mit Staffelung:
+ *   - aktiv ist je Monat die Stufe mit dem spätesten Start ≤ (Jahr, Monat)
+ *   - Shopumsatzpacht/Monat = Σ (Bemessungs-Umsatz/12 × Satz % × Stufen-Faktor %)
+ *   - Festpacht/Monat       = Festpacht-Betrag der aktiven Stufe
+ *   - vor der ersten Stufe fällt keine Pacht an
  */
 class LeaseCalculator
 {
     /**
      * @param  array<int, list<array{amount: float, rate: float}>>  $basesByYear  je Jahr die Bemessungsgrundlagen
-     * @param  array{up_start_year: int|null, up_start_month: int, fest_monthly: float, fest_start_year: int|null, fest_start_month: int}  $s
+     * @param  list<array{start_year: int, start_month: int, rate_factor: float, festpacht: float}>  $stages  nur Stufen mit gesetztem Start
      * @return array<int, array{umsatzpacht: float, festpacht: float, total: float}>
      */
-    public static function compute(array $basesByYear, array $s): array
+    public static function compute(array $basesByYear, array $stages): array
     {
+        // Stufen nach Startzeitpunkt sortieren.
+        usort($stages, fn ($a, $b) => [$a['start_year'], $a['start_month']] <=> [$b['start_year'], $b['start_month']]);
+
         $out = [];
         foreach ($basesByYear as $year => $bases) {
-            $upFull = 0.0;
+            $umsatzpacht = 0.0;
+            $festpacht = 0.0;
+
+            // Voller Monatswert der Umsatzpacht bei Faktor 100 %.
+            $fullMonth = 0.0;
             foreach ($bases as $b) {
-                $upFull += (float) $b['amount'] * (float) $b['rate'] / 100;
+                $fullMonth += (float) $b['amount'] / 12 * (float) $b['rate'] / 100;
             }
 
-            $upMonths = self::activeMonths($year, $s['up_start_year'], (int) $s['up_start_month']);
-            $umsatzpacht = $upFull * $upMonths / 12;
-
-            $fpMonths = self::activeMonths($year, $s['fest_start_year'], (int) $s['fest_start_month']);
-            $festpacht = (float) $s['fest_monthly'] * $fpMonths;
+            for ($m = 1; $m <= 12; $m++) {
+                $stage = self::activeStage($stages, $year, $m);
+                if ($stage === null) {
+                    continue;
+                }
+                $umsatzpacht += $fullMonth * (float) $stage['rate_factor'] / 100;
+                $festpacht += (float) $stage['festpacht'];
+            }
 
             $out[$year] = [
                 'umsatzpacht' => round($umsatzpacht, 2),
@@ -40,19 +51,16 @@ class LeaseCalculator
         return $out;
     }
 
-    /** Anzahl aktiver Monate eines Jahres ab (startYear, startMonth). */
-    private static function activeMonths(int $year, ?int $startYear, int $startMonth): int
+    /** Die im Monat aktive Stufe (späteste mit Start ≤ Jahr/Monat) oder null. */
+    private static function activeStage(array $stages, int $year, int $month): ?array
     {
-        if ($startYear === null) {
-            return 12;            // kein Start gesetzt -> ganzjährig
-        }
-        if ($year < $startYear) {
-            return 0;
-        }
-        if ($year > $startYear) {
-            return 12;
+        $active = null;
+        foreach ($stages as $s) {
+            if ($s['start_year'] < $year || ($s['start_year'] === $year && $s['start_month'] <= $month)) {
+                $active = $s;   // Stufen sind aufsteigend sortiert -> letzte passende gewinnt
+            }
         }
 
-        return max(0, 12 - max(1, $startMonth) + 1);
+        return $active;
     }
 }

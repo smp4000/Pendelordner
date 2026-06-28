@@ -318,17 +318,31 @@
             <x-slot name="heading">Pachtberechnung</x-slot>
             <x-slot name="description">Stationspacht = Shopumsatzpacht (Bemessungs-Umsatz × Satz, anteilig ab Startmonat) + Festpacht (€/Monat ab Startstufe). Fließt in die Kostenposition „Pacht - Station".</x-slot>
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:1rem;">
-                <div><label style="font-size:.8rem;font-weight:600;">Umsatzpacht ab Monat (1–12)</label>
-                    <input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.umsatzpacht_start_month" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Umsatzpacht ab Jahr</label>
-                    <input type="number" wire:model.live.debounce.400ms="stamm.umsatzpacht_start_year" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Festpacht (€ / Monat)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.festpacht_monthly" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Festpacht ab Monat (1–12)</label>
-                    <input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.festpacht_start_month" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Festpacht ab Jahr</label>
-                    <input type="number" wire:model.live.debounce.400ms="stamm.festpacht_start_year" style="{{ $inpTxt }};text-align:right;"></div>
+            <div style="overflow-x:auto;margin-bottom:1rem;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(120,120,120,.25);">
+                            <th style="{{ $th }};text-align:left;">Stufe</th>
+                            <th style="{{ $th }}">ab Jahr</th>
+                            <th style="{{ $th }}">ab Monat</th>
+                            <th style="{{ $th }}">Satz-Faktor %</th>
+                            <th style="{{ $th }}">Festpacht € / Monat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (collect($leaseStages) as $s)
+                            @php $sgid = $s['id']; @endphp
+                            <tr style="border-bottom:1px solid rgba(120,120,120,.1);">
+                                <td style="{{ $tdL }}">{{ $s['stage_no'] }}. Stufe</td>
+                                <td style="padding:.15rem .2rem;"><input type="number" placeholder="—" wire:model.live.debounce.400ms="leaseStages.{{ $sgid }}.start_year" style="{{ $inp }};min-width:70px;"></td>
+                                <td style="padding:.15rem .2rem;"><input type="number" min="1" max="12" wire:model.live.debounce.400ms="leaseStages.{{ $sgid }}.start_month" style="{{ $inp }};min-width:55px;"></td>
+                                <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="leaseStages.{{ $sgid }}.rate_factor" style="{{ $inp }};min-width:70px;"></td>
+                                <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="leaseStages.{{ $sgid }}.festpacht" style="{{ $inp }}"></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <div style="font-size:.75rem;opacity:.6;margin-top:.4rem;">Leeres „ab Jahr" = Stufe inaktiv. Aktiv ist je Monat die Stufe mit dem spätesten Start. Satz-Faktor 100 % = volle Umsatzpachtsätze; z. B. 0 % = keine Umsatzpacht, 120 % = höhere Stufe.</div>
             </div>
 
             <div style="overflow-x:auto;">

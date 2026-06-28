@@ -162,6 +162,17 @@ class BusinessPlanTemplate
             'festpacht_start_year' => $plan->year_from,
         ]);
 
+        // Pacht-Stufen (1.–4.): erste Stufe ab Planbeginn, Rest leer.
+        for ($n = 1; $n <= 4; $n++) {
+            $plan->leaseStages()->create([
+                'stage_no' => $n,
+                'start_year' => $n === 1 ? $plan->year_from : null,
+                'start_month' => 1,
+                'rate_factor_pct' => 100,
+                'festpacht_monthly' => 0,
+            ]);
+        }
+
         // Kapitalbedarf-Positionen (Finanzierung).
         foreach (self::FINANCINGS as $i => [$label, $type]) {
             $plan->financings()->create([
@@ -198,6 +209,47 @@ class BusinessPlanTemplate
             foreach ($years as $year) {
                 $line->values()->create(['year' => $year, 'amount' => 0, 'margin' => null]);
             }
+        }
+    }
+
+    /**
+     * Legt für bestehende Pläne ohne Pacht-Stufen vier Stufen an und übernimmt
+     * dabei die alten Einzelfelder (Umsatzpacht-Start, Festpacht). Idempotent.
+     */
+    public function ensureLeaseStages(BusinessPlan $plan): void
+    {
+        if ($plan->leaseStages()->exists()) {
+            return;
+        }
+
+        $upYear = $plan->umsatzpacht_start_year ?: $plan->year_from;
+        $upMonth = (int) ($plan->umsatzpacht_start_month ?: 1);
+        $festMonthly = (float) $plan->festpacht_monthly;
+        $festYear = $plan->festpacht_start_year ?: $upYear;
+        $festMonth = (int) ($plan->festpacht_start_month ?: 1);
+        $sameStart = ($festYear === $upYear && $festMonth === $upMonth);
+
+        $stages = [[
+            'start_year' => $upYear, 'start_month' => $upMonth,
+            'rate_factor_pct' => 100,
+            'festpacht_monthly' => ($festMonthly > 0 && $sameStart) ? $festMonthly : 0,
+        ]];
+        if ($festMonthly > 0 && ! $sameStart) {
+            $stages[] = [
+                'start_year' => $festYear, 'start_month' => $festMonth,
+                'rate_factor_pct' => 100, 'festpacht_monthly' => $festMonthly,
+            ];
+        }
+
+        $n = 1;
+        foreach ($stages as $st) {
+            $plan->leaseStages()->create(array_merge(['stage_no' => $n++], $st));
+        }
+        while ($n <= 4) {
+            $plan->leaseStages()->create([
+                'stage_no' => $n++, 'start_year' => null, 'start_month' => 1,
+                'rate_factor_pct' => 100, 'festpacht_monthly' => 0,
+            ]);
         }
     }
 

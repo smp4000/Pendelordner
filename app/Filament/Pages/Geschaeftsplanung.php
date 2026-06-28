@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\BusinessPlan;
 use App\Models\BusinessPlanFinancing;
 use App\Models\BusinessPlanLeaseBase;
+use App\Models\BusinessPlanLeaseStage;
 use App\Models\BusinessPlanLineValue;
 use App\Models\BusinessPlanStaffValue;
 use App\Models\Business;
@@ -69,6 +70,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
      * @var array<int, array{id:int, label:string, source:string, rate:string, manual:string}>
      */
     public array $leaseBases = [];
+
+    /**
+     * Pacht-Stufen (1.–4.).
+     *
+     * @var array<int, array{id:int, stage_no:int, start_year:string, start_month:string, rate_factor:string, festpacht:string}>
+     */
+    public array $leaseStages = [];
 
     /**
      * Kapitalbedarf-Positionen der Finanzierung.
@@ -230,16 +238,20 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             $basesByYear[$year] = $rows;
         }
 
-        $upSY = ($this->stamm['umsatzpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['umsatzpacht_start_year'] : null;
-        $fpSY = ($this->stamm['festpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['festpacht_start_year'] : null;
+        $stages = [];
+        foreach ($this->leaseStages as $s) {
+            if (($s['start_year'] ?? '') === '') {
+                continue;
+            }
+            $stages[] = [
+                'start_year' => (int) $s['start_year'],
+                'start_month' => (int) ($s['start_month'] ?: 1),
+                'rate_factor' => $this->num($s['rate_factor'] ?? 100),
+                'festpacht' => $this->num($s['festpacht'] ?? 0),
+            ];
+        }
 
-        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, [
-            'up_start_year' => $upSY,
-            'up_start_month' => (int) ($this->stamm['umsatzpacht_start_month'] ?? 1),
-            'fest_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
-            'fest_start_year' => $fpSY,
-            'fest_start_month' => (int) ($this->stamm['festpacht_start_month'] ?? 1),
-        ]);
+        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, $stages);
     }
 
     /** Kapitalbedarf = Summe der Finanzierungspositionen (live). */
@@ -487,6 +499,16 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             ]);
         }
 
+        // Pacht-Stufen speichern.
+        foreach ($this->leaseStages as $s) {
+            BusinessPlanLeaseStage::where('id', $s['id'])->update([
+                'start_year' => ($s['start_year'] ?? '') !== '' ? (int) $s['start_year'] : null,
+                'start_month' => (int) ($s['start_month'] ?? 1) ?: 1,
+                'rate_factor_pct' => $this->num($s['rate_factor'] ?? 100),
+                'festpacht_monthly' => $this->num($s['festpacht'] ?? 0),
+            ]);
+        }
+
         // Kapitalbedarf-Positionen speichern.
         foreach ($this->financings as $f) {
             BusinessPlanFinancing::where('id', $f['id'])->update([
@@ -556,6 +578,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         $this->rows = [];
         $this->staff = [];
         $this->leaseBases = [];
+        $this->leaseStages = [];
         $this->financings = [];
 
         $plan = $this->planId ? BusinessPlan::find($this->planId) : null;
@@ -563,9 +586,11 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             return;
         }
 
-        // Bestehende Pläne um fehlende Lohnbereiche (Werkstatt/Gastro) ergänzen.
-        (new \App\Services\Plan\BusinessPlanTemplate())->ensureStaffAreas($plan);
-        $plan->load(['lines.values', 'staffLines.values', 'leaseBases', 'financings']);
+        // Bestehende Pläne um fehlende Lohnbereiche und Pacht-Stufen ergänzen.
+        $template = new \App\Services\Plan\BusinessPlanTemplate();
+        $template->ensureStaffAreas($plan);
+        $template->ensureLeaseStages($plan);
+        $plan->load(['lines.values', 'staffLines.values', 'leaseBases', 'leaseStages', 'financings']);
 
         $this->stamm = [
             'title' => $plan->title,
@@ -617,6 +642,17 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
                 'source' => $base->source,
                 'rate' => $this->fmt($base->rate_pct),
                 'manual' => $this->fmt($base->manual_amount),
+            ];
+        }
+
+        foreach ($plan->leaseStages as $st) {
+            $this->leaseStages[$st->id] = [
+                'id' => $st->id,
+                'stage_no' => $st->stage_no,
+                'start_year' => $st->start_year ? (string) $st->start_year : '',
+                'start_month' => (string) ($st->start_month ?: 1),
+                'rate_factor' => $this->fmt($st->rate_factor_pct),
+                'festpacht' => $this->fmt($st->festpacht_monthly),
             ];
         }
 
