@@ -15,6 +15,7 @@
         "nemiah/php-fints": "^4.1",
         "setasign/fpdf": "^1.9",
         "setasign/fpdi": "^2.6",
+        "setasign/fpdi_pdf-parser": "^2.1",
         "smalot/pdfparser": "^2.12",
         "thiagoalessio/tesseract_ocr": "^2.13",
         "webklex/laravel-imap": "^6.2"
@@ -92,5 +93,10 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "setasign",
+        "type": "composer",
+        "url": "https://www.setasign.com/downloads/"
+    }]
 }

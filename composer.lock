@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7875ca4e2311a0d6d66111b2d3a7cb7f",
+    "content-hash": "1b571b7c1570553bde45e1acd29f58f1",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -5678,6 +5678,30 @@
                 }
             ],
             "time": "2026-06-11T10:37:24+00:00"
+        },
+        {
+            "name": "setasign/fpdi_pdf-parser",
+            "version": "2.1.6",
+            "dist": {
+                "type": "zip",
+                "url": "https://www.setasign.com/downloads/7082320/FPDI_PDF-Parser-2.1.6.zip"
+            },
+            "require": {
+                "setasign/fpdi": "^2.6.6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "setasign\\FpdiPdfParser\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "support": {
+                "email": "support@setasign.com"
+            },
+            "time": "2026-03-13T00:00:00+00:00"
         },
         {
             "name": "smalot/pdfparser",
