@@ -37,6 +37,7 @@ class BusinessPlan extends Model
         'feiertag_pct' => 'decimal:2',
         'nacht_hours' => 'decimal:2',
         'nacht_pct' => 'decimal:2',
+        'wage_growth_pct' => 'decimal:2',
         'umsatzpacht_start_year' => 'integer',
         'umsatzpacht_start_month' => 'integer',
         'festpacht_monthly' => 'decimal:2',
@@ -148,15 +149,27 @@ class BusinessPlan extends Model
      */
     public function payroll(): array
     {
+        $years = $this->years();
+        $firstYear = $years[0];
+        $growth = (float) $this->wage_growth_pct / 100;
+
         $rowsByYear = [];
-        foreach ($this->years() as $year) {
+        foreach ($years as $idx => $year) {
             $rows = [];
             foreach ($this->staffLines as $line) {
                 $v = $line->values->firstWhere('year', $year);
+                // Lohnentwicklung: bei Steigerung > 0 wird der Lohn aus dem ersten
+                // Planjahr hochgerechnet, sonst der je Jahr erfasste Lohn genutzt.
+                if ($growth > 0) {
+                    $base = (float) ($line->values->firstWhere('year', $firstYear)->hourly_wage ?? 0);
+                    $wage = $base * (1 + $growth) ** $idx;
+                } else {
+                    $wage = (float) ($v->hourly_wage ?? 0);
+                }
                 $rows[] = [
                     'hours_per_day' => (float) ($v->hours_per_day ?? 0),
                     'days_per_week' => (float) ($v->days_per_week ?? 0),
-                    'hourly_wage' => (float) ($v->hourly_wage ?? 0),
+                    'hourly_wage' => $wage,
                     'is_deduction' => (bool) $line->is_deduction,
                 ];
             }

@@ -119,13 +119,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     public function getPayrollProperty(): array
     {
         $rowsByYear = [];
-        foreach ($this->years as $year) {
+        foreach ($this->years as $idx => $year) {
             $rows = [];
             foreach ($this->staff as $s) {
                 $rows[] = [
                     'hours_per_day' => $this->num($s['values'][$year]['hpd'] ?? 0),
                     'days_per_week' => $this->num($s['values'][$year]['dpw'] ?? 0),
-                    'hourly_wage' => $this->num($s['values'][$year]['wage'] ?? 0),
+                    'hourly_wage' => $this->effectiveWage($s, $idx),
                     'is_deduction' => (bool) $s['is_deduction'],
                 ];
             }
@@ -146,12 +146,28 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         ]);
     }
 
+    /** Effektiver Stundenlohn einer Lohnzeile im Jahr (mit Lohnentwicklung). */
+    public function effectiveWage(array $s, int $yearIndex): float
+    {
+        $years = $this->years;
+        $growth = $this->num($this->stamm['wage_growth_pct'] ?? 0) / 100;
+        if ($growth > 0) {
+            $base = $this->num($s['values'][$years[0]]['wage'] ?? 0);
+
+            return $base * (1 + $growth) ** $yearIndex;
+        }
+
+        return $this->num($s['values'][$years[$yearIndex]]['wage'] ?? 0);
+    }
+
     /** Lohn p.a. einer einzelnen Lohnzeile in einem Jahr (für die Anzeige). */
     public function staffWage(array $s, int $year): float
     {
+        $idx = (int) array_search($year, $this->years, true);
+
         return $this->num($s['values'][$year]['hpd'] ?? 0)
             * $this->num($s['values'][$year]['dpw'] ?? 0) * 52
-            * $this->num($s['values'][$year]['wage'] ?? 0);
+            * $this->effectiveWage($s, $idx);
     }
 
     /** Umsatz einer Umsatzzeile (live aus dem Raster) per Bezeichnung. */
@@ -451,6 +467,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'feiertag_pct' => $this->num($this->stamm['feiertag_pct'] ?? 0),
             'nacht_hours' => $this->num($this->stamm['nacht_hours'] ?? 0),
             'nacht_pct' => $this->num($this->stamm['nacht_pct'] ?? 25),
+            'wage_growth_pct' => $this->num($this->stamm['wage_growth_pct'] ?? 0),
             'umsatzpacht_start_year' => ($this->stamm['umsatzpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['umsatzpacht_start_year'] : null,
             'umsatzpacht_start_month' => (int) ($this->stamm['umsatzpacht_start_month'] ?? 1) ?: 1,
             'festpacht_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
@@ -572,6 +589,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'feiertag_pct' => $this->fmt($plan->feiertag_pct),
             'nacht_hours' => $this->fmt($plan->nacht_hours),
             'nacht_pct' => $this->fmt($plan->nacht_pct),
+            'wage_growth_pct' => $this->fmt($plan->wage_growth_pct),
             'umsatzpacht_start_year' => $plan->umsatzpacht_start_year ? (string) $plan->umsatzpacht_start_year : '',
             'umsatzpacht_start_month' => (string) ($plan->umsatzpacht_start_month ?: 1),
             'festpacht_monthly' => $this->fmt($plan->festpacht_monthly),

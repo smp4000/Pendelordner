@@ -213,7 +213,7 @@
 
         <div x-show="tab==='lohn'" x-cloak>
         {{-- Personalkostenberechnung (Lohn) --}}
-        @php $staffRows = collect($staff); $pay = $this->payroll; @endphp
+        @php $staffRows = collect($staff); $pay = $this->payroll; $wageGrowth = (float) str_replace(['.', ','], ['', '.'], $stamm['wage_growth_pct'] ?? '0'); @endphp
         <x-filament::section>
             <x-slot name="heading">Personalkostenberechnung (Lohn)</x-slot>
             <x-slot name="description">Je Zeile: Std/Tag × Tage/Woche × 52 × Stundenlohn = Lohn p.a. (pro Jahr planbar). Eigenanteil Unternehmer wird abgezogen. Daraus ergibt sich das Personalkostenbudget (Urlaub/Krankheit, AG-Anteil Fest/Aushilfe, Zuschläge), das in „Personalkosten" einfließt.</x-slot>
@@ -237,7 +237,12 @@
                     <input type="text" wire:model.live.debounce.400ms="stamm.nacht_hours" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.78rem;font-weight:600;">Nachtzuschlag (%)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.nacht_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Lohnsteigerung % p.a. (Mindestlohn)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.wage_growth_pct" style="{{ $inpTxt }};text-align:right;"></div>
             </div>
+            @if ($wageGrowth > 0)
+                <div style="font-size:.78rem;opacity:.65;margin-bottom:.5rem;">Stundenlohn nur im ersten Planjahr eingeben – die Folgejahre werden automatisch mit {{ $money($wageGrowth) }} % p.a. hochgerechnet.</div>
+            @endif
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;">
                     <thead>
@@ -261,7 +266,11 @@
                                         @foreach ($years as $y)
                                             <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.hpd" style="{{ $inp }};min-width:60px;"></td>
                                             <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.dpw" style="{{ $inp }};min-width:55px;"></td>
-                                            <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.wage" style="{{ $inp }};min-width:60px;"></td>
+                                            @if ($loop->index > 0 && $wageGrowth > 0)
+                                                <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.6;min-width:60px;">{{ $money($this->effectiveWage($s, $loop->index)) }}</td>
+                                            @else
+                                                <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.wage" style="{{ $inp }};min-width:60px;"></td>
+                                            @endif
                                             <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.7;white-space:nowrap;{{ $s['is_deduction'] ? 'color:#dc2626;' : '' }}">{{ $s['is_deduction'] ? '-' : '' }}{{ $money($this->staffWage($s, $y)) }}</td>
                                         @endforeach
                                     </tr>

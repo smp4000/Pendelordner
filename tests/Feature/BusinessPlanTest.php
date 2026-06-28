@@ -157,6 +157,27 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(21428, $lease[2027]['total'], 0.01);
     }
 
+    public function test_lohnentwicklung_steigert_loehne_automatisch(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'Lohnentwicklung', 'year_from' => 2026, 'year_to' => 2027,
+            'wage_growth_pct' => 10, 'vacation_pct' => 0, 'staff_fest_pct' => 0, 'ag_pct_aushilfe' => 0,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        // Stunden je Jahr; Lohn nur im ersten Jahr (Folgejahr automatisch).
+        $line = $plan->staffLines()->where('label', 'like', 'Kassenschicht Mo%')->first();
+        $line->values()->where('year', 2026)->update(['hours_per_day' => 10, 'days_per_week' => 5, 'hourly_wage' => 10]);
+        $line->values()->where('year', 2027)->update(['hours_per_day' => 10, 'days_per_week' => 5]);
+
+        $pay = $plan->fresh()->load('staffLines.values')->payroll();
+        $this->assertEqualsWithDelta(26000, $pay[2026]['lohnkosten'], 0.01);
+        // 2027: Lohn automatisch 10 € × 1,10 = 11 € -> 10×5×52×11 = 28.600 €.
+        $this->assertEqualsWithDelta(28600, $pay[2027]['lohnkosten'], 0.01);
+    }
+
     public function test_lohnbereiche_werkstatt_gastro(): void
     {
         $this->seed(DatabaseSeeder::class);
