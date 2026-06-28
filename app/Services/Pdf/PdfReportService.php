@@ -208,12 +208,29 @@ class PdfReportService
 
         try {
             if ($mime === 'application/pdf' || str_ends_with(strtolower($absolute), '.pdf')) {
-                $this->importPdfString($pdf, (string) file_get_contents($absolute), $number);
+                try {
+                    $this->importPdfString($pdf, (string) file_get_contents($absolute), $number);
 
-                return;
-            }
+                    return;
+                } catch (Throwable $e) {
+                    // Häufig PDF > 1.4 (komprimierte Objekt-Streams), die der freie
+                    // FPDI-Parser nicht lesen kann -> auf PDF 1.4 konvertieren und
+                    // erneut versuchen.
+                    if ($converted = $this->convertPdfToCompatible($absolute)) {
+                        try {
+                            $this->importPdfString($pdf, (string) file_get_contents($converted), $number);
+                            @unlink($converted);
 
-            if (in_array($mime, ['image/jpeg', 'image/png'], true)
+                            return;
+                        } catch (Throwable $e2) {
+                            @unlink($converted);
+                            report($e2);
+                        }
+                    } else {
+                        report($e);
+                    }
+                }
+            } elseif (in_array($mime, ['image/jpeg', 'image/png'], true)
                 || preg_match('/\.(jpe?g|png)$/i', $absolute)) {
                 $pdf->AddPage();
                 // Bild auf A4-Breite (mit Rand) einpassen
@@ -228,10 +245,59 @@ class PdfReportService
             report($e);
         }
 
-        // Nicht einbettbar (z. B. TIFF) – Hinweisseite
+        // Nicht einbettbar (z. B. TIFF oder nicht konvertierbares PDF) – Hinweisseite.
+        // ASCII-Bindestrich, da der FPDF-Kernfont kein UTF-8 kann.
         $pdf->AddPage();
         $pdf->SetFont('Helvetica', '', 11);
-        $pdf->Cell(0, 10, 'Beleg ' . ($number ?? $receipt->invoice_number ?: $receipt->id) . ' – Datei nicht einbettbar (' . $mime . ').');
+        $pdf->Cell(0, 10, 'Beleg ' . ($number ?? $receipt->invoice_number ?: $receipt->id) . ' - Datei nicht einbettbar (' . $mime . ').');
+    }
+
+    /**
+     * Konvertiert ein PDF nach PDF 1.4 (für den freien FPDI-Parser lesbar),
+     * sofern qpdf oder Ghostscript auf dem Server verfügbar sind. Gibt den Pfad
+     * einer Temp-Datei zurück oder null, wenn keine Konvertierung möglich war.
+     */
+    private function convertPdfToCompatible(string $absolute): ?string
+    {
+        if (! function_exists('exec') || ! function_exists('shell_exec')) {
+            return null; // exec auf dem Hosting deaktiviert
+        }
+
+        $out = tempnam(sys_get_temp_dir(), 'rep_');
+        if ($out === false) {
+            return null;
+        }
+
+        // 1) qpdf: löst Objekt-Streams auf, behält Inhalt 1:1.
+        if ($bin = $this->findBinary('qpdf')) {
+            @exec(escapeshellarg($bin) . ' --object-streams=disable --stream-data=uncompress '
+                . escapeshellarg($absolute) . ' ' . escapeshellarg($out) . ' 2>/dev/null', $o, $rc);
+            if (is_file($out) && filesize($out) > 0) {
+                return $out;
+            }
+        }
+
+        // 2) Ghostscript: schreibt das PDF mit CompatibilityLevel 1.4 neu.
+        if ($bin = $this->findBinary('gs')) {
+            @exec(escapeshellarg($bin) . ' -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 '
+                . '-sOutputFile=' . escapeshellarg($out) . ' ' . escapeshellarg($absolute) . ' 2>/dev/null', $o2, $rc2);
+            if (is_file($out) && filesize($out) > 0) {
+                return $out;
+            }
+        }
+
+        @unlink($out);
+
+        return null;
+    }
+
+    /** Sucht ein ausführbares Programm über "command -v"; null wenn nicht vorhanden. */
+    private function findBinary(string $name): ?string
+    {
+        $path = @shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null');
+        $path = is_string($path) ? trim($path) : '';
+
+        return $path !== '' ? $path : null;
     }
 
     /** Lesbares Zeitraum-Label: ganzer Monat -> "Juni 2026", sonst "01.06.2026 – 30.06.2026". */
