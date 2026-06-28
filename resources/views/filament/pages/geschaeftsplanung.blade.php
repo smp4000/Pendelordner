@@ -61,8 +61,6 @@
                     <input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Tilgung / Jahr (€)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
-                <div><label style="font-size:.8rem;font-weight:600;">Lohnnebenkosten / AG-Anteil (%)</label>
-                    <input type="text" wire:model.live.debounce.400ms="stamm.payroll_overhead_pct" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Urlaub / Krankheit (%)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Gewerbesteuer Hebesatz (%)</label>
@@ -189,7 +187,28 @@
         @php $staffRows = collect($staff); $pay = $this->payroll; @endphp
         <x-filament::section>
             <x-slot name="heading">Personalkostenberechnung (Lohn)</x-slot>
-            <x-slot name="description">Je Zeile: Std/Tag × Tage/Woche × 52 × Stundenlohn = Lohn p.a. Eigenanteil Unternehmer wird abgezogen. Daraus ergibt sich das Personalkostenbudget (inkl. Urlaub/Krankheit und Lohnnebenkosten), das in die Kostenposition „Personalkosten" einfließt.</x-slot>
+            <x-slot name="description">Je Zeile: Std/Tag × Tage/Woche × 52 × Stundenlohn = Lohn p.a. (pro Jahr planbar). Eigenanteil Unternehmer wird abgezogen. Daraus ergibt sich das Personalkostenbudget (Urlaub/Krankheit, AG-Anteil Fest/Aushilfe, Zuschläge), das in „Personalkosten" einfließt.</x-slot>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin-bottom:1rem;">
+                <div><label style="font-size:.78rem;font-weight:600;">Anteil Festangestellte (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.staff_fest_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">AG-Anteil Fest (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.ag_pct_fest" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">AG-Anteil Aushilfen (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.ag_pct_aushilfe" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Sonntagsstunden / Jahr</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.sonntag_hours" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Sonntagszuschlag (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.sonntag_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Feiertagsstunden / Jahr</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.feiertag_hours" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Feiertagszuschlag (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.feiertag_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Nachtstunden / Jahr</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.nacht_hours" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.78rem;font-weight:600;">Nachtzuschlag (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.nacht_pct" style="{{ $inpTxt }};text-align:right;"></div>
+            </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;">
                     <thead>
@@ -220,7 +239,8 @@
                             $payLines = [
                                 ['Lohnkosten', 'lohnkosten'],
                                 ['+ Urlaub / Krankheit', 'urlaub'],
-                                ['+ Lohnnebenkosten (AG-Anteil)', 'nebenkosten'],
+                                ['+ AG-Anteil (Fest/Aushilfe)', 'ag_anteil'],
+                                ['+ Zuschläge (So./Feiertag/Nacht)', 'zuschlaege'],
                             ];
                         @endphp
                         @foreach ($payLines as [$lbl, $key])

@@ -73,8 +73,9 @@ class BusinessPlanTest extends TestCase
             'title' => 'Lohn',
             'year_from' => 2026,
             'year_to' => 2026,
-            'payroll_overhead_pct' => 25,
             'vacation_pct' => 10,
+            'staff_fest_pct' => 0,        // nur Aushilfen
+            'ag_pct_aushilfe' => 25,      // AG-Anteil 25 %
         ]);
         (new BusinessPlanTemplate())->apply($plan);
 
@@ -86,8 +87,9 @@ class BusinessPlanTest extends TestCase
 
         $pay = $plan->fresh()->load('staffLines.values')->payroll();
         $this->assertEqualsWithDelta(43680, $pay[2026]['lohnkosten'], 0.01);
-        // + 10 % Urlaub = 4.368; + 25 % auf 48.048 = 12.012; Budget = 60.060.
+        // + 10 % Urlaub = 4.368; + 25 % AG-Anteil auf 48.048 = 12.012; Budget = 60.060.
         $this->assertEqualsWithDelta(4368, $pay[2026]['urlaub'], 0.01);
+        $this->assertEqualsWithDelta(12012, $pay[2026]['ag_anteil'], 0.01);
         $this->assertEqualsWithDelta(60060, $pay[2026]['budget'], 0.01);
     }
 
@@ -111,10 +113,12 @@ class BusinessPlanTest extends TestCase
             ->set("staff.{$line->id}.values.2026.wage", '14')
             ->call('save');
 
-        // Budget (Standard 25 % / 10 %) landet in der Kostenposition „Personalkosten".
+        // Das berechnete Lohn-Budget landet in der Kostenposition „Personalkosten".
+        $budget = $plan->fresh()->load('staffLines.values')->payroll()[2026]['budget'];
+        $this->assertGreaterThan(0, $budget);
         $pk = $plan->lines()->where('label', 'Personalkosten')->first();
         $val = $pk->values()->where('year', 2026)->first();
-        $this->assertEqualsWithDelta(60060, (float) $val->amount, 0.01);
+        $this->assertEqualsWithDelta($budget, (float) $val->amount, 0.01);
     }
 
     public function test_pachtberechnung_umsatz_und_festpacht(): void

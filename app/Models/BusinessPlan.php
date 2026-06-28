@@ -28,6 +28,15 @@ class BusinessPlan extends Model
         'annual_repayment' => 'decimal:2',
         'payroll_overhead_pct' => 'decimal:2',
         'vacation_pct' => 'decimal:2',
+        'staff_fest_pct' => 'decimal:2',
+        'ag_pct_fest' => 'decimal:2',
+        'ag_pct_aushilfe' => 'decimal:2',
+        'sonntag_hours' => 'decimal:2',
+        'sonntag_pct' => 'decimal:2',
+        'feiertag_hours' => 'decimal:2',
+        'feiertag_pct' => 'decimal:2',
+        'nacht_hours' => 'decimal:2',
+        'nacht_pct' => 'decimal:2',
         'umsatzpacht_start_year' => 'integer',
         'umsatzpacht_start_month' => 'integer',
         'festpacht_monthly' => 'decimal:2',
@@ -154,11 +163,18 @@ class BusinessPlan extends Model
             $rowsByYear[$year] = $rows;
         }
 
-        return \App\Services\Plan\PayrollCalculator::compute(
-            $rowsByYear,
-            (float) $this->payroll_overhead_pct,
-            (float) $this->vacation_pct,
-        );
+        return \App\Services\Plan\PayrollCalculator::compute($rowsByYear, [
+            'vacation_pct' => (float) $this->vacation_pct,
+            'fest_pct' => (float) $this->staff_fest_pct,
+            'ag_fest' => (float) $this->ag_pct_fest,
+            'ag_aushilfe' => (float) $this->ag_pct_aushilfe,
+            'sonntag_hours' => (float) $this->sonntag_hours,
+            'sonntag_pct' => (float) $this->sonntag_pct,
+            'feiertag_hours' => (float) $this->feiertag_hours,
+            'feiertag_pct' => (float) $this->feiertag_pct,
+            'nacht_hours' => (float) $this->nacht_hours,
+            'nacht_pct' => (float) $this->nacht_pct,
+        ]);
     }
 
     /** Umsatz einer Umsatzzeile (per Bezeichnung) in einem Jahr. */

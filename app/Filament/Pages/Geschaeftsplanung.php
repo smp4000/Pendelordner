@@ -132,11 +132,18 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             $rowsByYear[$year] = $rows;
         }
 
-        return \App\Services\Plan\PayrollCalculator::compute(
-            $rowsByYear,
-            $this->num($this->stamm['payroll_overhead_pct'] ?? 25),
-            $this->num($this->stamm['vacation_pct'] ?? 10),
-        );
+        return \App\Services\Plan\PayrollCalculator::compute($rowsByYear, [
+            'vacation_pct' => $this->num($this->stamm['vacation_pct'] ?? 10),
+            'fest_pct' => $this->num($this->stamm['staff_fest_pct'] ?? 0),
+            'ag_fest' => $this->num($this->stamm['ag_pct_fest'] ?? 22.5),
+            'ag_aushilfe' => $this->num($this->stamm['ag_pct_aushilfe'] ?? 31.15),
+            'sonntag_hours' => $this->num($this->stamm['sonntag_hours'] ?? 0),
+            'sonntag_pct' => $this->num($this->stamm['sonntag_pct'] ?? 0),
+            'feiertag_hours' => $this->num($this->stamm['feiertag_hours'] ?? 0),
+            'feiertag_pct' => $this->num($this->stamm['feiertag_pct'] ?? 0),
+            'nacht_hours' => $this->num($this->stamm['nacht_hours'] ?? 0),
+            'nacht_pct' => $this->num($this->stamm['nacht_pct'] ?? 25),
+        ]);
     }
 
     /** Lohn p.a. einer einzelnen Lohnzeile in einem Jahr (für die Anzeige). */
@@ -434,8 +441,16 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
             'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
             'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
-            'payroll_overhead_pct' => $this->num($this->stamm['payroll_overhead_pct'] ?? 25),
             'vacation_pct' => $this->num($this->stamm['vacation_pct'] ?? 10),
+            'staff_fest_pct' => $this->num($this->stamm['staff_fest_pct'] ?? 0),
+            'ag_pct_fest' => $this->num($this->stamm['ag_pct_fest'] ?? 22.5),
+            'ag_pct_aushilfe' => $this->num($this->stamm['ag_pct_aushilfe'] ?? 31.15),
+            'sonntag_hours' => $this->num($this->stamm['sonntag_hours'] ?? 0),
+            'sonntag_pct' => $this->num($this->stamm['sonntag_pct'] ?? 0),
+            'feiertag_hours' => $this->num($this->stamm['feiertag_hours'] ?? 0),
+            'feiertag_pct' => $this->num($this->stamm['feiertag_pct'] ?? 0),
+            'nacht_hours' => $this->num($this->stamm['nacht_hours'] ?? 0),
+            'nacht_pct' => $this->num($this->stamm['nacht_pct'] ?? 25),
             'umsatzpacht_start_year' => ($this->stamm['umsatzpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['umsatzpacht_start_year'] : null,
             'umsatzpacht_start_month' => (int) ($this->stamm['umsatzpacht_start_month'] ?? 1) ?: 1,
             'festpacht_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
@@ -543,8 +558,16 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'opening_balance' => $this->fmt($plan->opening_balance),
             'vat_rate' => $this->fmt($plan->vat_rate),
             'annual_repayment' => $this->fmt($plan->annual_repayment),
-            'payroll_overhead_pct' => $this->fmt($plan->payroll_overhead_pct),
             'vacation_pct' => $this->fmt($plan->vacation_pct),
+            'staff_fest_pct' => $this->fmt($plan->staff_fest_pct),
+            'ag_pct_fest' => $this->fmt($plan->ag_pct_fest),
+            'ag_pct_aushilfe' => $this->fmt($plan->ag_pct_aushilfe),
+            'sonntag_hours' => $this->fmt($plan->sonntag_hours),
+            'sonntag_pct' => $this->fmt($plan->sonntag_pct),
+            'feiertag_hours' => $this->fmt($plan->feiertag_hours),
+            'feiertag_pct' => $this->fmt($plan->feiertag_pct),
+            'nacht_hours' => $this->fmt($plan->nacht_hours),
+            'nacht_pct' => $this->fmt($plan->nacht_pct),
             'umsatzpacht_start_year' => $plan->umsatzpacht_start_year ? (string) $plan->umsatzpacht_start_year : '',
             'umsatzpacht_start_month' => (string) ($plan->umsatzpacht_start_month ?: 1),
             'festpacht_monthly' => $this->fmt($plan->festpacht_monthly),
