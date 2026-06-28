@@ -86,6 +86,11 @@ class Kontoumsatzdetails extends Page
     // --- Inline-Zuordnung (Kategorie / Kostenstelle / Sachkonto) -------------
     public ?int $assignCategoryId = null;
 
+    // Durchsuchbare Kategorie-Auswahl (Name oder SKR03-Konto).
+    public string $categorySearch = '';
+
+    public bool $editingCategory = false;
+
     public ?int $assignCostCenterId = null;
 
     public ?int $assignLedgerAccountId = null;
@@ -155,6 +160,8 @@ class Kontoumsatzdetails extends Page
         $this->assignCostCenterId = $t?->cost_center_id;
         $this->assignLedgerAccountId = $t?->ledger_account_id;
         $this->ledgerSearch = '';
+        $this->categorySearch = '';
+        $this->editingCategory = false;
         $this->accountantNote = (string) ($t?->accountant_note ?? '');
         $this->showNote = $this->accountantNote !== '';
         $this->loadSplits();
@@ -256,6 +263,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
+            ->whereNotIn('chart', ['skr03', 'skr04'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)
@@ -380,6 +388,135 @@ class Kontoumsatzdetails extends Page
         $this->saveAssign('category_id', $value);
     }
 
+    /**
+     * Treffer der durchsuchbaren Kategorie-Auswahl. Findet per Kategoriename
+     * sowie per SKR03-Konto (Nummer oder Bezeichnung). Ohne Suchbegriff werden
+     * alle aktiven Kategorien angezeigt (wie ein filterbares Aufklappmenü).
+     *
+     * @return Collection<int, Category>
+     */
+    public function getCategoryResultsProperty(): Collection
+    {
+        $s = trim($this->categorySearch);
+
+        $query = Category::where('active', true);
+
+        if ($s !== '') {
+            // SKR03-Konten, deren Nummer/Bezeichnung passt – deren Nummern dienen
+            // als zusätzliches Suchkriterium für die Kategorie.
+            $skrNumbers = LedgerAccount::where('chart', 'skr03')
+                ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+                ->pluck('number')->all();
+
+            $query->where(function ($q) use ($s, $skrNumbers) {
+                $q->where('name', 'like', '%' . $s . '%')
+                    ->orWhere('skr03_account', 'like', $s . '%');
+                if (! empty($skrNumbers)) {
+                    $q->orWhereIn('skr03_account', $skrNumbers);
+                }
+            });
+        }
+
+        return $query->orderBy('name')->limit(25)->get();
+    }
+
+    /** Die aktuell gewählte Kategorie (für die Badge-Anzeige). */
+    public function getCurrentCategoryProperty(): ?Category
+    {
+        return $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
+    }
+
+    /**
+     * Zusätzliche Vorschläge aus dem SKR03-Kontenrahmen (Nummer oder Text),
+     * für die es noch keine Kategorie gibt. So lassen sich Konten wie
+     * „4130 – Gesetzliche soziale Aufwendungen" direkt finden und übernehmen.
+     *
+     * @return Collection<int, LedgerAccount>
+     */
+    public function getSkrResultsProperty(): Collection
+    {
+        $s = trim($this->categorySearch);
+        if (mb_strlen($s) < 2) {
+            return collect();
+        }
+
+        // SKR03-Nummern, die bereits einer Kategorie zugeordnet sind, ausblenden.
+        $existing = Category::whereNotNull('skr03_account')->pluck('skr03_account')->all();
+
+        return LedgerAccount::where('chart', 'skr03')
+            ->when($existing, fn ($q) => $q->whereNotIn('number', $existing))
+            ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
+            ->orderBy('number')
+            ->limit(10)
+            ->get();
+    }
+
+    public function setCategory(int $id): void
+    {
+        $this->assignCategoryId = $id;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
+        $this->saveAssign('category_id', $id);
+    }
+
+    /**
+     * Übernimmt ein SKR03-Konto als Kategorie: legt (oder findet) eine Kategorie
+     * mit dieser SKR03-Zuordnung an und weist sie dem Umsatz zu.
+     */
+    public function setCategoryFromSkr(int $ledgerId): void
+    {
+        $la = LedgerAccount::where('chart', 'skr03')->find($ledgerId);
+        if (! $la) {
+            return;
+        }
+
+        $category = Category::firstOrCreate(
+            ['skr03_account' => $la->number],
+            ['name' => $la->name, 'active' => true],
+        );
+
+        $this->setCategory($category->id);
+
+        Notification::make()->title('Kategorie „' . $category->name . '" (SKR03 ' . $la->number . ') zugeordnet')->success()->send();
+    }
+
+    public function editCategory(): void
+    {
+        $this->editingCategory = true;
+        $this->categorySearch = '';
+    }
+
+    public function clearCategory(): void
+    {
+        $this->assignCategoryId = null;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
+        $this->saveAssign('category_id', null);
+    }
+
+    /**
+     * SKR03/04-Konten der gewählten Kategorie (für die Steuerberater-Auswertung).
+     * Das operative Sachkonto (edtas) bleibt davon unberührt.
+     *
+     * @return array{skr03: ?LedgerAccount, skr04: ?LedgerAccount}
+     */
+    public function getCategorySkrProperty(): array
+    {
+        $category = $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
+        if (! $category) {
+            return ['skr03' => null, 'skr04' => null];
+        }
+
+        return [
+            'skr03' => $category->skr03_account
+                ? LedgerAccount::where('chart', 'skr03')->where('number', $category->skr03_account)->first()
+                : null,
+            'skr04' => $category->skr04_account
+                ? LedgerAccount::where('chart', 'skr04')->where('number', $category->skr04_account)->first()
+                : null,
+        ];
+    }
+
     public function updatedAssignCostCenterId($value): void
     {
         $this->saveAssign('cost_center_id', $value);
@@ -406,6 +543,8 @@ class Kontoumsatzdetails extends Page
 
         $this->newCategory = '';
         $this->showNewCategory = false;
+        $this->categorySearch = '';
+        $this->editingCategory = false;
 
         Notification::make()->title('Kategorie „' . $category->name . '" angelegt')->success()->send();
     }
@@ -498,7 +637,11 @@ class Kontoumsatzdetails extends Page
         return LedgerAccount::orderBy('number')->get(['id', 'number', 'name']);
     }
 
-    /** Treffer für die Sachkonto-Suche (Nummer oder Bezeichnung). */
+    /**
+     * Treffer für die operative Sachkonto-Suche (Nummer oder Bezeichnung).
+     * SKR03/04 sind hier ausgeschlossen – die dienen nur der Kategorie-
+     * Zuordnung (Steuerberater), nicht der operativen Buchung (edtas/gastro/kfz).
+     */
     public function getLedgerResultsProperty(): Collection
     {
         $s = trim($this->ledgerSearch);
@@ -507,6 +650,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
+            ->whereNotIn('chart', ['skr03', 'skr04'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)
@@ -801,33 +945,14 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        // Nächsten ungeprüften Satz ermitteln, BEVOR der aktuelle aus der
-        // Liste fällt – damit die Bearbeitung sauber auf den nächsten springt
-        // statt den geprüften Satz neu einzusortieren.
-        $nextId = $this->neighbourId();
-
+        // Nur speichern und auf dem Umsatz bleiben – das Weiterblättern
+        // erfolgt ausschließlich über die Navigation (Pfeile oben).
         // Mitteilung direkt am Modell sichern (recalculateStatus speichert mit).
         $transaction->accountant_note = trim($this->accountantNote) ?: null;
         $transaction->reviewed = true;
         $transaction->recalculateStatus();
 
-        if ($nextId) {
-            $this->selectTransaction($nextId);
-        }
-
         Notification::make()->title('Umsatz als geprüft markiert')->success()->send();
-    }
-
-    /** Id des nächsten (sonst vorherigen) Umsatzes in der aktuellen Liste. */
-    private function neighbourId(): ?int
-    {
-        $ids = $this->openTransactions->pluck('id')->all();
-        $i = array_search($this->selectedTransactionId, $ids, true);
-        if ($i === false) {
-            return $ids[0] ?? null;
-        }
-
-        return $ids[$i + 1] ?? $ids[$i - 1] ?? null;
     }
 
     public function togglePaid(): void
