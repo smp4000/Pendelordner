@@ -157,6 +157,36 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(21428, $lease[2027]['total'], 0.01);
     }
 
+    public function test_lohnbereiche_werkstatt_gastro(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'Bereiche', 'year_from' => 2026, 'year_to' => 2026,
+            'staff_fest_pct' => 0, 'ag_pct_aushilfe' => 0, 'vacation_pct' => 0,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        $areas = $plan->staffLines()->pluck('area')->unique()->sort()->values()->all();
+        $this->assertEquals(['gastro', 'shop', 'werkstatt'], $areas);
+
+        // Werkstatt-Schicht: 8 × 5 × 52 × 20 € = 41.600 €; ohne Aufschläge = Budget.
+        $w = $plan->staffLines()->where('area', 'werkstatt')->where('label', 'like', 'Werkstatt Mo%')->first();
+        $w->values()->where('year', 2026)->update(['hours_per_day' => 8, 'days_per_week' => 5, 'hourly_wage' => 20]);
+
+        $pay = $plan->fresh()->load('staffLines.values')->payroll();
+        $this->assertEqualsWithDelta(41600, $pay[2026]['budget'], 0.01);
+
+        // Backfill ist idempotent und ergänzt fehlende Bereiche.
+        $plan->staffLines()->whereIn('area', ['werkstatt', 'gastro'])->delete();
+        (new BusinessPlanTemplate())->ensureStaffAreas($plan->fresh());
+        $this->assertTrue($plan->staffLines()->where('area', 'werkstatt')->exists());
+        $this->assertTrue($plan->staffLines()->where('area', 'gastro')->exists());
+        $countAfter = $plan->staffLines()->count();
+        (new BusinessPlanTemplate())->ensureStaffAreas($plan->fresh());
+        $this->assertSame($countAfter, $plan->staffLines()->count());
+    }
+
     public function test_finanzierung_zinsen_aus_kapitalbedarf(): void
     {
         $this->seed(DatabaseSeeder::class);

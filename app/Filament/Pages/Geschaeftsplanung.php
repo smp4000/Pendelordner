@@ -541,10 +541,14 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         $this->leaseBases = [];
         $this->financings = [];
 
-        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values', 'leaseBases', 'financings'])->find($this->planId) : null;
+        $plan = $this->planId ? BusinessPlan::find($this->planId) : null;
         if (! $plan) {
             return;
         }
+
+        // Bestehende Pläne um fehlende Lohnbereiche (Werkstatt/Gastro) ergänzen.
+        (new \App\Services\Plan\BusinessPlanTemplate())->ensureStaffAreas($plan);
+        $plan->load(['lines.values', 'staffLines.values', 'leaseBases', 'financings']);
 
         $this->stamm = [
             'title' => $plan->title,
@@ -612,6 +616,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             }
             $this->staff[$line->id] = [
                 'id' => $line->id,
+                'area' => (string) ($line->area ?: 'shop'),
                 'category' => (string) $line->category,
                 'label' => $line->label,
                 'is_deduction' => (bool) $line->is_deduction,

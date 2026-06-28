@@ -220,19 +220,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($staffRows->groupBy('category') as $group => $grows)
-                            <tr><td colspan="{{ 1 + count($years) * 4 }}" style="padding:.5rem .5rem .2rem;font-weight:700;font-size:.8rem;opacity:.8;">{{ $group }}</td></tr>
-                            @foreach ($grows as $s)
-                                @php $sid = $s['id']; @endphp
-                                <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
-                                    <td style="{{ $tdL }}">{{ $s['label'] }}@if ($s['is_deduction'])<span style="opacity:.5;font-size:.7rem;"> (abzgl.)</span>@endif</td>
-                                    @foreach ($years as $y)
-                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.hpd" style="{{ $inp }};min-width:60px;"></td>
-                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.dpw" style="{{ $inp }};min-width:55px;"></td>
-                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.wage" style="{{ $inp }};min-width:60px;"></td>
-                                        <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.7;white-space:nowrap;{{ $s['is_deduction'] ? 'color:#dc2626;' : '' }}">{{ $s['is_deduction'] ? '-' : '' }}{{ $money($this->staffWage($s, $y)) }}</td>
-                                    @endforeach
-                                </tr>
+                        @php $areaNames = ['shop' => 'Shop', 'werkstatt' => 'Werkstatt / Kfz-Aufbereitung', 'gastro' => 'Gastronomie']; @endphp
+                        @foreach ($staffRows->groupBy('area') as $area => $arows)
+                            <tr><td colspan="{{ 1 + count($years) * 4 }}" style="padding:.7rem .5rem .25rem;font-weight:800;font-size:.9rem;border-bottom:1px solid rgba(120,120,120,.25);">{{ $areaNames[$area] ?? $area }}</td></tr>
+                            @foreach ($arows->groupBy('category') as $group => $grows)
+                                <tr><td colspan="{{ 1 + count($years) * 4 }}" style="padding:.35rem .5rem .15rem 1rem;font-weight:600;font-size:.78rem;opacity:.75;">{{ $group }}</td></tr>
+                                @foreach ($grows as $s)
+                                    @php $sid = $s['id']; @endphp
+                                    <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                        <td style="{{ $tdL }};padding-left:1rem;">{{ $s['label'] }}@if ($s['is_deduction'])<span style="opacity:.5;font-size:.7rem;"> (abzgl.)</span>@endif</td>
+                                        @foreach ($years as $y)
+                                            <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.hpd" style="{{ $inp }};min-width:60px;"></td>
+                                            <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.dpw" style="{{ $inp }};min-width:55px;"></td>
+                                            <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.wage" style="{{ $inp }};min-width:60px;"></td>
+                                            <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.7;white-space:nowrap;{{ $s['is_deduction'] ? 'color:#dc2626;' : '' }}">{{ $s['is_deduction'] ? '-' : '' }}{{ $money($this->staffWage($s, $y)) }}</td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
                             @endforeach
                         @endforeach
                         @php

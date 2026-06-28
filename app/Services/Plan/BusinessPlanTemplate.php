@@ -92,17 +92,37 @@ class BusinessPlanTemplate
         ['sonstige Anschaffungen', 'sonstige Anschaffungen'],
     ];
 
-    /** Standard-Lohnzeilen der Personalkostenberechnung: [Bezeichnung, Gruppe, ist Abzug]. */
+    /** Standard-Lohnzeilen je Bereich: [Bezeichnung, Gruppe, ist Abzug, Bereich]. */
     public const STAFF = [
-        ['Kassenschicht Mo.–Do.', 'Kassenschichten', false],
-        ['Kassenschicht Fr.', 'Kassenschichten', false],
-        ['Kassenschicht Sa.', 'Kassenschichten', false],
-        ['Kassenschicht So.', 'Kassenschichten', false],
-        ['Backshop', 'Zusatzstunden', false],
-        ['Schichtwechsel', 'Zusatzstunden', false],
-        ['Sonstige', 'Zusatzstunden', false],
-        ['Eigenanteil Unternehmer', 'Korrekturen', true],
+        // Shop
+        ['Kassenschicht Mo.–Do.', 'Kassenschichten', false, 'shop'],
+        ['Kassenschicht Fr.', 'Kassenschichten', false, 'shop'],
+        ['Kassenschicht Sa.', 'Kassenschichten', false, 'shop'],
+        ['Kassenschicht So.', 'Kassenschichten', false, 'shop'],
+        ['Backshop', 'Zusatzstunden', false, 'shop'],
+        ['Schichtwechsel', 'Zusatzstunden', false, 'shop'],
+        ['Sonstige', 'Zusatzstunden', false, 'shop'],
+        ['Eigenanteil Unternehmer', 'Korrekturen', true, 'shop'],
+        // Werkstatt / Kfz-Aufbereitung
+        ['Werkstatt Mo.–Do.', 'Schichten', false, 'werkstatt'],
+        ['Werkstatt Fr.', 'Schichten', false, 'werkstatt'],
+        ['Werkstatt Sa.', 'Schichten', false, 'werkstatt'],
+        ['Kfz-Aufbereitung 1', 'Zusatzstunden', false, 'werkstatt'],
+        ['Kfz-Aufbereitung 2', 'Zusatzstunden', false, 'werkstatt'],
+        ['Eigenanteil Unternehmer', 'Korrekturen', true, 'werkstatt'],
+        // Gastronomie
+        ['Gastro Mo.–Do.', 'Kassenschichten', false, 'gastro'],
+        ['Gastro Fr.', 'Kassenschichten', false, 'gastro'],
+        ['Gastro Sa.', 'Kassenschichten', false, 'gastro'],
+        ['Gastro So.', 'Kassenschichten', false, 'gastro'],
+        ['Koch', 'Zusatzstunden', false, 'gastro'],
+        ['Service', 'Zusatzstunden', false, 'gastro'],
+        ['Schichtwechsel', 'Zusatzstunden', false, 'gastro'],
+        ['Eigenanteil Unternehmer', 'Korrekturen', true, 'gastro'],
     ];
+
+    /** Lesbare Bereichsnamen. */
+    public const STAFF_AREAS = ['shop' => 'Shop', 'werkstatt' => 'Werkstatt / Kfz-Aufbereitung', 'gastro' => 'Gastronomie'];
 
     /** Erzeugt alle Standard-Positionen samt Jahres-Werten (0 €) für den Plan. */
     public function apply(BusinessPlan $plan): void
@@ -110,8 +130,9 @@ class BusinessPlanTemplate
         $years = $plan->years();
         $sort = 0;
 
-        foreach (self::STAFF as $i => [$label, $group, $deduction]) {
+        foreach (self::STAFF as $i => [$label, $group, $deduction, $area]) {
             $line = $plan->staffLines()->create([
+                'area' => $area,
                 'category' => $group,
                 'label' => $label,
                 'is_deduction' => $deduction,
@@ -176,6 +197,35 @@ class BusinessPlanTemplate
             ]);
             foreach ($years as $year) {
                 $line->values()->create(['year' => $year, 'amount' => 0, 'margin' => null]);
+            }
+        }
+    }
+
+    /**
+     * Ergänzt fehlende Lohnbereiche (z. B. Werkstatt/Gastro) bei bereits
+     * bestehenden Plänen, ohne vorhandene Zeilen zu verändern. Idempotent.
+     */
+    public function ensureStaffAreas(BusinessPlan $plan): void
+    {
+        $existing = $plan->staffLines()->pluck('area')->unique()->all();
+        $years = $plan->years();
+        $sort = (int) $plan->staffLines()->max('sort_order');
+
+        foreach (self::STAFF as [$label, $group, $deduction, $area]) {
+            if (in_array($area, $existing, true)) {
+                continue;   // Bereich ist bereits vorhanden -> nicht doppelt anlegen
+            }
+            $line = $plan->staffLines()->create([
+                'area' => $area,
+                'category' => $group,
+                'label' => $label,
+                'is_deduction' => $deduction,
+                'sort_order' => ++$sort,
+            ]);
+            foreach ($years as $year) {
+                $line->values()->create([
+                    'year' => $year, 'hours_per_day' => 0, 'days_per_week' => 0, 'hourly_wage' => 0,
+                ]);
             }
         }
     }
