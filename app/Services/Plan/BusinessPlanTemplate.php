@@ -74,11 +74,40 @@ class BusinessPlanTemplate
         'A.O. Aufwendungen',
     ];
 
+    /** Standard-Lohnzeilen der Personalkostenberechnung: [Bezeichnung, Gruppe, ist Abzug]. */
+    public const STAFF = [
+        ['Kassenschicht Mo.–Do.', 'Kassenschichten', false],
+        ['Kassenschicht Fr.', 'Kassenschichten', false],
+        ['Kassenschicht Sa.', 'Kassenschichten', false],
+        ['Kassenschicht So.', 'Kassenschichten', false],
+        ['Backshop', 'Zusatzstunden', false],
+        ['Schichtwechsel', 'Zusatzstunden', false],
+        ['Sonstige', 'Zusatzstunden', false],
+        ['Eigenanteil Unternehmer', 'Korrekturen', true],
+    ];
+
     /** Erzeugt alle Standard-Positionen samt Jahres-Werten (0 €) für den Plan. */
     public function apply(BusinessPlan $plan): void
     {
         $years = $plan->years();
         $sort = 0;
+
+        foreach (self::STAFF as $i => [$label, $group, $deduction]) {
+            $line = $plan->staffLines()->create([
+                'category' => $group,
+                'label' => $label,
+                'is_deduction' => $deduction,
+                'sort_order' => $i,
+            ]);
+            foreach ($years as $year) {
+                $line->values()->create([
+                    'year' => $year,
+                    'hours_per_day' => 0,
+                    'days_per_week' => 0,
+                    'hourly_wage' => 0,
+                ]);
+            }
+        }
 
         foreach (self::REVENUE as $group => $rows) {
             foreach ($rows as [$label, $margin]) {

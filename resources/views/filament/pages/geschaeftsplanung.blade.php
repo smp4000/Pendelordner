@@ -61,6 +61,10 @@
                     <input type="text" wire:model.live.debounce.400ms="stamm.vat_rate" style="{{ $inpTxt }};text-align:right;"></div>
                 <div><label style="font-size:.8rem;font-weight:600;">Tilgung / Jahr (€)</label>
                     <input type="text" wire:model.live.debounce.400ms="stamm.annual_repayment" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Lohnnebenkosten / AG-Anteil (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.payroll_overhead_pct" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Urlaub / Krankheit (%)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.vacation_pct" style="{{ $inpTxt }};text-align:right;"></div>
             </div>
         </x-filament::section>
 
@@ -154,6 +158,69 @@
             </div>
         </x-filament::section>
 
+        {{-- Personalkostenberechnung (Lohn) --}}
+        @php $staffRows = collect($staff); $pay = $this->payroll; @endphp
+        <x-filament::section>
+            <x-slot name="heading">Personalkostenberechnung (Lohn)</x-slot>
+            <x-slot name="description">Je Zeile: Std/Tag × Tage/Woche × 52 × Stundenlohn = Lohn p.a. Eigenanteil Unternehmer wird abgezogen. Daraus ergibt sich das Personalkostenbudget (inkl. Urlaub/Krankheit und Lohnnebenkosten), das in die Kostenposition „Personalkosten" einfließt.</x-slot>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid rgba(120,120,120,.3);">
+                            <th style="{{ $th }};text-align:left;min-width:200px;">Bezeichnung</th>
+                            @foreach ($years as $y)
+                                <th style="{{ $th }}" colspan="4">{{ $y }} — Std/Tag · Tage/Wo · €/Std · Lohn p.a.</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($staffRows->groupBy('category') as $group => $grows)
+                            <tr><td colspan="{{ 1 + count($years) * 4 }}" style="padding:.5rem .5rem .2rem;font-weight:700;font-size:.8rem;opacity:.8;">{{ $group }}</td></tr>
+                            @foreach ($grows as $s)
+                                @php $sid = $s['id']; @endphp
+                                <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                    <td style="{{ $tdL }}">{{ $s['label'] }}@if ($s['is_deduction'])<span style="opacity:.5;font-size:.7rem;"> (abzgl.)</span>@endif</td>
+                                    @foreach ($years as $y)
+                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.hpd" style="{{ $inp }};min-width:60px;"></td>
+                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.dpw" style="{{ $inp }};min-width:55px;"></td>
+                                        <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="staff.{{ $sid }}.values.{{ $y }}.wage" style="{{ $inp }};min-width:60px;"></td>
+                                        <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.7;white-space:nowrap;{{ $s['is_deduction'] ? 'color:#dc2626;' : '' }}">{{ $s['is_deduction'] ? '-' : '' }}{{ $money($this->staffWage($s, $y)) }}</td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        @endforeach
+                        @php
+                            $payLines = [
+                                ['Lohnkosten', 'lohnkosten'],
+                                ['+ Urlaub / Krankheit', 'urlaub'],
+                                ['+ Lohnnebenkosten (AG-Anteil)', 'nebenkosten'],
+                            ];
+                        @endphp
+                        @foreach ($payLines as [$lbl, $key])
+                            <tr style="font-size:.82rem;border-top:1px solid rgba(120,120,120,.2);">
+                                <td style="{{ $tdL }};text-align:right;">{{ $lbl }}</td>
+                                @foreach ($years as $y)
+                                    <td colspan="4" style="padding:.2rem .35rem;text-align:right;">{{ $money($pay[$y][$key] ?? 0) }} €</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        <tr style="font-weight:700;border-top:2px solid rgba(120,120,120,.3);">
+                            <td style="{{ $tdL }};text-align:right;">= Personalkostenbudget</td>
+                            @foreach ($years as $y)
+                                <td colspan="4" style="padding:.3rem .35rem;text-align:right;">{{ $money($pay[$y]['budget'] ?? 0) }} €</td>
+                            @endforeach
+                        </tr>
+                        <tr style="opacity:.6;font-size:.78rem;">
+                            <td style="{{ $tdL }};text-align:right;">Jahresstunden</td>
+                            @foreach ($years as $y)
+                                <td colspan="4" style="padding:.2rem .35rem;text-align:right;">{{ number_format($pay[$y]['hours'] ?? 0, 0, ',', '.') }} Std.</td>
+                            @endforeach
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </x-filament::section>
+
         {{-- Kostenplan --}}
         <x-filament::section>
             <x-slot name="heading">Kostenplan</x-slot>
@@ -168,12 +235,17 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php $pay = $this->payroll; @endphp
                         @foreach ($costRows as $row)
                             @php $id = $row['id']; @endphp
                             <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
-                                <td style="{{ $tdL }}">{{ $row['label'] }}</td>
+                                <td style="{{ $tdL }}">{{ $row['label'] }}@if ($row['label'] === 'Personalkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Lohnberechnung)</span>@endif</td>
                                 @foreach ($years as $y)
-                                    <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
+                                    @if ($row['label'] === 'Personalkosten')
+                                        <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($pay[$y]['budget'] ?? 0) }} €</td>
+                                    @else
+                                        <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
+                                    @endif
                                 @endforeach
                             </tr>
                         @endforeach

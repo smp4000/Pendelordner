@@ -65,6 +65,58 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(7000, $liq[2026]['end'], 0.01); // 1.000 Anfang + 6.000
     }
 
+    public function test_lohnberechnung_ergibt_personalkostenbudget(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create([
+            'title' => 'Lohn',
+            'year_from' => 2026,
+            'year_to' => 2026,
+            'payroll_overhead_pct' => 25,
+            'vacation_pct' => 10,
+        ]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        // 15 Std/Tag × 4 Tage × 52 × 14 €/Std = 43.680 € Lohn p.a.
+        $line = $plan->staffLines()->where('label', 'like', 'Kassenschicht Mo%')->first();
+        $line->values()->where('year', 2026)->update([
+            'hours_per_day' => 15, 'days_per_week' => 4, 'hourly_wage' => 14,
+        ]);
+
+        $pay = $plan->fresh()->load('staffLines.values')->payroll();
+        $this->assertEqualsWithDelta(43680, $pay[2026]['lohnkosten'], 0.01);
+        // + 10 % Urlaub = 4.368; + 25 % auf 48.048 = 12.012; Budget = 60.060.
+        $this->assertEqualsWithDelta(4368, $pay[2026]['urlaub'], 0.01);
+        $this->assertEqualsWithDelta(60060, $pay[2026]['budget'], 0.01);
+    }
+
+    public function test_lohnbudget_fliesst_in_personalkosten(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $comp = Livewire::test(Geschaeftsplanung::class)
+            ->callAction('createPlan', data: [
+                'business_id' => null, 'title' => 'Plan Lohn', 'ts_name' => null,
+                'address' => null, 'city' => null, 'year_from' => 2026, 'year_to' => 2026,
+            ]);
+
+        $plan = BusinessPlan::firstWhere('title', 'Plan Lohn');
+        $line = $plan->staffLines()->where('label', 'like', 'Kassenschicht Mo%')->first();
+
+        $comp->set("staff.{$line->id}.values.2026.hpd", '15')
+            ->set("staff.{$line->id}.values.2026.dpw", '4')
+            ->set("staff.{$line->id}.values.2026.wage", '14')
+            ->call('save');
+
+        // Budget (Standard 25 % / 10 %) landet in der Kostenposition „Personalkosten".
+        $pk = $plan->lines()->where('label', 'Personalkosten')->first();
+        $val = $pk->values()->where('year', 2026)->first();
+        $this->assertEqualsWithDelta(60060, (float) $val->amount, 0.01);
+    }
+
     public function test_seite_legt_plan_an_und_speichert_werte(): void
     {
         $this->seed(DatabaseSeeder::class);

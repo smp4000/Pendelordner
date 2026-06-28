@@ -26,6 +26,8 @@ class BusinessPlan extends Model
         'opening_balance' => 'decimal:2',
         'vat_rate' => 'decimal:2',
         'annual_repayment' => 'decimal:2',
+        'payroll_overhead_pct' => 'decimal:2',
+        'vacation_pct' => 'decimal:2',
     ];
 
     public function business(): BelongsTo
@@ -36,6 +38,11 @@ class BusinessPlan extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(BusinessPlanLine::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function staffLines(): HasMany
+    {
+        return $this->hasMany(BusinessPlanStaffLine::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /** @return list<int> */
@@ -78,6 +85,35 @@ class BusinessPlan extends Model
         }
 
         return $out;
+    }
+
+    /**
+     * Personalkostenberechnung (Lohnberechnung) je Jahr aus den Schichtzeilen.
+     *
+     * @return array<int, array{hours: float, lohnkosten: float, urlaub: float, nebenkosten: float, budget: float}>
+     */
+    public function payroll(): array
+    {
+        $rowsByYear = [];
+        foreach ($this->years() as $year) {
+            $rows = [];
+            foreach ($this->staffLines as $line) {
+                $v = $line->values->firstWhere('year', $year);
+                $rows[] = [
+                    'hours_per_day' => (float) ($v->hours_per_day ?? 0),
+                    'days_per_week' => (float) ($v->days_per_week ?? 0),
+                    'hourly_wage' => (float) ($v->hourly_wage ?? 0),
+                    'is_deduction' => (bool) $line->is_deduction,
+                ];
+            }
+            $rowsByYear[$year] = $rows;
+        }
+
+        return \App\Services\Plan\PayrollCalculator::compute(
+            $rowsByYear,
+            (float) $this->payroll_overhead_pct,
+            (float) $this->vacation_pct,
+        );
     }
 
     /** Summe der Kostenzeilen eines Jahres, deren Bezeichnung mit „Personalkosten" beginnt. */

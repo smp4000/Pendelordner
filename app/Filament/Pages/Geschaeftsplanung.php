@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\BusinessPlan;
 use App\Models\BusinessPlanLineValue;
+use App\Models\BusinessPlanStaffValue;
 use App\Models\Business;
 use App\Services\Plan\BusinessPlanTemplate;
 use BackedEnum;
@@ -53,6 +54,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
      */
     public array $rows = [];
 
+    /**
+     * Lohnzeilen der Personalkostenberechnung, je Zeile mit Werten pro Jahr.
+     *
+     * @var array<int, array{id:int, category:string, label:string, is_deduction:bool, values: array<int, array{hpd:string, dpw:string, wage:string}>}>
+     */
+    public array $staff = [];
+
     public function getMaxContentWidth(): Width
     {
         return Width::Full;
@@ -88,23 +96,64 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     }
 
     /**
+     * Personalkostenberechnung (Lohn) je Jahr – live aus dem Lohn-Raster.
+     *
+     * @return array<int, array{hours: float, lohnkosten: float, urlaub: float, nebenkosten: float, budget: float}>
+     */
+    public function getPayrollProperty(): array
+    {
+        $rowsByYear = [];
+        foreach ($this->years as $year) {
+            $rows = [];
+            foreach ($this->staff as $s) {
+                $rows[] = [
+                    'hours_per_day' => $this->num($s['values'][$year]['hpd'] ?? 0),
+                    'days_per_week' => $this->num($s['values'][$year]['dpw'] ?? 0),
+                    'hourly_wage' => $this->num($s['values'][$year]['wage'] ?? 0),
+                    'is_deduction' => (bool) $s['is_deduction'],
+                ];
+            }
+            $rowsByYear[$year] = $rows;
+        }
+
+        return \App\Services\Plan\PayrollCalculator::compute(
+            $rowsByYear,
+            $this->num($this->stamm['payroll_overhead_pct'] ?? 25),
+            $this->num($this->stamm['vacation_pct'] ?? 10),
+        );
+    }
+
+    /** Lohn p.a. einer einzelnen Lohnzeile in einem Jahr (für die Anzeige). */
+    public function staffWage(array $s, int $year): float
+    {
+        return $this->num($s['values'][$year]['hpd'] ?? 0)
+            * $this->num($s['values'][$year]['dpw'] ?? 0) * 52
+            * $this->num($s['values'][$year]['wage'] ?? 0);
+    }
+
+    /**
      * Geschäftsplanübersicht je Jahr – live aus dem Eingabe-Raster berechnet.
      *
      * @return array<int, array{umsatz: float, rohertrag: float, kosten: float, gewinn: float}>
      */
     public function getOverviewProperty(): array
     {
+        $payroll = $this->payroll;
         $out = [];
         foreach ($this->years as $year) {
             $umsatz = 0.0;
             $rohertrag = 0.0;
             $kosten = 0.0;
             foreach ($this->rows as $row) {
-                $amount = $this->num($row['values'][$year]['amount'] ?? 0);
                 if ($row['section'] === 'revenue') {
+                    $amount = $this->num($row['values'][$year]['amount'] ?? 0);
                     $umsatz += $amount;
                     $rohertrag += $amount * $this->num($row['values'][$year]['margin'] ?? 0) / 100;
                 } else {
+                    // Personalkosten kommen aus der Lohnberechnung (Budget).
+                    $amount = $row['label'] === 'Personalkosten'
+                        ? ($payroll[$year]['budget'] ?? 0)
+                        : $this->num($row['values'][$year]['amount'] ?? 0);
                     $kosten += $amount;
                 }
             }
@@ -127,12 +176,15 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     public function getLiquidityProperty(): array
     {
         $overview = $this->overview;
+        $payroll = $this->payroll;
         $perYear = [];
         foreach ($this->years as $year) {
             $personal = 0.0;
             foreach ($this->rows as $row) {
                 if ($row['section'] === 'cost' && str_starts_with($row['label'], 'Personalkosten')) {
-                    $personal += $this->num($row['values'][$year]['amount'] ?? 0);
+                    $personal += $row['label'] === 'Personalkosten'
+                        ? ($payroll[$year]['budget'] ?? 0)
+                        : $this->num($row['values'][$year]['amount'] ?? 0);
                 }
             }
             $perYear[$year] = [
@@ -255,15 +307,40 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'opening_balance' => $this->num($this->stamm['opening_balance'] ?? 0),
             'vat_rate' => $this->num($this->stamm['vat_rate'] ?? 19),
             'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
+            'payroll_overhead_pct' => $this->num($this->stamm['payroll_overhead_pct'] ?? 25),
+            'vacation_pct' => $this->num($this->stamm['vacation_pct'] ?? 10),
             'notes' => $this->stamm['notes'] ?: null,
         ]);
 
         $years = range($yearFrom, $yearTo);
+        $payroll = $this->payroll;   // Personalkostenbudget je Jahr aus der Lohnberechnung
+
+        // Lohnzeilen speichern.
+        foreach ($this->staff as $s) {
+            foreach ($years as $year) {
+                BusinessPlanStaffValue::updateOrCreate(
+                    ['business_plan_staff_line_id' => $s['id'], 'year' => $year],
+                    [
+                        'hours_per_day' => $this->num($s['values'][$year]['hpd'] ?? 0),
+                        'days_per_week' => $this->num($s['values'][$year]['dpw'] ?? 0),
+                        'hourly_wage' => $this->num($s['values'][$year]['wage'] ?? 0),
+                    ],
+                );
+            }
+            BusinessPlanStaffValue::where('business_plan_staff_line_id', $s['id'])
+                ->whereNotIn('year', $years)->delete();
+        }
 
         foreach ($this->rows as $row) {
             foreach ($years as $year) {
-                $amount = $this->num($row['values'][$year]['amount'] ?? 0);
-                $margin = $row['has_margin'] ? $this->num($row['values'][$year]['margin'] ?? 0) : null;
+                // Personalkosten = berechnetes Lohn-Budget (nicht manuell).
+                if ($row['section'] === 'cost' && $row['label'] === 'Personalkosten') {
+                    $amount = $payroll[$year]['budget'] ?? 0;
+                    $margin = null;
+                } else {
+                    $amount = $this->num($row['values'][$year]['amount'] ?? 0);
+                    $margin = $row['has_margin'] ? $this->num($row['values'][$year]['margin'] ?? 0) : null;
+                }
 
                 BusinessPlanLineValue::updateOrCreate(
                     ['business_plan_line_id' => $row['id'], 'year' => $year],
@@ -286,8 +363,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     {
         $this->stamm = [];
         $this->rows = [];
+        $this->staff = [];
 
-        $plan = $this->planId ? BusinessPlan::with('lines.values')->find($this->planId) : null;
+        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values'])->find($this->planId) : null;
         if (! $plan) {
             return;
         }
@@ -304,10 +382,31 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'opening_balance' => $this->fmt($plan->opening_balance),
             'vat_rate' => $this->fmt($plan->vat_rate),
             'annual_repayment' => $this->fmt($plan->annual_repayment),
+            'payroll_overhead_pct' => $this->fmt($plan->payroll_overhead_pct),
+            'vacation_pct' => $this->fmt($plan->vacation_pct),
             'notes' => $plan->notes,
         ];
 
         $years = $plan->years();
+
+        foreach ($plan->staffLines as $line) {
+            $values = [];
+            foreach ($years as $year) {
+                $v = $line->values->firstWhere('year', $year);
+                $values[$year] = [
+                    'hpd' => $this->fmt($v->hours_per_day ?? 0),
+                    'dpw' => $this->fmt($v->days_per_week ?? 0),
+                    'wage' => $this->fmt($v->hourly_wage ?? 0),
+                ];
+            }
+            $this->staff[$line->id] = [
+                'id' => $line->id,
+                'category' => (string) $line->category,
+                'label' => $line->label,
+                'is_deduction' => (bool) $line->is_deduction,
+                'values' => $values,
+            ];
+        }
 
         foreach ($plan->lines as $line) {
             $values = [];
