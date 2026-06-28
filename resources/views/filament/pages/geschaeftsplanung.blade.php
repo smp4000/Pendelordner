@@ -35,6 +35,29 @@
     </x-filament::section>
 
     @if ($planId && $years)
+        <style>[x-cloak]{display:none!important}</style>
+        @php
+            $tabs = [
+                'stammdaten' => 'Stammdaten',
+                'uebersicht' => 'Übersicht',
+                'umsatz' => 'Umsatz',
+                'lohn' => 'Lohn',
+                'pacht' => 'Pacht',
+                'finanzierung' => 'Finanzierung',
+                'kosten' => 'Kosten',
+                'liquiditaet' => 'Liquidität',
+            ];
+        @endphp
+        <div x-data="{ tab: 'stammdaten' }">
+            <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;">
+                @foreach ($tabs as $key => $label)
+                    <button type="button" x-on:click="tab='{{ $key }}'"
+                        :style="tab==='{{ $key }}' ? 'background:#059669;color:#fff;border-color:#059669;' : ''"
+                        style="padding:.45rem .9rem;border:1px solid rgba(120,120,120,.3);border-radius:.5rem;font-size:.85rem;font-weight:600;cursor:pointer;background:transparent;">{{ $label }}</button>
+                @endforeach
+            </div>
+
+        <div x-show="tab==='stammdaten'" x-cloak>
         {{-- Stammdaten --}}
         <x-filament::section>
             <x-slot name="heading">Stammdaten</x-slot>
@@ -71,7 +94,9 @@
                 </div>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='uebersicht'" x-cloak>
         {{-- Geschäftsplanübersicht (live) --}}
         <x-filament::section>
             <x-slot name="heading">Geschäftsplanübersicht</x-slot>
@@ -138,7 +163,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='umsatz'" x-cloak>
         {{-- Umsatzplan --}}
         <x-filament::section>
             <x-slot name="heading">Umsatzplan</x-slot>
@@ -182,7 +209,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='lohn'" x-cloak>
         {{-- Personalkostenberechnung (Lohn) --}}
         @php $staffRows = collect($staff); $pay = $this->payroll; @endphp
         <x-filament::section>
@@ -271,7 +300,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='pacht'" x-cloak>
         {{-- Pachtberechnung --}}
         @php $lease = $this->lease; $leaseRows = collect($leaseBases); @endphp
         <x-filament::section>
@@ -343,7 +374,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='kosten'" x-cloak>
         {{-- Kostenplan --}}
         <x-filament::section>
             <x-slot name="heading">Kostenplan</x-slot>
@@ -386,6 +419,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
+
+        <div x-show="tab==='finanzierung'" x-cloak>
         {{-- Finanzierung / Kapitalbedarf --}}
         @php $financeRows = collect($financings); $interest = $this->interest; $capital = $this->capitalNeed; @endphp
         <x-filament::section>
@@ -437,7 +473,9 @@
                 </table>
             </div>
         </x-filament::section>
+        </div>
 
+        <div x-show="tab==='liquiditaet'" x-cloak>
         {{-- Liquiditätsplanung --}}
         @php
             $liq = $this->liquidity;
@@ -510,6 +548,8 @@
                 </div>
             @endforeach
         </x-filament::section>
+        </div>
+        </div>
     @else
         <x-filament::section>
             <div style="padding:1rem;text-align:center;opacity:.6;">Bitte einen Plan wählen oder mit „Neuer Plan" anlegen.</div>
