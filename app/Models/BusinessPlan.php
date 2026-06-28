@@ -28,6 +28,11 @@ class BusinessPlan extends Model
         'annual_repayment' => 'decimal:2',
         'payroll_overhead_pct' => 'decimal:2',
         'vacation_pct' => 'decimal:2',
+        'umsatzpacht_start_year' => 'integer',
+        'umsatzpacht_start_month' => 'integer',
+        'festpacht_monthly' => 'decimal:2',
+        'festpacht_start_year' => 'integer',
+        'festpacht_start_month' => 'integer',
     ];
 
     public function business(): BelongsTo
@@ -43,6 +48,11 @@ class BusinessPlan extends Model
     public function staffLines(): HasMany
     {
         return $this->hasMany(BusinessPlanStaffLine::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function leaseBases(): HasMany
+    {
+        return $this->hasMany(BusinessPlanLeaseBase::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /** @return list<int> */
@@ -114,6 +124,67 @@ class BusinessPlan extends Model
             (float) $this->payroll_overhead_pct,
             (float) $this->vacation_pct,
         );
+    }
+
+    /** Umsatz einer Umsatzzeile (per Bezeichnung) in einem Jahr. */
+    private function revenueAmount(string $label, int $year): float
+    {
+        $line = $this->lines->first(fn ($l) => $l->section === 'revenue' && $l->label === $label);
+        $v = $line?->values->firstWhere('year', $year);
+
+        return (float) ($v->amount ?? 0);
+    }
+
+    /** Summe einer Umsatzgruppe (category) in einem Jahr. */
+    private function groupAmount(string $category, int $year): float
+    {
+        $sum = 0.0;
+        foreach ($this->lines as $line) {
+            if ($line->section === 'revenue' && $line->category === $category) {
+                $v = $line->values->firstWhere('year', $year);
+                $sum += (float) ($v->amount ?? 0);
+            }
+        }
+
+        return $sum;
+    }
+
+    /** Bemessungs-Umsatz einer Pacht-Grundlage je Jahr (aus dem Umsatzplan oder manuell). */
+    public function leaseBaseAmount(BusinessPlanLeaseBase $base, int $year): float
+    {
+        return match ($base->source) {
+            'tabak' => $this->revenueAmount('Tabakwaren', $year),
+            'wasch' => $this->revenueAmount('Autowaschanlage', $year),
+            'shop_rest' => max(0.0, $this->groupAmount('Shop / Bistro', $year)
+                - $this->revenueAmount('Tabakwaren', $year)
+                - $this->revenueAmount('Karten, Bücher, Zeitschriften', $year)),
+            default => (float) $base->manual_amount,
+        };
+    }
+
+    /**
+     * Pachtberechnung je Jahr (Shopumsatzpacht + Festpacht).
+     *
+     * @return array<int, array{umsatzpacht: float, festpacht: float, total: float}>
+     */
+    public function lease(): array
+    {
+        $basesByYear = [];
+        foreach ($this->years() as $year) {
+            $rows = [];
+            foreach ($this->leaseBases as $base) {
+                $rows[] = ['amount' => $this->leaseBaseAmount($base, $year), 'rate' => (float) $base->rate_pct];
+            }
+            $basesByYear[$year] = $rows;
+        }
+
+        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, [
+            'up_start_year' => $this->umsatzpacht_start_year,
+            'up_start_month' => (int) ($this->umsatzpacht_start_month ?: 1),
+            'fest_monthly' => (float) $this->festpacht_monthly,
+            'fest_start_year' => $this->festpacht_start_year,
+            'fest_start_month' => (int) ($this->festpacht_start_month ?: 1),
+        ]);
     }
 
     /** Summe der Kostenzeilen eines Jahres, deren Bezeichnung mit „Personalkosten" beginnt. */

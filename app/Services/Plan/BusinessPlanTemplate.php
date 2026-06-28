@@ -74,6 +74,14 @@ class BusinessPlanTemplate
         'A.O. Aufwendungen',
     ];
 
+    /** Standard-Bemessungsgrundlagen der Shopumsatzpacht: [Bezeichnung, Quelle]. */
+    public const LEASE_BASES = [
+        ['Tabak', 'tabak'],
+        ['Autowaschanlage', 'wasch'],
+        ['Shop (ohne Tabak, KBZ, Telefonkarten)', 'shop_rest'],
+        ['Lotto / Glücksspiel', 'manual'],
+    ];
+
     /** Standard-Lohnzeilen der Personalkostenberechnung: [Bezeichnung, Gruppe, ist Abzug]. */
     public const STAFF = [
         ['Kassenschicht Mo.–Do.', 'Kassenschichten', false],
@@ -108,6 +116,20 @@ class BusinessPlanTemplate
                 ]);
             }
         }
+
+        // Bemessungsgrundlagen der Shopumsatzpacht + Pacht-Startjahre vorbelegen.
+        foreach (self::LEASE_BASES as $i => [$label, $source]) {
+            $plan->leaseBases()->create([
+                'label' => $label,
+                'source' => $source,
+                'rate_pct' => 0,
+                'sort_order' => $i,
+            ]);
+        }
+        $plan->update([
+            'umsatzpacht_start_year' => $plan->year_from,
+            'festpacht_start_year' => $plan->year_from,
+        ]);
 
         foreach (self::REVENUE as $group => $rows) {
             foreach ($rows as [$label, $margin]) {

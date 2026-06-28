@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\BusinessPlan;
+use App\Models\BusinessPlanLeaseBase;
 use App\Models\BusinessPlanLineValue;
 use App\Models\BusinessPlanStaffValue;
 use App\Models\Business;
@@ -60,6 +61,13 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
      * @var array<int, array{id:int, category:string, label:string, is_deduction:bool, values: array<int, array{hpd:string, dpw:string, wage:string}>}>
      */
     public array $staff = [];
+
+    /**
+     * Bemessungsgrundlagen der Shopumsatzpacht.
+     *
+     * @var array<int, array{id:int, label:string, source:string, rate:string, manual:string}>
+     */
+    public array $leaseBases = [];
 
     public function getMaxContentWidth(): Width
     {
@@ -131,6 +139,78 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             * $this->num($s['values'][$year]['wage'] ?? 0);
     }
 
+    /** Umsatz einer Umsatzzeile (live aus dem Raster) per Bezeichnung. */
+    private function revAmountLive(string $label, int $year): float
+    {
+        foreach ($this->rows as $row) {
+            if ($row['section'] === 'revenue' && $row['label'] === $label) {
+                return $this->num($row['values'][$year]['amount'] ?? 0);
+            }
+        }
+
+        return 0.0;
+    }
+
+    /** Summe einer Umsatzgruppe (live) per category. */
+    private function groupAmountLive(string $category, int $year): float
+    {
+        $sum = 0.0;
+        foreach ($this->rows as $row) {
+            if ($row['section'] === 'revenue' && $row['category'] === $category) {
+                $sum += $this->num($row['values'][$year]['amount'] ?? 0);
+            }
+        }
+
+        return $sum;
+    }
+
+    /** Bemessungs-Umsatz einer Pacht-Grundlage je Jahr (öffentlich, für die Anzeige). */
+    public function leaseAmount(array $base, int $year): float
+    {
+        return $this->leaseBaseAmountLive($base, $year);
+    }
+
+    /** Bemessungs-Umsatz einer Pacht-Grundlage je Jahr (live). */
+    private function leaseBaseAmountLive(array $base, int $year): float
+    {
+        return match ($base['source']) {
+            'tabak' => $this->revAmountLive('Tabakwaren', $year),
+            'wasch' => $this->revAmountLive('Autowaschanlage', $year),
+            'shop_rest' => max(0.0, $this->groupAmountLive('Shop / Bistro', $year)
+                - $this->revAmountLive('Tabakwaren', $year)
+                - $this->revAmountLive('Karten, Bücher, Zeitschriften', $year)),
+            default => $this->num($base['manual'] ?? 0),
+        };
+    }
+
+    /**
+     * Pachtberechnung je Jahr (Shopumsatzpacht + Festpacht) – live.
+     *
+     * @return array<int, array{umsatzpacht: float, festpacht: float, total: float}>
+     */
+    public function getLeaseProperty(): array
+    {
+        $basesByYear = [];
+        foreach ($this->years as $year) {
+            $rows = [];
+            foreach ($this->leaseBases as $b) {
+                $rows[] = ['amount' => $this->leaseBaseAmountLive($b, $year), 'rate' => $this->num($b['rate'] ?? 0)];
+            }
+            $basesByYear[$year] = $rows;
+        }
+
+        $upSY = ($this->stamm['umsatzpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['umsatzpacht_start_year'] : null;
+        $fpSY = ($this->stamm['festpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['festpacht_start_year'] : null;
+
+        return \App\Services\Plan\LeaseCalculator::compute($basesByYear, [
+            'up_start_year' => $upSY,
+            'up_start_month' => (int) ($this->stamm['umsatzpacht_start_month'] ?? 1),
+            'fest_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
+            'fest_start_year' => $fpSY,
+            'fest_start_month' => (int) ($this->stamm['festpacht_start_month'] ?? 1),
+        ]);
+    }
+
     /**
      * Geschäftsplanübersicht je Jahr – live aus dem Eingabe-Raster berechnet.
      *
@@ -139,6 +219,7 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
     public function getOverviewProperty(): array
     {
         $payroll = $this->payroll;
+        $lease = $this->lease;
         $out = [];
         foreach ($this->years as $year) {
             $umsatz = 0.0;
@@ -150,10 +231,12 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
                     $umsatz += $amount;
                     $rohertrag += $amount * $this->num($row['values'][$year]['margin'] ?? 0) / 100;
                 } else {
-                    // Personalkosten kommen aus der Lohnberechnung (Budget).
-                    $amount = $row['label'] === 'Personalkosten'
-                        ? ($payroll[$year]['budget'] ?? 0)
-                        : $this->num($row['values'][$year]['amount'] ?? 0);
+                    // Personalkosten aus der Lohnberechnung, Pacht aus der Pachtberechnung.
+                    $amount = match ($row['label']) {
+                        'Personalkosten' => $payroll[$year]['budget'] ?? 0,
+                        'Pacht - Station' => $lease[$year]['total'] ?? 0,
+                        default => $this->num($row['values'][$year]['amount'] ?? 0),
+                    };
                     $kosten += $amount;
                 }
             }
@@ -309,11 +392,25 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'annual_repayment' => $this->num($this->stamm['annual_repayment'] ?? 0),
             'payroll_overhead_pct' => $this->num($this->stamm['payroll_overhead_pct'] ?? 25),
             'vacation_pct' => $this->num($this->stamm['vacation_pct'] ?? 10),
+            'umsatzpacht_start_year' => ($this->stamm['umsatzpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['umsatzpacht_start_year'] : null,
+            'umsatzpacht_start_month' => (int) ($this->stamm['umsatzpacht_start_month'] ?? 1) ?: 1,
+            'festpacht_monthly' => $this->num($this->stamm['festpacht_monthly'] ?? 0),
+            'festpacht_start_year' => ($this->stamm['festpacht_start_year'] ?? '') !== '' ? (int) $this->stamm['festpacht_start_year'] : null,
+            'festpacht_start_month' => (int) ($this->stamm['festpacht_start_month'] ?? 1) ?: 1,
             'notes' => $this->stamm['notes'] ?: null,
         ]);
 
+        // Bemessungsgrundlagen der Umsatzpacht (Satz + manueller Umsatz) speichern.
+        foreach ($this->leaseBases as $b) {
+            BusinessPlanLeaseBase::where('id', $b['id'])->update([
+                'rate_pct' => $this->num($b['rate'] ?? 0),
+                'manual_amount' => $this->num($b['manual'] ?? 0),
+            ]);
+        }
+
         $years = range($yearFrom, $yearTo);
         $payroll = $this->payroll;   // Personalkostenbudget je Jahr aus der Lohnberechnung
+        $lease = $this->lease;       // Stationspacht je Jahr aus der Pachtberechnung
 
         // Lohnzeilen speichern.
         foreach ($this->staff as $s) {
@@ -333,9 +430,12 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
 
         foreach ($this->rows as $row) {
             foreach ($years as $year) {
-                // Personalkosten = berechnetes Lohn-Budget (nicht manuell).
+                // Personalkosten aus Lohnberechnung, Pacht aus Pachtberechnung (nicht manuell).
                 if ($row['section'] === 'cost' && $row['label'] === 'Personalkosten') {
                     $amount = $payroll[$year]['budget'] ?? 0;
+                    $margin = null;
+                } elseif ($row['section'] === 'cost' && $row['label'] === 'Pacht - Station') {
+                    $amount = $lease[$year]['total'] ?? 0;
                     $margin = null;
                 } else {
                     $amount = $this->num($row['values'][$year]['amount'] ?? 0);
@@ -364,8 +464,9 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
         $this->stamm = [];
         $this->rows = [];
         $this->staff = [];
+        $this->leaseBases = [];
 
-        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values'])->find($this->planId) : null;
+        $plan = $this->planId ? BusinessPlan::with(['lines.values', 'staffLines.values', 'leaseBases'])->find($this->planId) : null;
         if (! $plan) {
             return;
         }
@@ -384,8 +485,23 @@ class Geschaeftsplanung extends Page implements HasActions, HasForms
             'annual_repayment' => $this->fmt($plan->annual_repayment),
             'payroll_overhead_pct' => $this->fmt($plan->payroll_overhead_pct),
             'vacation_pct' => $this->fmt($plan->vacation_pct),
+            'umsatzpacht_start_year' => $plan->umsatzpacht_start_year ? (string) $plan->umsatzpacht_start_year : '',
+            'umsatzpacht_start_month' => (string) ($plan->umsatzpacht_start_month ?: 1),
+            'festpacht_monthly' => $this->fmt($plan->festpacht_monthly),
+            'festpacht_start_year' => $plan->festpacht_start_year ? (string) $plan->festpacht_start_year : '',
+            'festpacht_start_month' => (string) ($plan->festpacht_start_month ?: 1),
             'notes' => $plan->notes,
         ];
+
+        foreach ($plan->leaseBases as $base) {
+            $this->leaseBases[$base->id] = [
+                'id' => $base->id,
+                'label' => $base->label,
+                'source' => $base->source,
+                'rate' => $this->fmt($base->rate_pct),
+                'manual' => $this->fmt($base->manual_amount),
+            ];
+        }
 
         $years = $plan->years();
 

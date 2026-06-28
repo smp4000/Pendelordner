@@ -221,6 +221,78 @@
             </div>
         </x-filament::section>
 
+        {{-- Pachtberechnung --}}
+        @php $lease = $this->lease; $leaseRows = collect($leaseBases); @endphp
+        <x-filament::section>
+            <x-slot name="heading">Pachtberechnung</x-slot>
+            <x-slot name="description">Stationspacht = Shopumsatzpacht (Bemessungs-Umsatz × Satz, anteilig ab Startmonat) + Festpacht (€/Monat ab Startstufe). Fließt in die Kostenposition „Pacht - Station".</x-slot>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:1rem;">
+                <div><label style="font-size:.8rem;font-weight:600;">Umsatzpacht ab Monat (1–12)</label>
+                    <input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.umsatzpacht_start_month" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Umsatzpacht ab Jahr</label>
+                    <input type="number" wire:model.live.debounce.400ms="stamm.umsatzpacht_start_year" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Festpacht (€ / Monat)</label>
+                    <input type="text" wire:model.live.debounce.400ms="stamm.festpacht_monthly" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Festpacht ab Monat (1–12)</label>
+                    <input type="number" min="1" max="12" wire:model.live.debounce.400ms="stamm.festpacht_start_month" style="{{ $inpTxt }};text-align:right;"></div>
+                <div><label style="font-size:.8rem;font-weight:600;">Festpacht ab Jahr</label>
+                    <input type="number" wire:model.live.debounce.400ms="stamm.festpacht_start_year" style="{{ $inpTxt }};text-align:right;"></div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid rgba(120,120,120,.3);">
+                            <th style="{{ $th }};text-align:left;min-width:200px;">Bemessungsgrundlage</th>
+                            <th style="{{ $th }}">Satz %</th>
+                            <th style="{{ $th }}">man. Umsatz</th>
+                            @foreach ($years as $y)
+                                <th style="{{ $th }}">{{ $y }} Umsatz</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($leaseRows as $b)
+                            @php $bid = $b['id']; @endphp
+                            <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                <td style="{{ $tdL }}">{{ $b['label'] }}</td>
+                                <td style="padding:.15rem .2rem;"><input type="text" wire:model.live.debounce.400ms="leaseBases.{{ $bid }}.rate" style="{{ $inp }};min-width:60px;"></td>
+                                <td style="padding:.15rem .2rem;">
+                                    @if ($b['source'] === 'manual')
+                                        <input type="text" wire:model.live.debounce.400ms="leaseBases.{{ $bid }}.manual" style="{{ $inp }}">
+                                    @else
+                                        <span style="opacity:.4;font-size:.75rem;">automatisch</span>
+                                    @endif
+                                </td>
+                                @foreach ($years as $y)
+                                    <td style="padding:.15rem .35rem;text-align:right;font-size:.8rem;opacity:.75;white-space:nowrap;">{{ $money($this->leaseAmount($b, $y)) }}</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        <tr style="font-size:.85rem;border-top:1px solid rgba(120,120,120,.2);">
+                            <td style="{{ $tdL }};text-align:right;" colspan="3">Shopumsatzpacht</td>
+                            @foreach ($years as $y)
+                                <td style="padding:.2rem .35rem;text-align:right;">{{ $money($lease[$y]['umsatzpacht'] ?? 0) }} €</td>
+                            @endforeach
+                        </tr>
+                        <tr style="font-size:.85rem;">
+                            <td style="{{ $tdL }};text-align:right;" colspan="3">+ Festpacht</td>
+                            @foreach ($years as $y)
+                                <td style="padding:.2rem .35rem;text-align:right;">{{ $money($lease[$y]['festpacht'] ?? 0) }} €</td>
+                            @endforeach
+                        </tr>
+                        <tr style="font-weight:700;border-top:2px solid rgba(120,120,120,.3);">
+                            <td style="{{ $tdL }};text-align:right;" colspan="3">= Pacht - Station</td>
+                            @foreach ($years as $y)
+                                <td style="padding:.3rem .35rem;text-align:right;">{{ $money($lease[$y]['total'] ?? 0) }} €</td>
+                            @endforeach
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </x-filament::section>
+
         {{-- Kostenplan --}}
         <x-filament::section>
             <x-slot name="heading">Kostenplan</x-slot>
@@ -235,14 +307,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php $pay = $this->payroll; @endphp
+                        @php $pay = $this->payroll; $lease = $this->lease; @endphp
                         @foreach ($costRows as $row)
-                            @php $id = $row['id']; @endphp
+                            @php $id = $row['id']; $derived = in_array($row['label'], ['Personalkosten', 'Pacht - Station'], true); @endphp
                             <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
-                                <td style="{{ $tdL }}">{{ $row['label'] }}@if ($row['label'] === 'Personalkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Lohnberechnung)</span>@endif</td>
+                                <td style="{{ $tdL }}">{{ $row['label'] }}@if ($row['label'] === 'Personalkosten')<span style="opacity:.5;font-size:.7rem;"> (aus Lohnberechnung)</span>@elseif ($row['label'] === 'Pacht - Station')<span style="opacity:.5;font-size:.7rem;"> (aus Pachtberechnung)</span>@endif</td>
                                 @foreach ($years as $y)
                                     @if ($row['label'] === 'Personalkosten')
                                         <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($pay[$y]['budget'] ?? 0) }} €</td>
+                                    @elseif ($row['label'] === 'Pacht - Station')
+                                        <td style="padding:.15rem .35rem;text-align:right;opacity:.85;">{{ $money($lease[$y]['total'] ?? 0) }} €</td>
                                     @else
                                         <td style="padding:.15rem .25rem;"><input type="text" wire:model.live.debounce.400ms="rows.{{ $id }}.values.{{ $y }}.amount" style="{{ $inp }}"></td>
                                     @endif

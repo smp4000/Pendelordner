@@ -117,6 +117,42 @@ class BusinessPlanTest extends TestCase
         $this->assertEqualsWithDelta(60060, (float) $val->amount, 0.01);
     }
 
+    public function test_pachtberechnung_umsatz_und_festpacht(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $plan = BusinessPlan::create(['title' => 'Pacht', 'year_from' => 2026, 'year_to' => 2027]);
+        (new BusinessPlanTemplate())->apply($plan);
+
+        // Umsatzpacht ab Juli 2026, Festpacht 500 €/Monat ab 2027.
+        $plan->update([
+            'umsatzpacht_start_year' => 2026, 'umsatzpacht_start_month' => 7,
+            'festpacht_monthly' => 500, 'festpacht_start_year' => 2027, 'festpacht_start_month' => 1,
+        ]);
+
+        $setRev = function (string $label, int $year, float $amount) use ($plan) {
+            $plan->lines()->where('label', $label)->first()
+                ->values()->where('year', $year)->update(['amount' => $amount]);
+        };
+        $setRev('Tabakwaren', 2026, 440000);
+        $setRev('Tabakwaren', 2027, 440000);
+        $setRev('Autowaschanlage', 2026, 43700);
+        $setRev('Autowaschanlage', 2027, 48800);
+
+        $plan->leaseBases()->where('source', 'tabak')->update(['rate_pct' => 2.5]);
+        $plan->leaseBases()->where('source', 'wasch')->update(['rate_pct' => 6]);
+        $plan->leaseBases()->where('source', 'manual')->update(['rate_pct' => 1, 'manual_amount' => 150000]);
+
+        $lease = $plan->fresh()->load(['lines.values', 'leaseBases'])->lease();
+
+        // 2026: (440.000×2,5% + 43.700×6% + 150.000×1%) = 15.122 → ×6/12 = 7.561; Festpacht 0.
+        $this->assertEqualsWithDelta(7561, $lease[2026]['total'], 0.01);
+        // 2027: (11.000 + 2.928 + 1.500) = 15.428 ganzjährig + 6.000 Festpacht = 21.428.
+        $this->assertEqualsWithDelta(15428, $lease[2027]['umsatzpacht'], 0.01);
+        $this->assertEqualsWithDelta(6000, $lease[2027]['festpacht'], 0.01);
+        $this->assertEqualsWithDelta(21428, $lease[2027]['total'], 0.01);
+    }
+
     public function test_seite_legt_plan_an_und_speichert_werte(): void
     {
         $this->seed(DatabaseSeeder::class);
