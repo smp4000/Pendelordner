@@ -110,18 +110,11 @@ class PdfReportService
         ])->setPaper('a4')->output();
         $this->importPdfString($pdf, $frontMatter);
 
-        // 4. Belege chronologisch anhängen – ohne Trennseite, mit aufgedruckter
-        //    Beleg-Nummer und Status-Stempeln (bezahlt/gebucht) je Umsatz.
+        // 4. Belege chronologisch anhängen – ohne Trennseite, mit aufgedruckter Beleg-Nummer.
         foreach ($transactions as $transaction) {
             foreach ($transaction->receipts as $receipt) {
                 if (isset($receiptNumbers[$receipt->id])) {
-                    $this->appendReceipt(
-                        $pdf,
-                        $receipt,
-                        $receiptNumbers[$receipt->id],
-                        (bool) $transaction->fully_paid,
-                        (bool) $transaction->reviewed,
-                    );
+                    $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
                 }
             }
         }
@@ -155,7 +148,7 @@ class PdfReportService
      * Importiert alle Seiten eines PDF-Strings in das Zieldokument.
      * Ist $stampNumber gesetzt, wird die Beleg-Nummer auf die erste Seite gedruckt.
      */
-    private function importPdfString(ReportPdf $pdf, string $pdfContent, ?int $stampNumber = null, bool $paid = false, bool $booked = false): void
+    private function importPdfString(ReportPdf $pdf, string $pdfContent, ?int $stampNumber = null): void
     {
         $pageCount = $pdf->setSourceFile(StreamReader::createByString($pdfContent));
         for ($page = 1; $page <= $pageCount; $page++) {
@@ -166,9 +159,6 @@ class PdfReportService
 
             if ($page === 1 && $stampNumber !== null) {
                 $this->stampNumber($pdf, $stampNumber, (float) $size['width']);
-            }
-            if ($page === 1 && ($paid || $booked)) {
-                $this->stampStatus($pdf, (float) $size['width'], $paid, $booked);
             }
         }
     }
@@ -201,26 +191,8 @@ class PdfReportService
         $pdf->SetTextColor(0, 0, 0);
     }
 
-    /**
-     * Druckt die Status-Stempel (bezahlt/gebucht) gedreht oben rechts auf die
-     * Seite – nur in den Bericht, die Originaldatei bleibt unverändert.
-     */
-    private function stampStatus(ReportPdf $pdf, float $pageWidth, bool $paid, bool $booked): void
-    {
-        $cx = $pageWidth - 26.0;   // Mittelpunkt rechts, unterhalb der Beleg-Nummer
-        $y = 22.0;
-
-        if ($paid) {
-            $pdf->statusStamp('BEZAHLT', $cx, $y, [217, 119, 6]);   // orange
-            $y += 11.0;
-        }
-        if ($booked) {
-            $pdf->statusStamp('GEBUCHT', $cx, $y, [13, 148, 136]);  // petrol
-        }
-    }
-
     /** Hängt einen Original-Beleg an: PDF-Seiten importieren, Bilder einbetten. */
-    private function appendReceipt(ReportPdf $pdf, Receipt $receipt, ?int $number = null, bool $paid = false, bool $booked = false): void
+    private function appendReceipt(ReportPdf $pdf, Receipt $receipt, ?int $number = null): void
     {
         if (! $receipt->file_path) {
             return;
@@ -237,7 +209,7 @@ class PdfReportService
         try {
             if ($mime === 'application/pdf' || str_ends_with(strtolower($absolute), '.pdf')) {
                 try {
-                    $this->importPdfString($pdf, (string) file_get_contents($absolute), $number, $paid, $booked);
+                    $this->importPdfString($pdf, (string) file_get_contents($absolute), $number);
 
                     return;
                 } catch (Throwable $e) {
@@ -246,7 +218,7 @@ class PdfReportService
                     // erneut versuchen.
                     if ($converted = $this->convertPdfToCompatible($absolute)) {
                         try {
-                            $this->importPdfString($pdf, (string) file_get_contents($converted), $number, $paid, $booked);
+                            $this->importPdfString($pdf, (string) file_get_contents($converted), $number);
                             @unlink($converted);
 
                             return;
@@ -265,9 +237,6 @@ class PdfReportService
                 $pdf->Image($absolute, 10, 10, 190);
                 if ($number !== null) {
                     $this->stampNumber($pdf, $number, 210.0); // A4-Breite in mm
-                }
-                if ($paid || $booked) {
-                    $this->stampStatus($pdf, 210.0, $paid, $booked);
                 }
 
                 return;
