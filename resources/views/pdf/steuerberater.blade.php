@@ -108,7 +108,11 @@
                         <td><strong>{{ $steuerNumbers[$doc->id] ?? '' }}</strong></td>
                         <td>{{ $doc->period?->format('m/Y') }}</td>
                         <td>{{ $doc->category }}</td>
-                        <td>{{ $doc->file_name }}</td>
+                        <td>{{ $doc->file_name }}
+                            @if (trim((string) $doc->note) !== '')
+                                <div class="memo"><span class="memo-label">Hinweis:</span> {{ $doc->note }}</div>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

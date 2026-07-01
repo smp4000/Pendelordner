@@ -57,6 +57,8 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
     public string $docCategory = 'Monatsrechnung';
 
+    public string $docNote = '';
+
     public function mount(): void
     {
         $this->form->fill([
@@ -271,6 +273,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
                     'bank_account_id' => $accId,
                     'period' => $month,
                     'category' => $category,
+                    'note' => trim($this->docNote) ?: null,
                     'file_path' => $path,
                     'file_name' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
@@ -284,12 +287,18 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             }
         }
 
-        $this->reset('docUploads');
+        $this->reset('docUploads', 'docNote');
 
         Notification::make()
             ->title($count . ' Datei(en) hochgeladen')
             ->body($skipped > 0 ? $skipped . ' Dublette(n) übersprungen.' : '')
             ->success()->send();
+    }
+
+    /** Notiz/Hinweis eines Dokuments speichern (erscheint als Info-Box im Bericht). */
+    public function saveDocNote(int $id, ?string $note = null): void
+    {
+        SteuerDocument::where('id', $id)->update(['note' => trim((string) $note) ?: null]);
     }
 
     /** Ein Dokument löschen (inkl. Datei). */

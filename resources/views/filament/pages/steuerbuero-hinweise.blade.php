@@ -45,6 +45,10 @@
                     <x-filament::button wire:click="uploadDocuments" wire:loading.attr="disabled" wire:target="docUploads,uploadDocuments" icon="heroicon-o-arrow-up-tray">Hochladen &amp; zuordnen</x-filament::button>
                 </div>
             </div>
+            <div style="margin-top:.75rem;">
+                <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz / Hinweis für den Steuerberater (optional)</label>
+                <input type="text" wire:model="docNote" placeholder="z. B. Bitte auf Konto 1900 buchen" style="{{ $inpTxt }}">
+            </div>
             <div wire:loading wire:target="docUploads" style="font-size:.8rem;opacity:.7;margin-top:.5rem;">Datei wird hochgeladen …</div>
 
             @php $docs = $this->documents; @endphp
@@ -64,7 +68,10 @@
                                 <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
                                     <td style="padding:.35rem .5rem;font-weight:700;">{{ $i + 1 }}</td>
                                     <td style="padding:.35rem .5rem;">{{ $doc->category }}</td>
-                                    <td style="padding:.35rem .5rem;"><a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;">{{ $doc->file_name ?: 'Datei' }}</a></td>
+                                    <td style="padding:.35rem .5rem;">
+                                        <a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;">{{ $doc->file_name ?: 'Datei' }}</a>
+                                        <input type="text" value="{{ $doc->note }}" wire:change="saveDocNote({{ $doc->id }}, $event.target.value)" placeholder="Notiz / Hinweis für den Steuerberater …" style="width:100%;margin-top:.3rem;padding:.25rem .45rem;border:1px solid rgba(245,158,11,.5);border-radius:.4rem;background:rgba(254,243,199,.35);font-size:.8rem;">
+                                    </td>
                                     <td style="padding:.35rem .5rem;">
                                         <button type="button" wire:click="deleteDocument({{ $doc->id }})" wire:confirm="Dieses Dokument wirklich löschen?" style="color:#dc2626;font-weight:600;background:none;border:0;cursor:pointer;">Löschen</button>
                                     </td>

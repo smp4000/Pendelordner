@@ -33,6 +33,7 @@ class SteuerDocumentTest extends TestCase
             ->set('data.year', '2026')
             ->set('data.month', '6')
             ->set('docCategory', 'Monatsrechnung')
+            ->set('docNote', 'Bitte auf Konto 1900 buchen')
             ->set('docUploads', [UploadedFile::fake()->create('rechnung.pdf', 100, 'application/pdf')])
             ->call('uploadDocuments');
 
@@ -40,6 +41,7 @@ class SteuerDocumentTest extends TestCase
         $this->assertNotNull($doc);
         $this->assertSame($account->id, $doc->bank_account_id);
         $this->assertSame('Monatsrechnung', $doc->category);
+        $this->assertSame('Bitte auf Konto 1900 buchen', $doc->note);
         $this->assertSame(6, $doc->period->month);
         $this->assertSame(2026, $doc->period->year);
         Storage::disk('belege')->assertExists($doc->file_path);
