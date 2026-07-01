@@ -25,7 +25,10 @@
         .receipts { color: #6b7280; font-size: 9px; }
         .beleg-nr { display: inline-block; margin-top: 2px; background: #059669; color: #fff;
                     font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
-        .memo { margin-top: 3px; font-weight: bold; color: #b45309; font-size: 10px; }
+        .memo { margin-top: 4px; font-weight: bold; color: #92400e; font-size: 10px;
+            background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px;
+            padding: 3px 6px; }
+        .memo-label { color: #b45309; }
         .note-card { border: 1px solid #a7f3d0; border-radius: 5px; padding: 6px 9px; margin-top: 8px; background: #f0fdf4; }
         .note-head { font-weight: bold; color: #065f46; font-size: 11px; margin-bottom: 3px; }
         .note-lines { width: 100%; border-collapse: collapse; }
@@ -120,7 +123,7 @@
                         <br><span class="beleg-nr">Beleg {{ $nums->implode(', ') }}</span>
                     @endif
                     @if (trim((string) $t->accountant_note) !== '')
-                        <div class="memo">{{ $t->accountant_note }}</div>
+                        <div class="memo"><span class="memo-label">Mitteilung an Steuerberater:</span> {{ $t->accountant_note }}</div>
                     @endif
                     @if ($t->accountAssignments->isNotEmpty())
                         <table class="splits">
