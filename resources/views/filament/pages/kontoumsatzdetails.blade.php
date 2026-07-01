@@ -456,18 +456,19 @@
                                 x-on:drop.prevent="dragging=false; $refs.fileInput.files=$event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change',{bubbles:true}))"
                                 :style="dragging ? 'background:rgba(16,185,129,.08);' : ''"
                                 style="border:2px dashed #10b981;border-radius:.6rem;padding:2rem;text-align:center;">
-                                <input type="file" x-ref="fileInput" wire:model="uploadFile" style="display:none" id="belegUpload"
+                                <input type="file" x-ref="fileInput" wire:model="uploadFiles" multiple style="display:none" id="belegUpload"
                                     accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,application/pdf,image/*">
                                 <div style="font-size:2rem;color:#10b981;">＋</div>
-                                <p style="margin:.5rem 0;font-weight:600;">Beleg hier ablegen oder</p>
-                                <label for="belegUpload" style="display:inline-block;padding:.45rem .9rem;background:#10b981;color:#fff;border-radius:.4rem;cursor:pointer;">Datei auswählen</label>
-                                <p style="margin-top:.5rem;font-size:.75rem;opacity:.6;">PDF, JPG, PNG, TIFF · max. 20 MB</p>
+                                <p style="margin:.5rem 0;font-weight:600;">Belege hier ablegen oder</p>
+                                <label for="belegUpload" style="display:inline-block;padding:.45rem .9rem;background:#10b981;color:#fff;border-radius:.4rem;cursor:pointer;">Dateien auswählen</label>
+                                <p style="margin-top:.5rem;font-size:.75rem;opacity:.6;">Mehrere möglich · PDF, JPG, PNG, TIFF · max. 20 MB je Datei</p>
 
-                                <div wire:loading wire:target="uploadFile" style="margin-top:.5rem;font-size:.8rem;opacity:.7;">Lädt hoch…</div>
+                                <div wire:loading wire:target="uploadFiles" style="margin-top:.5rem;font-size:.8rem;opacity:.7;">Lädt hoch…</div>
 
-                                @if ($uploadFile)
+                                @if (! empty($uploadFiles))
                                     <div style="margin-top:.75rem;font-size:.85rem;">
-                                        Gewählt: <strong>{{ method_exists($uploadFile,'getClientOriginalName') ? $uploadFile->getClientOriginalName() : 'Datei' }}</strong>
+                                        {{ count($uploadFiles) }} Datei(en) gewählt:
+                                        <strong>{{ collect($uploadFiles)->map(fn ($f) => method_exists($f, 'getClientOriginalName') ? $f->getClientOriginalName() : 'Datei')->implode(', ') }}</strong>
                                     </div>
                                     <div style="margin-top:.5rem;">
                                         <x-filament::button wire:click="uploadReceipt" wire:loading.attr="disabled" wire:target="uploadReceipt" icon="heroicon-o-arrow-up-tray" color="primary">
@@ -476,7 +477,8 @@
                                         <span wire:loading wire:target="uploadReceipt" style="margin-left:.5rem;font-size:.8rem;opacity:.7;">OCR läuft…</span>
                                     </div>
                                 @endif
-                                @error('uploadFile') <p style="color:#dc2626;margin-top:.5rem;font-size:.8rem;">{{ $message }}</p> @enderror
+                                @error('uploadFiles') <p style="color:#dc2626;margin-top:.5rem;font-size:.8rem;">{{ $message }}</p> @enderror
+                                @error('uploadFiles.*') <p style="color:#dc2626;margin-top:.5rem;font-size:.8rem;">{{ $message }}</p> @enderror
                             </div>
                         @endif
                     </div>

@@ -79,7 +79,8 @@ class Kontoumsatzdetails extends Page
     public string $searchType = 'all';            // all | <ReceiptType>
 
     // --- Upload --------------------------------------------------------------
-    public $uploadFile = null;
+    /** @var array<int, mixed> */
+    public array $uploadFiles = [];
 
     public string $uploadType = 'incoming_invoice';
 
@@ -1028,54 +1029,66 @@ class Kontoumsatzdetails extends Page
         }
 
         $this->validate([
-            'uploadFile' => 'required|file|max:20480', // max. 20 MB
-        ], [], ['uploadFile' => 'Datei']);
+            'uploadFiles' => 'required|array',
+            'uploadFiles.*' => 'file|max:20480', // max. 20 MB je Datei
+        ], [], ['uploadFiles' => 'Dateien']);
 
-        try {
-            $diskName = config('pendelordner.belege_disk', 'belege');
+        $diskName = config('pendelordner.belege_disk', 'belege');
+        $count = 0;
+        $lastId = null;
 
-            // Dublettenprüfung: existiert der Beleg schon, den vorhandenen
-            // verwenden (statt eine zweite Kopie anzulegen).
-            $hash = hash('sha256', $this->uploadFile->get());
-            $receipt = Receipt::where('file_hash', $hash)->first();
+        foreach ($this->uploadFiles as $file) {
+            try {
+                // Dublettenprüfung: existiert der Beleg schon, den vorhandenen
+                // verwenden (statt eine zweite Kopie anzulegen).
+                $hash = hash('sha256', $file->get());
+                $receipt = Receipt::where('file_hash', $hash)->first();
 
-            if (! $receipt) {
-                $path = $this->uploadFile->store(date('Y/m'), $diskName);
+                if (! $receipt) {
+                    $path = $file->store(date('Y/m'), $diskName);
 
-                $receipt = Receipt::create([
-                    'type' => $this->uploadType,
-                    'business_id' => $transaction->business_id,
-                    'file_path' => $path,
-                    'file_name' => $this->uploadFile->getClientOriginalName(),
-                    'mime_type' => $this->uploadFile->getMimeType(),
-                    'file_size' => $this->uploadFile->getSize(),
-                    'file_hash' => $hash,
-                    'status' => 'new',
+                    $receipt = Receipt::create([
+                        'type' => $this->uploadType,
+                        'business_id' => $transaction->business_id,
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                        'file_hash' => $hash,
+                        'status' => 'new',
+                    ]);
+
+                    // OCR ausführen (füllt Rechnungsnummer, Datum, Beträge …)
+                    (new OcrService())->process($receipt->refresh());
+                }
+                $receipt->refresh();
+
+                // Restbetrag aktuell halten (mehrere Belege je Umsatz).
+                $transaction->load('receipts');
+
+                $amount = $receipt->gross_amount > 0
+                    ? min((float) $receipt->gross_amount, abs((float) $transaction->amount))
+                    : ($transaction->difference > 0 ? $transaction->difference : abs((float) $transaction->amount));
+
+                $transaction->receipts()->syncWithoutDetaching([
+                    $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'manual', 'sort_order' => $transaction->receipts()->count()],
                 ]);
 
-                // OCR ausführen (füllt Rechnungsnummer, Datum, Beträge …)
-                (new OcrService())->process($receipt->refresh());
+                $lastId = $receipt->id;
+                $count++;
+            } catch (Throwable $e) {
+                report($e);
             }
-            $receipt->refresh();
-
-            // Betrag zuordnen
-            $amount = $receipt->gross_amount > 0
-                ? min((float) $receipt->gross_amount, abs((float) $transaction->amount))
-                : ($transaction->difference > 0 ? $transaction->difference : abs((float) $transaction->amount));
-
-            $transaction->receipts()->syncWithoutDetaching([
-                $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'manual', 'sort_order' => $transaction->receipts()->count()],
-            ]);
-            $transaction->recalculateStatus();
-
-            $this->reset('uploadFile');
-            $this->selectedReceiptId = $receipt->id;
-            $this->activeTab = 'assigned';
-
-            Notification::make()->title('Beleg hochgeladen & zugeordnet')->success()->send();
-        } catch (Throwable $e) {
-            report($e);
-            Notification::make()->title('Upload fehlgeschlagen')->body($e->getMessage())->danger()->send();
         }
+
+        $transaction->recalculateStatus();
+
+        $this->reset('uploadFiles');
+        if ($lastId) {
+            $this->selectedReceiptId = $lastId;
+        }
+        $this->activeTab = 'assigned';
+
+        Notification::make()->title($count . ' Beleg(e) hochgeladen & zugeordnet')->success()->send();
     }
 }
