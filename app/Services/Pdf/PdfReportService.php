@@ -69,22 +69,48 @@ class PdfReportService
 
         $stats = $this->buildStats($transactions);
 
-        // Fortlaufende Beleg-Nummern (chronologisch) vergeben: Umsatz->id => [receipt_id => Nr].
-        // Dieselbe Nummer steht in der Umsatzliste und wird auf den angehängten Beleg gestempelt.
         $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
-        $receiptNumbers = [];
-        $counter = 0;
+
+        // Steuerbüro-Dateien (nur bei Konto-Auswahl) im Zeitraum.
+        $steuerDocs = $account
+            ? \App\Models\SteuerDocument::where('bank_account_id', $account->id)
+                ->whereBetween('period', [$from->copy()->startOfMonth()->toDateString(), $to->copy()->endOfMonth()->toDateString()])
+                ->orderBy('period')->orderBy('sort_order')->orderBy('id')->get()
+            : collect();
+
+        // Je Monat bündeln: zuerst die Steuerbüro-Dateien, dann die Kontoauszug-Belege.
+        $months = [];
+        foreach ($steuerDocs as $doc) {
+            if ($doc->file_path && $disk->exists($doc->file_path)) {
+                $months[$doc->period->format('Y-m')]['docs'][] = $doc;
+            }
+        }
         foreach ($transactions as $transaction) {
+            $key = $transaction->booking_date?->format('Y-m') ?? '0000-00';
             foreach ($transaction->receipts as $receipt) {
-                if ($receipt->include_in_report
-                    && $receipt->file_path && $disk->exists($receipt->file_path)) {
-                    $receiptNumbers[$receipt->id] = ++$counter;
+                if ($receipt->include_in_report && $receipt->file_path && $disk->exists($receipt->file_path)) {
+                    $months[$key]['receipts'][] = $receipt;
                 }
             }
         }
+        ksort($months);
 
-        // Tatsächlich angehängte Belege = Anzahl vergebener Beleg-Nummern.
+        // Nummerierung je Monat ab 1: erst Steuerbüro-Dateien, dann Belege.
+        // Dieselbe Beleg-Nummer steht in der Umsatzliste und wird angehängt gestempelt.
+        $receiptNumbers = [];
+        $steuerNumbers = [];
+        foreach ($months as $bucket) {
+            $n = 0;
+            foreach ($bucket['docs'] ?? [] as $doc) {
+                $steuerNumbers[$doc->id] = ++$n;
+            }
+            foreach ($bucket['receipts'] ?? [] as $receipt) {
+                $receiptNumbers[$receipt->id] = ++$n;
+            }
+        }
+
         $stats['appendedFiles'] = count($receiptNumbers);
+        $stats['steuerFiles'] = count($steuerNumbers);
 
         // Hinweise an das Steuerbüro (Karten) für dieses Konto im Zeitraum.
         $reportNotes = $account
@@ -105,17 +131,20 @@ class PdfReportService
             'transactions' => $transactions,
             'stats' => $stats,
             'receiptNumbers' => $receiptNumbers,
+            'steuerNumbers' => $steuerNumbers,
+            'steuerDocs' => $steuerDocs,
             'reportNotes' => $reportNotes,
             'money' => $this->money,
         ])->setPaper('a4')->output();
         $this->importPdfString($pdf, $frontMatter);
 
-        // 4. Belege chronologisch anhängen – ohne Trennseite, mit aufgedruckter Beleg-Nummer.
-        foreach ($transactions as $transaction) {
-            foreach ($transaction->receipts as $receipt) {
-                if (isset($receiptNumbers[$receipt->id])) {
-                    $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
-                }
+        // 4. Anhänge je Monat: erst Steuerbüro-Dateien (Nr. 1…), dann Belege.
+        foreach ($months as $bucket) {
+            foreach ($bucket['docs'] ?? [] as $doc) {
+                $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
+            }
+            foreach ($bucket['receipts'] ?? [] as $receipt) {
+                $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
             }
         }
 
@@ -197,15 +226,26 @@ class PdfReportService
         if (! $receipt->file_path) {
             return;
         }
-
         $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
         if (! $disk->exists($receipt->file_path)) {
             return;
         }
+        $this->appendFileByPath($pdf, $disk->path($receipt->file_path), (string) $receipt->mime_type, $number, 'Beleg');
+    }
 
-        $absolute = $disk->path($receipt->file_path);
-        $mime = (string) $receipt->mime_type;
+    /** Hängt eine Steuerbüro-Datei an (gleiche Logik wie ein Beleg). */
+    private function appendSteuerDocument(ReportPdf $pdf, \App\Models\SteuerDocument $doc, int $number): void
+    {
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+        if (! $doc->file_path || ! $disk->exists($doc->file_path)) {
+            return;
+        }
+        $this->appendFileByPath($pdf, $disk->path($doc->file_path), (string) $doc->mime_type, $number, 'Dokument');
+    }
 
+    /** Hängt eine Datei (PDF-Seiten oder Bild) mit aufgedruckter Nummer an. */
+    private function appendFileByPath(ReportPdf $pdf, string $absolute, string $mime, ?int $number, string $kind = 'Beleg'): void
+    {
         try {
             if ($mime === 'application/pdf' || str_ends_with(strtolower($absolute), '.pdf')) {
                 try {
@@ -249,7 +289,7 @@ class PdfReportService
         // ASCII-Bindestrich, da der FPDF-Kernfont kein UTF-8 kann.
         $pdf->AddPage();
         $pdf->SetFont('Helvetica', '', 11);
-        $pdf->Cell(0, 10, 'Beleg ' . ($number ?? $receipt->invoice_number ?: $receipt->id) . ' - Datei nicht einbettbar (' . $mime . ').');
+        $pdf->Cell(0, 10, $kind . ' ' . ($number ?? '') . ' - Datei nicht einbettbar (' . $mime . ').');
     }
 
     /**

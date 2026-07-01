@@ -6,6 +6,7 @@ use App\Enums\ImportSource;
 use App\Models\BankAccount;
 use App\Models\Business;
 use App\Models\Receipt;
+use App\Models\SteuerDocument;
 use App\Services\Bank\BankImportService;
 use App\Services\Bank\Parsers\CsvBankParser;
 use App\Services\Pdf\PdfReportService;
@@ -76,5 +77,46 @@ class PdfReportTest extends TestCase
         $withoutReceipt = strlen(Storage::disk('local')->get($path2));
 
         $this->assertLessThan($withReceipt, $withoutReceipt);
+    }
+
+    public function test_steuerbuero_datei_wird_angehaengt(): void
+    {
+        Storage::fake('belege');
+        Storage::fake('local');
+        $this->seed(MasterDataSeeder::class);
+        $this->seed(SupplierSeeder::class);
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
+            . "08.01.2026;HBW Sinsheim;Blumen;-63,70\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+
+        $receipt = Receipt::create([
+            'type' => 'incoming_invoice', 'gross_amount' => 63.70, 'invoice_date' => '2026-01-07',
+            'file_path' => '2026/01/beleg.pdf', 'mime_type' => 'application/pdf',
+        ]);
+        Storage::disk('belege')->put('2026/01/beleg.pdf', DomPdf::loadHTML('<h1>Beleg</h1>')->output());
+        $account->bankTransactions()->where('counterparty', 'HBW Sinsheim')->first()
+            ->receipts()->attach($receipt->id, ['amount' => 63.70]);
+
+        // Steuerbüro-Datei desselben Monats.
+        Storage::disk('belege')->put('2026/01/monatsrechnung.pdf', DomPdf::loadHTML('<h1>Monatsrechnung DATEV</h1>')->output());
+        SteuerDocument::create([
+            'bank_account_id' => $account->id, 'period' => '2026-01-01', 'category' => 'Monatsrechnung',
+            'file_path' => '2026/01/monatsrechnung.pdf', 'mime_type' => 'application/pdf', 'sort_order' => 1,
+        ]);
+
+        $path = (new PdfReportService())->generate(Carbon::parse('2026-01-01'), Carbon::parse('2026-01-31'), null, $account);
+        $withDoc = strlen(Storage::disk('local')->get($path));
+
+        // Ohne die Steuerbüro-Datei ist das Dokument kleiner (Datei wird angehängt).
+        SteuerDocument::query()->delete();
+        $path2 = (new PdfReportService())->generate(Carbon::parse('2026-01-01'), Carbon::parse('2026-01-31'), null, $account);
+        $withoutDoc = strlen(Storage::disk('local')->get($path2));
+
+        $this->assertGreaterThan($withoutDoc, $withDoc);
     }
 }

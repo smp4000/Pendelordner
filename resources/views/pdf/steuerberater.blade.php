@@ -90,6 +90,30 @@
             </div>
         @endforeach
     @endif
+
+    @if (! empty($steuerDocs) && $steuerDocs->isNotEmpty())
+        <h3 style="margin-top:26px;">Steuerbüro-Dateien (angehängt, je Monat ab 1)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px;">Nr.</th>
+                    <th style="width:80px;">Monat</th>
+                    <th style="width:150px;">Kategorie</th>
+                    <th>Datei</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($steuerDocs as $doc)
+                    <tr>
+                        <td><strong>{{ $steuerNumbers[$doc->id] ?? '' }}</strong></td>
+                        <td>{{ $doc->period?->format('m/Y') }}</td>
+                        <td>{{ $doc->category }}</td>
+                        <td>{{ $doc->file_name }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 </div>
 
 {{-- Seite 3 ff.: Chronologische Umsatzliste --}}
