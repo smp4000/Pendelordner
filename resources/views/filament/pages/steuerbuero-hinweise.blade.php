@@ -47,14 +47,29 @@
             </div>
             <div style="margin-top:.75rem;">
                 <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz / Hinweis für den Steuerberater (optional)</label>
-                <input type="text" wire:model="docNote" placeholder="z. B. Bitte auf Konto 1900 buchen" style="{{ $inpTxt }}">
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                    <select wire:model="docNote" style="{{ $inpTxt }};flex:1;">
+                        <option value="">– kein Hinweis –</option>
+                        @foreach ($this->noteTexts as $nt)
+                            <option value="{{ $nt->text }}">{{ $nt->text }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" wire:click="$toggle('showNewNote')" title="Neuen Hinweis-Text anlegen"
+                        style="width:2.5rem;height:2.5rem;flex-shrink:0;border:1px solid #059669;color:#059669;background:transparent;border-radius:.5rem;font-size:1.25rem;font-weight:700;cursor:pointer;line-height:1;">+</button>
+                </div>
+                @if ($showNewNote)
+                    <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+                        <input type="text" wire:model="newNoteText" wire:keydown.enter="addNoteText" placeholder="Neuen Hinweis-Text eingeben …" style="{{ $inpTxt }};flex:1;">
+                        <x-filament::button wire:click="addNoteText" icon="heroicon-o-plus">Hinzufügen</x-filament::button>
+                    </div>
+                @endif
             </div>
             <label style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;font-size:.82rem;font-weight:600;cursor:pointer;">
                 <input type="checkbox" wire:model="docPrint" style="width:1.05rem;height:1.05rem;"> Im Bericht drucken (sonst nur speichern)
             </label>
             <div wire:loading wire:target="docUploads" style="font-size:.8rem;opacity:.7;margin-top:.5rem;">Datei wird hochgeladen …</div>
 
-            @php $docs = $this->documents; @endphp
+            @php $docs = $this->documents; $noteTexts = $this->noteTexts; @endphp
             <div style="margin-top:1.25rem;">
                 @if ($docs->isNotEmpty())
                     <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
@@ -74,7 +89,15 @@
                                     <td style="padding:.35rem .5rem;">{{ $doc->category }}</td>
                                     <td style="padding:.35rem .5rem;">
                                         <a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;">{{ $doc->file_name ?: 'Datei' }}</a>
-                                        <input type="text" value="{{ $doc->note }}" wire:change="saveDocNote({{ $doc->id }}, $event.target.value)" placeholder="Notiz / Hinweis für den Steuerberater …" style="width:100%;margin-top:.3rem;padding:.25rem .45rem;border:1px solid rgba(245,158,11,.5);border-radius:.4rem;background:rgba(254,243,199,.35);font-size:.8rem;">
+                                        <select wire:change="saveDocNote({{ $doc->id }}, $event.target.value)" style="width:100%;margin-top:.3rem;padding:.25rem .45rem;border:1px solid rgba(245,158,11,.5);border-radius:.4rem;background:rgba(254,243,199,.35);font-size:.8rem;">
+                                            <option value="">– kein Hinweis –</option>
+                                            @foreach ($noteTexts as $nt)
+                                                <option value="{{ $nt->text }}" @selected($doc->note === $nt->text)>{{ $nt->text }}</option>
+                                            @endforeach
+                                            @if ($doc->note && ! $noteTexts->contains('text', $doc->note))
+                                                <option value="{{ $doc->note }}" selected>{{ $doc->note }}</option>
+                                            @endif
+                                        </select>
                                     </td>
                                     <td style="padding:.35rem .5rem;text-align:center;">
                                         <input type="checkbox" @checked($doc->include_in_report) wire:change="setDocPrint({{ $doc->id }}, $event.target.checked)" title="Im Bericht drucken" style="width:1.05rem;height:1.05rem;">

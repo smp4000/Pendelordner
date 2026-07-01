@@ -56,4 +56,19 @@ class SteuerDocumentTest extends TestCase
 
         $this->assertSame(1, SteuerDocument::count());
     }
+
+    public function test_hinweis_text_wird_hinzugefuegt(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(SteuerbueroHinweise::class)
+            ->set('newNoteText', 'Bitte auf Konto 1900 buchen')
+            ->call('addNoteText')
+            ->assertSet('docNote', 'Bitte auf Konto 1900 buchen')
+            ->assertSet('showNewNote', false);
+
+        $this->assertDatabaseHas('steuer_note_texts', ['text' => 'Bitte auf Konto 1900 buchen']);
+    }
 }

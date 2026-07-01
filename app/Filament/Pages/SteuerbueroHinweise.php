@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\BankAccount;
 use App\Models\ReportNote;
 use App\Models\SteuerDocument;
+use App\Models\SteuerNoteText;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -60,6 +61,10 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     public string $docNote = '';
 
     public bool $docPrint = true;
+
+    public bool $showNewNote = false;
+
+    public string $newNoteText = '';
 
     public function mount(): void
     {
@@ -302,6 +307,32 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     public function saveDocNote(int $id, ?string $note = null): void
     {
         SteuerDocument::where('id', $id)->update(['note' => trim((string) $note) ?: null]);
+    }
+
+    /** Vordefinierte Hinweis-Texte (für die Auswahlbox). */
+    public function getNoteTextsProperty(): Collection
+    {
+        return SteuerNoteText::orderBy('sort_order')->orderBy('text')->get();
+    }
+
+    /** Neuen Hinweis-Text zur Tabelle hinzufügen und direkt auswählen. */
+    public function addNoteText(): void
+    {
+        $text = trim($this->newNoteText);
+        if ($text === '') {
+            return;
+        }
+
+        $note = SteuerNoteText::firstOrCreate(
+            ['text' => $text],
+            ['sort_order' => (int) SteuerNoteText::max('sort_order') + 1],
+        );
+
+        $this->docNote = $note->text;
+        $this->newNoteText = '';
+        $this->showNewNote = false;
+
+        Notification::make()->title('Hinweis-Text hinzugefügt')->success()->send();
     }
 
     /** Schalter „im Bericht drucken" eines Dokuments setzen. */
