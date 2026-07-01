@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\BankAccount;
 use App\Models\ReportNote;
+use App\Models\SteuerDocument;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -20,6 +21,9 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Livewire\WithFileUploads;
+use Throwable;
 use UnitEnum;
 
 /**
@@ -31,6 +35,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;
+    use WithFileUploads;
 
     protected string $view = 'filament.pages.steuerbuero-hinweise';
 
@@ -46,6 +51,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
     /** @var array<string, mixed> */
     public ?array $data = [];
+
+    /** @var array<int, mixed> Hochzuladende Dateien */
+    public array $docUploads = [];
+
+    public string $docCategory = 'Monatsrechnung';
 
     public function mount(): void
     {
@@ -194,6 +204,108 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             ->title('Hinweise gespeichert')
             ->body($cardCount . ' Karte(n) für ' . $this->monthNames()[(int) $month->month] . ' ' . $month->year . ' gespeichert.')
             ->success()->send();
+    }
+
+    /** Hochgeladene Dokumente des gewählten Konto/Monats. */
+    public function getDocumentsProperty(): Collection
+    {
+        $accId = $this->data['bank_account_id'] ?? null;
+        $month = $this->selectedMonth($this->data ?? []);
+        if (! $accId || ! $month) {
+            return collect();
+        }
+
+        return SteuerDocument::where('bank_account_id', $accId)
+            ->whereYear('period', $month->year)
+            ->whereMonth('period', $month->month)
+            ->orderBy('sort_order')->orderBy('id')
+            ->get();
+    }
+
+    /** Bereits verwendete Kategorien als Vorschläge (frei erweiterbar). */
+    public function getCategorySuggestionsProperty(): array
+    {
+        $used = SteuerDocument::query()->select('category')->distinct()
+            ->orderBy('category')->pluck('category')->filter()->all();
+
+        return array_values(array_unique(array_merge(['Monatsrechnung'], $used)));
+    }
+
+    /** PDF-Dateien hochladen und Konto/Monat + Kategorie zuordnen. */
+    public function uploadDocuments(): void
+    {
+        $accId = $this->data['bank_account_id'] ?? null;
+        $month = $this->selectedMonth($this->data ?? []);
+        if (! $accId || ! $month) {
+            Notification::make()->title('Bitte Konto, Monat und Jahr wählen')->warning()->send();
+
+            return;
+        }
+
+        $this->validate([
+            'docUploads' => 'required|array',
+            'docUploads.*' => 'file|max:20480',
+        ], [], ['docUploads' => 'Dateien']);
+
+        $category = trim($this->docCategory) ?: 'Monatsrechnung';
+        $diskName = config('pendelordner.belege_disk', 'belege');
+        $count = 0;
+        $skipped = 0;
+        $sort = (int) SteuerDocument::where('bank_account_id', $accId)
+            ->whereYear('period', $month->year)->whereMonth('period', $month->month)
+            ->max('sort_order');
+
+        foreach ($this->docUploads as $file) {
+            try {
+                $hash = hash('sha256', $file->get());
+                $dupe = SteuerDocument::where('bank_account_id', $accId)
+                    ->whereYear('period', $month->year)->whereMonth('period', $month->month)
+                    ->where('file_hash', $hash)->exists();
+                if ($dupe) {
+                    $skipped++;
+
+                    continue;
+                }
+                $path = $file->store($month->format('Y/m'), $diskName);
+                SteuerDocument::create([
+                    'bank_account_id' => $accId,
+                    'period' => $month,
+                    'category' => $category,
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                    'file_hash' => $hash,
+                    'sort_order' => ++$sort,
+                ]);
+                $count++;
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        $this->reset('docUploads');
+
+        Notification::make()
+            ->title($count . ' Datei(en) hochgeladen')
+            ->body($skipped > 0 ? $skipped . ' Dublette(n) übersprungen.' : '')
+            ->success()->send();
+    }
+
+    /** Ein Dokument löschen (inkl. Datei). */
+    public function deleteDocument(int $id): void
+    {
+        $doc = SteuerDocument::find($id);
+        if ($doc) {
+            try {
+                \Illuminate\Support\Facades\Storage::disk(config('pendelordner.belege_disk', 'belege'))
+                    ->delete($doc->file_path);
+            } catch (Throwable $e) {
+                report($e);
+            }
+            $doc->delete();
+            Notification::make()->title('Dokument gelöscht')->success()->send();
+        }
     }
 
     /** Karten des gewählten Konto/Monats in das Formular laden. */

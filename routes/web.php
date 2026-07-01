@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Receipt;
+use App\Models\SteuerDocument;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -46,3 +47,17 @@ Route::get('belege/{receipt}/datei', function (Receipt $receipt) {
         ['Content-Type' => $receipt->mime_type ?: 'application/octet-stream']
     );
 })->middleware(['web', 'auth'])->name('beleg.datei');
+
+/** Streamt eine Steuerbüro-Dokument-Datei zur Inline-Vorschau. */
+Route::get('steuer-dokumente/{document}/datei', function (SteuerDocument $document) {
+    abort_unless((bool) $document->file_path, 404);
+
+    $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+    abort_unless($disk->exists($document->file_path), 404);
+
+    return $disk->response(
+        $document->file_path,
+        $document->file_name ?: 'dokument',
+        ['Content-Type' => $document->mime_type ?: 'application/octet-stream']
+    );
+})->middleware(['web', 'auth'])->name('steuer.datei');
