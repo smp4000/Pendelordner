@@ -147,7 +147,7 @@
                         <br><span class="beleg-nr">Beleg {{ $nums->implode(', ') }}</span>
                     @endif
                     @if (trim((string) $t->accountant_note) !== '')
-                        <div class="memo"><span class="memo-label">Mitteilung an Steuerberater:</span> {{ $t->accountant_note }}</div>
+                        <div class="memo"><span class="memo-label">Hinweis:</span> {{ $t->accountant_note }}</div>
                     @endif
                     @if ($t->accountAssignments->isNotEmpty())
                         <table class="splits">
