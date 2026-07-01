@@ -59,6 +59,8 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
     public string $docNote = '';
 
+    public bool $docPrint = true;
+
     public function mount(): void
     {
         $this->form->fill([
@@ -274,6 +276,7 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
                     'period' => $month,
                     'category' => $category,
                     'note' => trim($this->docNote) ?: null,
+                    'include_in_report' => $this->docPrint,
                     'file_path' => $path,
                     'file_name' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
@@ -299,6 +302,12 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     public function saveDocNote(int $id, ?string $note = null): void
     {
         SteuerDocument::where('id', $id)->update(['note' => trim((string) $note) ?: null]);
+    }
+
+    /** Schalter „im Bericht drucken" eines Dokuments setzen. */
+    public function setDocPrint(int $id, bool $value): void
+    {
+        SteuerDocument::where('id', $id)->update(['include_in_report' => $value]);
     }
 
     /** Ein Dokument löschen (inkl. Datei). */

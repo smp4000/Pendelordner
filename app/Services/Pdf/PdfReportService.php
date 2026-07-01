@@ -74,6 +74,7 @@ class PdfReportService
         // Steuerbüro-Dateien (nur bei Konto-Auswahl) im Zeitraum.
         $steuerDocs = $account
             ? \App\Models\SteuerDocument::where('bank_account_id', $account->id)
+                ->where('include_in_report', true)
                 ->whereBetween('period', [$from->copy()->startOfMonth()->toDateString(), $to->copy()->endOfMonth()->toDateString()])
                 ->orderBy('period')->orderBy('sort_order')->orderBy('id')->get()
             : collect();

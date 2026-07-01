@@ -49,6 +49,9 @@
                 <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz / Hinweis für den Steuerberater (optional)</label>
                 <input type="text" wire:model="docNote" placeholder="z. B. Bitte auf Konto 1900 buchen" style="{{ $inpTxt }}">
             </div>
+            <label style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;font-size:.82rem;font-weight:600;cursor:pointer;">
+                <input type="checkbox" wire:model="docPrint" style="width:1.05rem;height:1.05rem;"> Im Bericht drucken (sonst nur speichern)
+            </label>
             <div wire:loading wire:target="docUploads" style="font-size:.8rem;opacity:.7;margin-top:.5rem;">Datei wird hochgeladen …</div>
 
             @php $docs = $this->documents; @endphp
@@ -60,6 +63,7 @@
                                 <th style="padding:.4rem .5rem;width:48px;">Nr.</th>
                                 <th style="padding:.4rem .5rem;">Kategorie</th>
                                 <th style="padding:.4rem .5rem;">Datei</th>
+                                <th style="padding:.4rem .5rem;width:70px;text-align:center;">Druck</th>
                                 <th style="padding:.4rem .5rem;width:60px;"></th>
                             </tr>
                         </thead>
@@ -71,6 +75,9 @@
                                     <td style="padding:.35rem .5rem;">
                                         <a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;">{{ $doc->file_name ?: 'Datei' }}</a>
                                         <input type="text" value="{{ $doc->note }}" wire:change="saveDocNote({{ $doc->id }}, $event.target.value)" placeholder="Notiz / Hinweis für den Steuerberater …" style="width:100%;margin-top:.3rem;padding:.25rem .45rem;border:1px solid rgba(245,158,11,.5);border-radius:.4rem;background:rgba(254,243,199,.35);font-size:.8rem;">
+                                    </td>
+                                    <td style="padding:.35rem .5rem;text-align:center;">
+                                        <input type="checkbox" @checked($doc->include_in_report) wire:change="setDocPrint({{ $doc->id }}, $event.target.checked)" title="Im Bericht drucken" style="width:1.05rem;height:1.05rem;">
                                     </td>
                                     <td style="padding:.35rem .5rem;">
                                         <button type="button" wire:click="deleteDocument({{ $doc->id }})" wire:confirm="Dieses Dokument wirklich löschen?" style="color:#dc2626;font-weight:600;background:none;border:0;cursor:pointer;">Löschen</button>

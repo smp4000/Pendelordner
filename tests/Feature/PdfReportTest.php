@@ -112,11 +112,11 @@ class PdfReportTest extends TestCase
         $path = (new PdfReportService())->generate(Carbon::parse('2026-01-01'), Carbon::parse('2026-01-31'), null, $account);
         $withDoc = strlen(Storage::disk('local')->get($path));
 
-        // Ohne die Steuerbüro-Datei ist das Dokument kleiner (Datei wird angehängt).
-        SteuerDocument::query()->delete();
+        // Auf "nicht drucken" gesetzt -> Datei wird nicht eingebettet (Dokument kleiner).
+        SteuerDocument::query()->update(['include_in_report' => false]);
         $path2 = (new PdfReportService())->generate(Carbon::parse('2026-01-01'), Carbon::parse('2026-01-31'), null, $account);
-        $withoutDoc = strlen(Storage::disk('local')->get($path2));
+        $withNoPrint = strlen(Storage::disk('local')->get($path2));
 
-        $this->assertGreaterThan($withoutDoc, $withDoc);
+        $this->assertGreaterThan($withNoPrint, $withDoc);
     }
 }

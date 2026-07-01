@@ -15,6 +15,7 @@ class SteuerDocument extends Model
         'period' => 'date',
         'file_size' => 'integer',
         'sort_order' => 'integer',
+        'include_in_report' => 'boolean',
     ];
 
     public function bankAccount(): BelongsTo
