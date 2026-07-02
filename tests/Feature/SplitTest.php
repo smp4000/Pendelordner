@@ -32,8 +32,8 @@ class SplitTest extends TestCase
             'currency' => 'EUR',
         ]);
         $category = Category::firstOrCreate(['name' => 'Shop'], ['active' => true]);
-        $la1 = LedgerAccount::create(['chart' => 'skr03', 'number' => '3790', 'name' => 'Einkauf Telefonkarten']);
-        $la2 = LedgerAccount::create(['chart' => 'skr03', 'number' => '3793', 'name' => 'e-Loading']);
+        $la1 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3790'], ['name' => 'Einkauf Telefonkarten']);
+        $la2 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3793'], ['name' => 'e-Loading']);
 
         $tx = BankTransaction::create([
             'bank_account_id' => $account->id,

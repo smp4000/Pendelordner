@@ -35,7 +35,7 @@ class CategoryForm
                 TextInput::make('number')->label('Kontonummer')->required(),
                 TextInput::make('name')->label('Bezeichnung')->required(),
                 Select::make('chart')->label('Kontenrahmen')
-                    ->options(['skr03' => 'SKR03', 'skr04' => 'SKR04', 'edtas' => 'edtas'])
+                    ->options(['edtas' => 'eDTAS', 'kfz' => 'Kfz', 'gastro' => 'Gastronomie'])
                     ->default($defaultChart)->required(),
             ])
             ->createOptionUsing(fn (array $data) => LedgerAccount::firstOrCreate(
@@ -60,12 +60,11 @@ class CategoryForm
                         Textarea::make('description')->label('Beschreibung')->rows(2)->columnSpanFull(),
                     ]),
 
-                Section::make('Kontierung (SKR03/04)')
+                Section::make('Kontierung (eDTAS)')
                     ->description('Vorbelegung für Buchhaltung/DATEV.')
                     ->columns(2)
                     ->schema([
-                        self::ledgerSelect('skr03_account', 'SKR03-Konto', 'skr03'),
-                        self::ledgerSelect('skr04_account', 'SKR04-Konto', 'skr04'),
+                        self::ledgerSelect('edtas_account', 'eDTAS-Konto', 'edtas'),
                         TextInput::make('tax_key')->label('Steuerschlüssel')
                             ->helperText('DATEV-BU, z. B. 9 = 19% VSt, 8 = 7% VSt'),
                         TextInput::make('default_tax_rate')->label('Standard-Steuersatz')->numeric()->suffix('%'),

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Kategorie (Modul 8), inkl. Default-Kontierung SKR03/04. */
+/** Kategorie (Modul 8), inkl. Default-Kontierung (eDTAS). */
 class Category extends Model
 {
     use SoftDeletes;

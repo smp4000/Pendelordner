@@ -7,12 +7,9 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Importiert die Sachkonten aller Kontenrahmen:
- *   - edtas/Kfz/Gastro aus database/data/ledger_accounts.json (PDF-Kontenpläne)
- *   - SKR03/SKR04 über den SkrAccountSeeder (DATEV-Standardkontenrahmen)
- *
- * SKR03/04 sind Grundlage für die Auswertung beim Steuerberater (eine Kategorie
- * trägt je ein SKR03- und SKR04-Konto).
+ * Importiert die eDTAS-Sachkonten (edtas/Kfz/Gastro) aus
+ * database/data/ledger_accounts.json (PDF-Kontenpläne). Im Tankstellenbereich
+ * wird ausschließlich mit eDTAS kontiert.
  */
 class LedgerAccountSeeder extends Seeder
 {
@@ -50,8 +47,5 @@ class LedgerAccountSeeder extends Seeder
 
             $this->command?->info(count($insert) . ' Sachkonten (edtas/kfz/gastro) importiert.');
         }
-
-        // SKR03/SKR04 ergänzen (additiv, separater Datensatz).
-        $this->call(SkrAccountSeeder::class);
     }
 }

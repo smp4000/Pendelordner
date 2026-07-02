@@ -62,32 +62,32 @@
                                             </div>
                                         </x-filament::input.wrapper>
                                     @else
-                                        {{-- Durchsuchbar: Kategoriename ODER SKR03-Konto (Nummer/Bezeichnung) --}}
+                                        {{-- Durchsuchbar: Kategoriename ODER eDTAS-Konto (Nummer/Bezeichnung) --}}
                                         <x-filament::input.wrapper>
                                             <x-filament::input type="text" wire:model.live.debounce.250ms="categorySearch"
-                                                placeholder="Suchen: Kategorie oder SKR03-Konto (Nr. oder Text)…" />
+                                                placeholder="Suchen: Kategorie oder eDTAS-Konto (Nr. oder Text)…" />
                                         </x-filament::input.wrapper>
-                                        @php $catRes = $this->categoryResults; $skrRes = $this->skrResults; @endphp
+                                        @php $catRes = $this->categoryResults; $skrRes = $this->edtasResults; @endphp
                                         <div style="margin-top:.25rem;border:1px solid rgba(120,120,120,.2);border-radius:.4rem;max-height:260px;overflow-y:auto;">
                                             @foreach ($catRes as $cat)
                                                 <div wire:click="setCategory({{ $cat->id }})"
                                                     style="padding:.35rem .6rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid rgba(120,120,120,.1);display:flex;justify-content:space-between;gap:.5rem;{{ $cat->id === $assignCategoryId ? 'background:rgba(16,185,129,.12);' : '' }}">
                                                     <span>{{ $cat->name }}</span>
-                                                    @if ($cat->skr03_account)
-                                                        <span style="opacity:.55;white-space:nowrap;">SKR03 {{ $cat->skr03_account }}</span>
+                                                    @if ($cat->edtas_account)
+                                                        <span style="opacity:.55;white-space:nowrap;">eDTAS {{ $cat->edtas_account }}</span>
                                                     @endif
                                                 </div>
                                             @endforeach
 
                                             @if ($skrRes->isNotEmpty())
                                                 <div style="padding:.3rem .6rem;font-size:.7rem;opacity:.6;background:rgba(99,102,241,.07);border-bottom:1px solid rgba(120,120,120,.1);">
-                                                    SKR03-Konto übernehmen (legt Kategorie an)
+                                                    eDTAS-Konto übernehmen (legt Kategorie an)
                                                 </div>
                                                 @foreach ($skrRes as $la)
-                                                    <div wire:click="setCategoryFromSkr({{ $la->id }})"
+                                                    <div wire:click="setCategoryFromEdtas({{ $la->id }})"
                                                         style="padding:.35rem .6rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid rgba(120,120,120,.1);display:flex;justify-content:space-between;gap:.5rem;">
                                                         <span>{{ $la->name }}</span>
-                                                        <span style="opacity:.55;white-space:nowrap;color:#4f46e5;">SKR03 {{ $la->number }}</span>
+                                                        <span style="opacity:.55;white-space:nowrap;color:#4f46e5;">eDTAS {{ $la->number }}</span>
                                                     </div>
                                                 @endforeach
                                             @endif
@@ -124,22 +124,15 @@
                         </div>
                     </div>
 
-                    {{-- SKR03/04-Konto der gewählten Kategorie (für die Steuerberater-Auswertung) --}}
-                    @php $skr = $this->categorySkr; @endphp
-                    @if ($skr['skr03'] || $skr['skr04'])
+                    {{-- eDTAS-Konto der gewählten Kategorie (für die Steuerberater-Auswertung) --}}
+                    @php $edtas = $this->categoryLedger; @endphp
+                    @if ($edtas)
                         <div style="margin-top:.6rem;padding:.4rem .6rem;border:1px solid rgba(99,102,241,.35);border-radius:.45rem;background:rgba(99,102,241,.06);">
-                            <div style="font-size:.72rem;opacity:.6;margin-bottom:.2rem;">Steuerberater-Konto (aus Kategorie)</div>
+                            <div style="font-size:.72rem;opacity:.6;margin-bottom:.2rem;">eDTAS-Konto (aus Kategorie)</div>
                             <div style="display:flex;flex-wrap:wrap;gap:.4rem;font-size:.82rem;">
-                                @if ($skr['skr03'])
-                                    <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(99,102,241,.15);color:#4f46e5;font-weight:600;">
-                                        SKR03 · {{ $skr['skr03']->number }} – {{ $skr['skr03']->name }}
-                                    </span>
-                                @endif
-                                @if ($skr['skr04'])
-                                    <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(99,102,241,.1);color:#6366f1;">
-                                        SKR04 · {{ $skr['skr04']->number }} – {{ $skr['skr04']->name }}
-                                    </span>
-                                @endif
+                                <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(99,102,241,.15);color:#4f46e5;font-weight:600;">
+                                    eDTAS · {{ $edtas['number'] }}@if ($edtas['name']) – {{ $edtas['name'] }}@endif
+                                </span>
                             </div>
                         </div>
                     @endif

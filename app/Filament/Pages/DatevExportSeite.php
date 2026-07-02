@@ -50,7 +50,7 @@ class DatevExportSeite extends Page implements HasActions, HasForms
         $this->form->fill([
             'from' => Carbon::now()->startOfMonth()->toDateString(),
             'to' => Carbon::now()->endOfMonth()->toDateString(),
-            'chart' => config('pendelordner.kontierung.standard_kontenrahmen', 'skr03'),
+            'chart' => config('pendelordner.kontierung.standard_kontenrahmen', 'edtas'),
         ]);
     }
 

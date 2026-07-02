@@ -47,8 +47,7 @@ class MatchingRuleForm
                 Section::make('Kontierung')
                     ->columns(3)
                     ->schema([
-                        TextInput::make('skr03_account')->label('SKR03-Konto'),
-                        TextInput::make('skr04_account')->label('SKR04-Konto'),
+                        TextInput::make('edtas_account')->label('eDTAS-Konto'),
                         TextInput::make('tax_key')->label('Steuerschlüssel'),
                     ]),
             ]);

@@ -30,7 +30,7 @@ class AccountAssignmentsTable
             ])
             ->filters([
                 SelectFilter::make('chart_of_accounts')->label('Kontenrahmen')
-                    ->options(['skr03' => 'SKR03', 'skr04' => 'SKR04']),
+                    ->options(['edtas' => 'eDTAS']),
                 TernaryFilter::make('exported')->label('Exportiert'),
             ])
             ->recordActions([

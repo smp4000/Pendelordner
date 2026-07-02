@@ -26,13 +26,12 @@ class KontierungService
      */
     public function bookTransaction(BankTransaction $transaction, ?ChartOfAccounts $chart = null): ?AccountAssignment
     {
-        $chart ??= ChartOfAccounts::from(config('pendelordner.kontierung.standard_kontenrahmen', 'skr03'));
+        $chart ??= ChartOfAccounts::from(config('pendelordner.kontierung.standard_kontenrahmen', 'edtas'));
         $chartKey = $chart->value;
-        $accountField = $chartKey === 'skr04' ? 'skr04_account' : 'skr03_account';
 
-        // Aufwands-/Ertragskonto: Kategorie hat Vorrang vor Lieferant.
-        $account = $transaction->category?->{$accountField}
-            ?? $transaction->supplier?->{$accountField}
+        // Aufwands-/Ertragskonto (edtas): Kategorie hat Vorrang vor Lieferant.
+        $account = $transaction->category?->edtas_account
+            ?? $transaction->supplier?->edtas_account
             ?? config("pendelordner.kontierung.sammelkonto.{$chartKey}");
 
         if (! $account) {

@@ -82,7 +82,7 @@ class ImportLedgerAccounts extends Command
         file_put_contents($jsonPath, json_encode($all, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         // In die Tabelle übernehmen. Nur die per PDF erzeugten Kontenrahmen
-        // ersetzen – SKR03/SKR04 (separater Datensatz) bleiben erhalten.
+        // ersetzen – (nur eDTAS-Kontenrahmen).
         $charts = array_values(array_unique(array_column($all, 'chart')));
         LedgerAccount::whereIn('chart', $charts)->delete();
         $now = now();

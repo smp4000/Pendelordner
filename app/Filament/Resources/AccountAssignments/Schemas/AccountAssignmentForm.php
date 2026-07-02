@@ -22,7 +22,7 @@ class AccountAssignmentForm
                     ->numeric(),
                 Select::make('chart_of_accounts')
                     ->options(ChartOfAccounts::class)
-                    ->default('skr03')
+                    ->default('edtas')
                     ->required(),
                 TextInput::make('account')
                     ->default(null),

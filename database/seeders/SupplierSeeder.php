@@ -42,8 +42,7 @@ class SupplierSeeder extends Seeder
                     'default_category_id' => $categoryId,
                     'default_cost_center_id' => $costCenterId,
                     'default_business_id' => $e['business'],
-                    'skr03_account' => $category?->skr03_account,
-                    'skr04_account' => $category?->skr04_account,
+                    'edtas_account' => $category?->edtas_account,
                     'tax_key' => $category?->tax_key,
                 ]
             );
@@ -55,8 +54,7 @@ class SupplierSeeder extends Seeder
                     'category_id' => $categoryId,
                     'cost_center_id' => $costCenterId,
                     'business_id' => $e['business'],
-                    'skr03_account' => $category?->skr03_account,
-                    'skr04_account' => $category?->skr04_account,
+                    'edtas_account' => $category?->edtas_account,
                     'tax_key' => $category?->tax_key,
                     'priority' => 100 - $priority,
                     'active' => true,

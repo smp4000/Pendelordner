@@ -45,7 +45,7 @@ class DatevExportService
         string $consultant = '',
         string $client = '',
     ): DatevExport {
-        $chart ??= ChartOfAccounts::from(config('pendelordner.kontierung.standard_kontenrahmen', 'skr03'));
+        $chart ??= ChartOfAccounts::from(config('pendelordner.kontierung.standard_kontenrahmen', 'edtas'));
         $fiscalYearStart = $from->copy()->startOfYear();
 
         $assignments = AccountAssignment::query()

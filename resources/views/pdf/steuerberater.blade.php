@@ -129,7 +129,7 @@
             <th>Empfänger / Verwendungszweck</th>
             <th style="width:80px;">Kategorie</th>
             <th style="width:70px;">Kostenstelle</th>
-            <th style="width:85px;">Konto (SKR/edtas)</th>
+            <th style="width:85px;">Konto (eDTAS)</th>
             <th class="num" style="width:75px;">Betrag</th>
         </tr>
     </thead>

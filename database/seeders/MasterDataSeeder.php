@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * Grundstammdaten: Betriebe (Modul 7), Kostenstellen (Modul 9) und
- * Standardkategorien (Modul 8) inkl. Default-Kontierung SKR03/SKR04.
+ * Standardkategorien (Modul 8) inkl. Default-Kontierung eDTAS.
  */
 class MasterDataSeeder extends Seeder
 {

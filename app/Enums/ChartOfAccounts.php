@@ -4,18 +4,16 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
 
-/** Kontenrahmen für die Kontierung (Modul 13/14). */
+/** Kontenrahmen für die Kontierung – im Tankstellenbereich nur edtas. */
 enum ChartOfAccounts: string implements HasLabel
 {
-    case Skr03 = 'skr03';
-    case Skr04 = 'skr04';
+    case Edtas = 'edtas';
     case Other = 'other';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Skr03 => 'SKR03',
-            self::Skr04 => 'SKR04',
+            self::Edtas => 'eDTAS',
             self::Other => 'Sonstige',
         };
     }

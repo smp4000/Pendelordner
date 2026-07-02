@@ -54,8 +54,8 @@ class AccountingTest extends TestCase
         $assignment = (new KontierungService())->bookTransaction($transaction);
 
         $this->assertNotNull($assignment);
-        $this->assertSame('3300', $assignment->account);        // SKR03 Blumen (7%)
-        $this->assertSame('1200', $assignment->contra_account); // SKR03 Bank
+        $this->assertSame('3300', $assignment->account);        // edtas Blumen (7%)
+        $this->assertSame('1200', $assignment->contra_account); // edtas Bank
         $this->assertSame('8', $assignment->tax_key);           // 7% Vorsteuer
         $this->assertEqualsWithDelta(63.70, (float) $assignment->amount, 0.001);
     }

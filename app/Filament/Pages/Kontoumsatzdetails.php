@@ -87,7 +87,7 @@ class Kontoumsatzdetails extends Page
     // --- Inline-Zuordnung (Kategorie / Kostenstelle / Sachkonto) -------------
     public ?int $assignCategoryId = null;
 
-    // Durchsuchbare Kategorie-Auswahl (Name oder SKR03-Konto).
+    // Durchsuchbare Kategorie-Auswahl (Name oder eDTAS-Konto).
     public string $categorySearch = '';
 
     public bool $editingCategory = false;
@@ -264,7 +264,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
-            ->whereNotIn('chart', ['skr03', 'skr04'])
+            ->whereIn('chart', ['edtas', 'kfz', 'gastro'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)
@@ -313,7 +313,7 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'skr03');
+        $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'edtas');
 
         // Alte Positionen ersetzen. Kategorie/Kostenstelle vom Umsatz übernehmen,
         // Betrag immer als Brutto speichern (Summe = Umsatzbetrag).
@@ -391,7 +391,7 @@ class Kontoumsatzdetails extends Page
 
     /**
      * Treffer der durchsuchbaren Kategorie-Auswahl. Findet per Kategoriename
-     * sowie per SKR03-Konto (Nummer oder Bezeichnung). Ohne Suchbegriff werden
+     * sowie per eDTAS-Konto (Nummer oder Bezeichnung). Ohne Suchbegriff werden
      * alle aktiven Kategorien angezeigt (wie ein filterbares Aufklappmenü).
      *
      * @return Collection<int, Category>
@@ -403,17 +403,17 @@ class Kontoumsatzdetails extends Page
         $query = Category::where('active', true);
 
         if ($s !== '') {
-            // SKR03-Konten, deren Nummer/Bezeichnung passt – deren Nummern dienen
+            // eDTAS-Konten, deren Nummer/Bezeichnung passt – deren Nummern dienen
             // als zusätzliches Suchkriterium für die Kategorie.
-            $skrNumbers = LedgerAccount::where('chart', 'skr03')
+            $edtasNumbers = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
                 ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
                 ->pluck('number')->all();
 
-            $query->where(function ($q) use ($s, $skrNumbers) {
+            $query->where(function ($q) use ($s, $edtasNumbers) {
                 $q->where('name', 'like', '%' . $s . '%')
-                    ->orWhere('skr03_account', 'like', $s . '%');
-                if (! empty($skrNumbers)) {
-                    $q->orWhereIn('skr03_account', $skrNumbers);
+                    ->orWhere('edtas_account', 'like', $s . '%');
+                if (! empty($edtasNumbers)) {
+                    $q->orWhereIn('edtas_account', $edtasNumbers);
                 }
             });
         }
@@ -428,23 +428,22 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
-     * Zusätzliche Vorschläge aus dem SKR03-Kontenrahmen (Nummer oder Text),
-     * für die es noch keine Kategorie gibt. So lassen sich Konten wie
-     * „4130 – Gesetzliche soziale Aufwendungen" direkt finden und übernehmen.
+     * Zusätzliche Vorschläge aus dem eDTAS-Kontenrahmen (Nummer oder Text),
+     * für die es noch keine Kategorie gibt – direkt findbar und übernehmbar.
      *
      * @return Collection<int, LedgerAccount>
      */
-    public function getSkrResultsProperty(): Collection
+    public function getEdtasResultsProperty(): Collection
     {
         $s = trim($this->categorySearch);
         if (mb_strlen($s) < 2) {
             return collect();
         }
 
-        // SKR03-Nummern, die bereits einer Kategorie zugeordnet sind, ausblenden.
-        $existing = Category::whereNotNull('skr03_account')->pluck('skr03_account')->all();
+        // eDTAS-Nummern, die bereits einer Kategorie zugeordnet sind, ausblenden.
+        $existing = Category::whereNotNull('edtas_account')->pluck('edtas_account')->all();
 
-        return LedgerAccount::where('chart', 'skr03')
+        return LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
             ->when($existing, fn ($q) => $q->whereNotIn('number', $existing))
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
@@ -461,24 +460,24 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
-     * Übernimmt ein SKR03-Konto als Kategorie: legt (oder findet) eine Kategorie
-     * mit dieser SKR03-Zuordnung an und weist sie dem Umsatz zu.
+     * Übernimmt ein eDTAS-Konto als Kategorie: legt (oder findet) eine Kategorie
+     * mit dieser eDTAS-Zuordnung an und weist sie dem Umsatz zu.
      */
-    public function setCategoryFromSkr(int $ledgerId): void
+    public function setCategoryFromEdtas(int $ledgerId): void
     {
-        $la = LedgerAccount::where('chart', 'skr03')->find($ledgerId);
+        $la = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])->find($ledgerId);
         if (! $la) {
             return;
         }
 
         $category = Category::firstOrCreate(
-            ['skr03_account' => $la->number],
+            ['edtas_account' => $la->number],
             ['name' => $la->name, 'active' => true],
         );
 
         $this->setCategory($category->id);
 
-        Notification::make()->title('Kategorie „' . $category->name . '" (SKR03 ' . $la->number . ') zugeordnet')->success()->send();
+        Notification::make()->title('Kategorie „' . $category->name . '" (eDTAS ' . $la->number . ') zugeordnet')->success()->send();
     }
 
     public function editCategory(): void
@@ -496,26 +495,21 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
-     * SKR03/04-Konten der gewählten Kategorie (für die Steuerberater-Auswertung).
-     * Das operative Sachkonto (edtas) bleibt davon unberührt.
+     * eDTAS-Konto der gewählten Kategorie (für die Steuerberater-Auswertung).
      *
-     * @return array{skr03: ?LedgerAccount, skr04: ?LedgerAccount}
+     * @return ?array{number: string, name: ?string}
      */
-    public function getCategorySkrProperty(): array
+    public function getCategoryLedgerProperty(): ?array
     {
         $category = $this->assignCategoryId ? Category::find($this->assignCategoryId) : null;
-        if (! $category) {
-            return ['skr03' => null, 'skr04' => null];
+        if (! $category || ! $category->edtas_account) {
+            return null;
         }
 
-        return [
-            'skr03' => $category->skr03_account
-                ? LedgerAccount::where('chart', 'skr03')->where('number', $category->skr03_account)->first()
-                : null,
-            'skr04' => $category->skr04_account
-                ? LedgerAccount::where('chart', 'skr04')->where('number', $category->skr04_account)->first()
-                : null,
-        ];
+        $la = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
+            ->where('number', $category->edtas_account)->first();
+
+        return ['number' => (string) $category->edtas_account, 'name' => $la?->name];
     }
 
     public function updatedAssignCostCenterId($value): void
@@ -640,7 +634,7 @@ class Kontoumsatzdetails extends Page
 
     /**
      * Treffer für die operative Sachkonto-Suche (Nummer oder Bezeichnung).
-     * SKR03/04 sind hier ausgeschlossen – die dienen nur der Kategorie-
+     * Nur die operativen eDTAS-Konten (die Kategorie-
      * Zuordnung (Steuerberater), nicht der operativen Buchung (edtas/gastro/kfz).
      */
     public function getLedgerResultsProperty(): Collection
@@ -651,7 +645,7 @@ class Kontoumsatzdetails extends Page
         }
 
         return LedgerAccount::query()
-            ->whereNotIn('chart', ['skr03', 'skr04'])
+            ->whereIn('chart', ['edtas', 'kfz', 'gastro'])
             ->where(fn ($q) => $q->where('number', 'like', $s . '%')->orWhere('name', 'like', '%' . $s . '%'))
             ->orderBy('number')
             ->limit(15)
