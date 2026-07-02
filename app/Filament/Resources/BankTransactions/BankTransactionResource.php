@@ -74,12 +74,17 @@ class BankTransactionResource extends Resource
         ];
     }
 
-    /** Anzahl der Ausgaben ohne Beleg als Navigations-Badge (Rot). */
+    /** Anzahl der noch nicht geprüften Umsätze als Navigations-Badge (Rot). */
     public static function getNavigationBadge(): ?string
     {
-        $open = static::getModel()::query()->withoutReceipt()->where('amount', '<', 0)->count();
+        $open = static::getModel()::query()->where('reviewed', false)->count();
 
         return $open > 0 ? (string) $open : null;
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Ungeprüfte Umsätze';
     }
 
     public static function getNavigationBadgeColor(): ?string
