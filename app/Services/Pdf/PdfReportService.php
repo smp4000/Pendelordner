@@ -47,8 +47,14 @@ class PdfReportService
         return $this->generate($month->copy()->startOfMonth(), $month->copy()->endOfMonth(), $business, $account);
     }
 
-    /** Bericht für einen beliebigen Zeitraum. */
-    public function generate(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): string
+    /**
+     * Sammelt alle Daten des Berichts (Umsätze, Steuerbüro-Dateien, monatliche
+     * Anhang-Bündel und die Nummerierung je Monat ab 1) – gemeinsame Basis für
+     * das PDF und den Einzel-Beleg-Export.
+     *
+     * @return array<string, mixed>
+     */
+    private function collectData(Carbon $from, Carbon $to, ?Business $business, ?BankAccount $account): array
     {
         // Ist ein Konto gewählt, definiert es den Betrieb -> nur nach Konto
         // filtern (verhindert 0 Treffer, falls die business_id der Umsätze noch
@@ -61,13 +67,6 @@ class PdfReportService
             ->orderBy('booking_date')
             ->orderBy('id')
             ->get();
-
-        // Betrieb fürs Deckblatt: bei Konto-Auswahl vom Konto ableiten.
-        $business = $business ?: $account?->business;
-
-        $pdf = new ReportPdf();
-
-        $stats = $this->buildStats($transactions);
 
         $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
 
@@ -110,8 +109,72 @@ class PdfReportService
             }
         }
 
-        $stats['appendedFiles'] = count($receiptNumbers);
-        $stats['steuerFiles'] = count($steuerNumbers);
+        return [
+            'transactions' => $transactions,
+            'business' => $business ?: $account?->business,
+            'disk' => $disk,
+            'steuerDocs' => $steuerDocs,
+            'months' => $months,
+            'receiptNumbers' => $receiptNumbers,
+            'steuerNumbers' => $steuerNumbers,
+        ];
+    }
+
+    /**
+     * Alle nummerierten Anhänge des Berichts als Einzeldateien:
+     * Name = Jahr-Monat-Nummer (z. B. "2026-06-01.pdf"), gleiche Nummern wie
+     * im Bericht (je Monat ab 1, Steuerbüro-Dateien zuerst).
+     *
+     * @return list<array{name: string, absolute: string}>
+     */
+    public function attachmentFiles(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): array
+    {
+        $d = $this->collectData($from, $to, $business, $account);
+
+        $out = [];
+        foreach ($d['months'] as $key => $bucket) {
+            foreach ($bucket['docs'] ?? [] as $doc) {
+                $out[] = [
+                    'name' => $key . '-' . str_pad((string) $d['steuerNumbers'][$doc->id], 2, '0', STR_PAD_LEFT)
+                        . '.' . $this->fileExtension($doc->file_path),
+                    'absolute' => $d['disk']->path($doc->file_path),
+                ];
+            }
+            foreach ($bucket['receipts'] ?? [] as $receipt) {
+                $out[] = [
+                    'name' => $key . '-' . str_pad((string) $d['receiptNumbers'][$receipt->id], 2, '0', STR_PAD_LEFT)
+                        . '.' . $this->fileExtension($receipt->file_path),
+                    'absolute' => $d['disk']->path($receipt->file_path),
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    private function fileExtension(?string $path): string
+    {
+        $ext = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
+
+        return $ext !== '' ? $ext : 'pdf';
+    }
+
+    /** Bericht für einen beliebigen Zeitraum ($withReceipts=false: nur Übersicht). */
+    public function generate(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null, bool $withReceipts = true): string
+    {
+        $d = $this->collectData($from, $to, $business, $account);
+        $transactions = $d['transactions'];
+        $business = $d['business'];
+        $months = $d['months'];
+        $receiptNumbers = $d['receiptNumbers'];
+        $steuerNumbers = $d['steuerNumbers'];
+        $steuerDocs = $d['steuerDocs'];
+
+        $pdf = new ReportPdf();
+
+        $stats = $this->buildStats($transactions);
+        $stats['appendedFiles'] = $withReceipts ? count($receiptNumbers) : 0;
+        $stats['steuerFiles'] = $withReceipts ? count($steuerNumbers) : 0;
 
         // Hinweise an das Steuerbüro (Karten) für dieses Konto im Zeitraum.
         $reportNotes = $account
@@ -140,16 +203,20 @@ class PdfReportService
         $this->importPdfString($pdf, $frontMatter);
 
         // 4. Anhänge je Monat: erst Steuerbüro-Dateien (Nr. 1…), dann Belege.
-        foreach ($months as $bucket) {
-            foreach ($bucket['docs'] ?? [] as $doc) {
-                $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
-            }
-            foreach ($bucket['receipts'] ?? [] as $receipt) {
-                $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
+        //    Bei der reinen Übersicht ($withReceipts=false) entfallen sie.
+        if ($withReceipts) {
+            foreach ($months as $bucket) {
+                foreach ($bucket['docs'] ?? [] as $doc) {
+                    $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
+                }
+                foreach ($bucket['receipts'] ?? [] as $receipt) {
+                    $this->appendReceipt($pdf, $receipt, $receiptNumbers[$receipt->id]);
+                }
             }
         }
 
-        $name = 'Pendelordner_' . $from->format('Ymd') . '-' . $to->format('Ymd')
+        $name = ($withReceipts ? 'Pendelordner_' : 'Uebersicht_')
+            . $from->format('Ymd') . '-' . $to->format('Ymd')
             . ($business ? '_b' . $business->id : '')
             . ($account ? '_k' . $account->id : '') . '.pdf';
         $path = 'reports/' . $name;

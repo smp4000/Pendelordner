@@ -119,4 +119,53 @@ class PdfReportTest extends TestCase
 
         $this->assertGreaterThan($withNoPrint, $withDoc);
     }
+
+    public function test_uebersicht_ohne_belege_und_einzelbelege_mit_monatsnummern(): void
+    {
+        Storage::fake('belege');
+        Storage::fake('local');
+        $this->seed(MasterDataSeeder::class);
+        $this->seed(SupplierSeeder::class);
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
+            . "08.01.2026;HBW Sinsheim;Blumen;-63,70\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+
+        // Steuerbüro-Datei (wird Nr. 1) + Kontoauszug-Beleg (wird Nr. 2) im Januar.
+        Storage::disk('belege')->put('2026/01/mr.pdf', DomPdf::loadHTML('<h1>Monatsrechnung</h1>')->output());
+        SteuerDocument::create([
+            'bank_account_id' => $account->id, 'period' => '2026-01-01', 'category' => 'Monatsrechnung',
+            'file_path' => '2026/01/mr.pdf', 'mime_type' => 'application/pdf', 'sort_order' => 1,
+        ]);
+        Storage::disk('belege')->put('2026/01/beleg.pdf', DomPdf::loadHTML('<h1>Beleg</h1>')->output());
+        $receipt = Receipt::create([
+            'type' => 'incoming_invoice', 'gross_amount' => 63.70,
+            'file_path' => '2026/01/beleg.pdf', 'mime_type' => 'application/pdf',
+        ]);
+        $account->bankTransactions()->first()->receipts()->attach($receipt->id, ['amount' => 63.70]);
+
+        $service = new PdfReportService();
+        $from = Carbon::parse('2026-01-01');
+        $to = Carbon::parse('2026-01-31');
+
+        // Einzel-Belege: Jahr-Monat-Nummer, Steuerbüro-Datei zuerst.
+        $files = $service->attachmentFiles($from, $to, null, $account);
+        $this->assertSame(['2026-01-01.pdf', '2026-01-02.pdf'], array_column($files, 'name'));
+        foreach ($files as $f) {
+            $this->assertFileExists($f['absolute']);
+        }
+
+        // Übersicht (ohne Belege) ist kleiner als der Komplett-Bericht.
+        $overview = $service->generate($from, $to, null, $account, withReceipts: false);
+        $full = $service->generate($from, $to, null, $account);
+        $this->assertStringContainsString('Uebersicht_', $overview);
+        $this->assertLessThan(
+            strlen(Storage::disk('local')->get($full)),
+            strlen(Storage::disk('local')->get($overview)),
+        );
+    }
 }

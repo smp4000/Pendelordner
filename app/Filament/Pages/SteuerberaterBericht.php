@@ -146,7 +146,9 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
                 $service = new PdfReportService();
                 $disk = Storage::disk('local');
 
-                $entries = [];
+                // Je Konto: Ordner mit Übersicht (ohne Belege), Komplett-PDF
+                // (mit Belegen) und den Einzel-Belegen (Jahr-Monat-Nr.).
+                $entries = [];   // Zielname im ZIP => absoluter Quellpfad
                 foreach ($accounts as $account) {
                     $hasTx = BankTransaction::query()
                         ->where('bank_account_id', $account->id)
@@ -158,8 +160,17 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
                         continue; // Konten ohne Umsätze im Zeitraum überspringen
                     }
 
-                    $path = $service->generate($from, $to, $business, $account);
-                    $entries[$this->zipEntryName($account)] = $path;
+                    $folder = $this->zipFolderName($account);
+
+                    $overview = $service->generate($from, $to, $business, $account, withReceipts: false);
+                    $entries[$folder . '/Uebersicht.pdf'] = $disk->path($overview);
+
+                    $full = $service->generate($from, $to, $business, $account);
+                    $entries[$folder . '/Pendelordner_mit_Belegen.pdf'] = $disk->path($full);
+
+                    foreach ($service->attachmentFiles($from, $to, $business, $account) as $file) {
+                        $entries[$folder . '/Belege/' . $file['name']] = $file['absolute'];
+                    }
                 }
 
                 if (empty($entries)) {
@@ -181,8 +192,8 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
 
                     return null;
                 }
-                foreach ($entries as $entryName => $path) {
-                    $zip->addFile($disk->path($path), $entryName);
+                foreach ($entries as $entryName => $absolute) {
+                    $zip->addFile($absolute, $entryName);
                 }
                 $zip->close();
 
@@ -207,13 +218,12 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
         return [Carbon::parse($f), Carbon::parse($t)];
     }
 
-    /** Sicherer, lesbarer Dateiname je Konto innerhalb des ZIP. */
-    private function zipEntryName(BankAccount $account): string
+    /** Sicherer, lesbarer Ordnername je Konto innerhalb des ZIP. */
+    private function zipFolderName(BankAccount $account): string
     {
         $base = trim((string) $account->label) !== '' ? $account->label : ('Konto ' . $account->id);
         $safe = preg_replace('/[^\p{L}\p{N}\-_ ]+/u', '', $base);
-        $safe = trim((string) preg_replace('/\s+/', ' ', (string) $safe)) ?: ('Konto ' . $account->id);
 
-        return $safe . '.pdf';
+        return trim((string) preg_replace('/\s+/', ' ', (string) $safe)) ?: ('Konto ' . $account->id);
     }
 }
