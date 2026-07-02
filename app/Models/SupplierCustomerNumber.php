@@ -22,4 +22,9 @@ class SupplierCustomerNumber extends Model
     {
         return $this->belongsTo(Business::class);
     }
+
+    public function costCenter(): BelongsTo
+    {
+        return $this->belongsTo(CostCenter::class);
+    }
 }

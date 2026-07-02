@@ -883,7 +883,10 @@ class Kontoumsatzdetails extends Page
         $transaction->receipts()->syncWithoutDetaching([
             $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed', 'sort_order' => $transaction->receipts()->count()],
         ]);
+        // Lieferanten-Defaults (je Tankstelle/Kundennummer) auf leere Felder anwenden.
+        (new \App\Services\Matching\SupplierDefaults())->applyToTransaction($transaction, $receipt);
         $transaction->recalculateStatus();
+        $this->fillAssign();
 
         $this->selectedReceiptId = $receipt->id;
         $this->activeTab = 'assigned';
@@ -1067,6 +1070,8 @@ class Kontoumsatzdetails extends Page
                 $transaction->receipts()->syncWithoutDetaching([
                     $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'manual', 'sort_order' => $transaction->receipts()->count()],
                 ]);
+                // Lieferanten-Defaults (je Tankstelle/Kundennummer) anwenden.
+                (new \App\Services\Matching\SupplierDefaults())->applyToTransaction($transaction, $receipt);
 
                 $lastId = $receipt->id;
                 $count++;
@@ -1076,6 +1081,7 @@ class Kontoumsatzdetails extends Page
         }
 
         $transaction->recalculateStatus();
+        $this->fillAssign();
 
         $this->reset('uploadFiles');
         if ($lastId) {

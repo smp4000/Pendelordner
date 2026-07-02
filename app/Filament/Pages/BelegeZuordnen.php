@@ -212,6 +212,8 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
         $transaction->receipts()->syncWithoutDetaching([
             $receipt->id => ['amount' => round($amount, 2), 'match_type' => 'confirmed', 'sort_order' => $transaction->receipts()->count()],
         ]);
+        // Lieferanten-Defaults (je Tankstelle/Kundennummer) auf leere Felder anwenden.
+        (new \App\Services\Matching\SupplierDefaults())->applyToTransaction($transaction, $receipt);
         $transaction->recalculateStatus();
 
         Notification::make()->title('Beleg zugeordnet')->success()->send();

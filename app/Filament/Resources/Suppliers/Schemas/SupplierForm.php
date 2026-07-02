@@ -28,7 +28,7 @@ class SupplierForm
                     ]),
 
                 Section::make('Tankstellen & Kundennummern')
-                    ->description('Verknüpfe diesen Lieferanten mit deinen Tankstellen und hinterlege je Tankstelle die Kundennummer. Über mehrere Tankstellen darf die Kundennummer gleich oder unterschiedlich sein. Wird zur automatischen Zuordnung von Rechnungen genutzt.')
+                    ->description('Verknüpfe diesen Lieferanten mit deinen Tankstellen und hinterlege je Tankstelle die Kundennummer sowie Kostenstelle und eDTAS-Konto. Rechnungen dieser Kundennummer werden automatisch der Tankstelle zugeordnet und mit Kostenstelle/Konto vorbelegt.')
                     ->schema([
                         Repeater::make('customerNumbers')
                             ->relationship()
@@ -43,6 +43,12 @@ class SupplierForm
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->display_label)
                                     ->searchable(['name', 'postal_code', 'city'])->preload()->required(),
                                 TextInput::make('customer_number')->label('Kundennummer'),
+                                Select::make('cost_center_id')->label('Kostenstelle')
+                                    ->relationship('costCenter', 'name')
+                                    ->searchable()->preload()
+                                    ->helperText('Wird bei Rechnungen dieser Kundennummer vorbelegt.'),
+                                TextInput::make('edtas_account')->label('eDTAS-Konto')
+                                    ->helperText('Konto für Rechnungen dieser Kundennummer (leer = Standard des Lieferanten).'),
                             ]),
                     ]),
 
