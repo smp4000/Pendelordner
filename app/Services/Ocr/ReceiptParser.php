@@ -218,6 +218,13 @@ class ReceiptParser
             }
         }
 
+        // Betrag unmittelbar VOR einem Zahlungs-Schlüsselwort (Fußzeilen-Layout,
+        // z. B. Hall Tabakwaren: "6.452,24Zahlungsvereinbarung: SEPA-…"). Das
+        // ist der tatsächliche Zahlbetrag – er schlägt Katalog-/KVP-Summen.
+        if (preg_match('/(-?' . $amountRe . ')\s*(?:zahlungsvereinbarung|zahlbetrag|zahlbar\b)/iu', $text, $m)) {
+            return $this->parseAmount($m[1]);
+        }
+
         // Starke, eindeutige Gesamtbetrags-Schlüsselwörter zuerst (in Reihenfolge).
         // "gesamt(?!preis)" verhindert Falschtreffer auf der Spalte "Gesamtpreis".
         $keywords = [

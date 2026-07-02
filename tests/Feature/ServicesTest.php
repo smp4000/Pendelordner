@@ -250,6 +250,20 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(10.37, $data['gross_amount'], 0.001);
     }
 
+    public function test_parser_zahlbetrag_vor_zahlungsvereinbarung(): void
+    {
+        // Hall-Tabakwaren-Layout: KVP-Summe (7.176,68) ist der größte Betrag im
+        // Text, der echte Zahlbetrag steht VOR "Zahlungsvereinbarung".
+        $text = "7.176,68205\t5.422,05Gesamt\n"
+            . "MwSt\tNettobetrag €\tMwSt %\tMwSt €\tEndbetrag €\n"
+            . "-35,70-5,7019,00-30,001\n"
+            . "6.487,941.035,8919,005.452,051\n"
+            . "6.452,24Zahlungsvereinbarung: SEPA-Firmenlastschrift  nach 9 Tagen";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertEqualsWithDelta(6452.24, $data['gross_amount'], 0.001);
+    }
+
     public function test_parser_kundennummer_in_tabellenlayouts(): void
     {
         $parser = new ReceiptParser();
