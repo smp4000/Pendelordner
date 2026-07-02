@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\Kassenumsaetze;
 use App\Models\Business;
 use App\Models\PosSale;
+use App\Models\User;
 use App\Services\Pos\PosReportImporter;
 use App\Services\Pos\PosReportParser;
+use Database\Seeders\DatabaseSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PosImportTest extends TestCase
@@ -85,5 +90,35 @@ class PosImportTest extends TestCase
         $liters = (float) PosSale::where('business_id', $business->id)->where('is_fuel', true)->sum('quantity');
         $this->assertEqualsWithDelta(156707.10, $liters, 0.01);
         $this->assertEqualsWithDelta(4387.80, $liters * 2.8 / 100, 0.01);
+    }
+
+    public function test_verbuchung_je_edtas_konto_mit_ust(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $b = Business::create([
+            'name' => 'Aral Fulda', 'type' => 'gas_station', 'station_number' => '0170320196',
+            'fuel_commission_ct' => 2.8, 'fuel_provision_account' => '8400',
+        ]);
+        (new PosReportImporter())->import($this->sampleCsv());
+
+        $bk = Livewire::test(Kassenumsaetze::class)
+            ->set('businessId', $b->id)->set('year', '2026')->set('month', '6')
+            ->instance()->booking;
+
+        // Kraftstoff-Provision -> Konto 8400 (156.707,10 L × 2,8 ct = 4.387,80 netto).
+        $fuel = collect($bk['rows'])->firstWhere('account', '8400');
+        $this->assertEqualsWithDelta(4387.80, $fuel['net'], 0.01);
+
+        // Tabak 8140: 67.971,48 brutto / 1,19 = 57.118,05 netto (19 %).
+        $tabak = collect($bk['rows'])->firstWhere('account', '8140');
+        $this->assertEqualsWithDelta(67971.48 / 1.19, $tabak['net'], 0.01);
+
+        // Lotto 8090: durchlaufend 0 % -> netto = brutto, keine USt.
+        $lotto = collect($bk['rows'])->firstWhere('account', '8090');
+        $this->assertEqualsWithDelta(14241.50, $lotto['net'], 0.01);
+        $this->assertEqualsWithDelta(0, $lotto['ust'], 0.01);
     }
 }

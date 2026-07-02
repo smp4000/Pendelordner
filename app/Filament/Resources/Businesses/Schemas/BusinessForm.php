@@ -46,6 +46,8 @@ class BusinessForm
                         TextInput::make('fuel_commission_ct')->label('Kraftstoff-Provision (Cent/Liter)')
                             ->numeric()->default(2.8)
                             ->helperText('Provision je Liter für die Ist-Erlöse.'),
+                        TextInput::make('fuel_provision_account')->label('eDTAS-Konto Kraftstoff-Provision')
+                            ->helperText('Auf dieses Konto wird die Kraftstoff-Provision gebucht.'),
                     ]),
 
                 Section::make('Steuer & Sonstiges')

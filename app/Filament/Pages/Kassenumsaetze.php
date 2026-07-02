@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Business;
+use App\Models\LedgerAccount;
 use App\Models\PosSale;
 use App\Services\Pos\PosReportImporter;
 use BackedEnum;
@@ -155,6 +156,62 @@ class Kassenumsaetze extends Page
             'provision' => round($provision, 2),
             'other_gross' => round($otherGross, 2),
             'total' => round($provision + $otherGross, 2),
+        ];
+    }
+
+    /**
+     * Verbuchung der Erlöse je eDTAS-Konto (Netto/USt aus brutto). Kraftstoff
+     * wird als Provision auf das Provisionskonto der Tankstelle gebucht.
+     *
+     * @return array{rows: list<array{account: string, name: ?string, net: float, ust: float, brutto: float}>, sum: array{net: float, ust: float, brutto: float}, fuel_account: ?string}
+     */
+    public function getBookingProperty(): array
+    {
+        $sales = $this->sales;
+        $business = $this->businessId ? Business::find($this->businessId) : null;
+        $ct = (float) ($business->fuel_commission_ct ?? 0);
+        $fuelAcct = $business?->fuel_provision_account ?: null;
+
+        $rows = [];
+        $add = function (string $acct, float $net, float $ust, float $brutto) use (&$rows): void {
+            $rows[$acct] ??= ['account' => $acct, 'name' => null, 'net' => 0.0, 'ust' => 0.0, 'brutto' => 0.0];
+            $rows[$acct]['net'] += $net;
+            $rows[$acct]['ust'] += $ust;
+            $rows[$acct]['brutto'] += $brutto;
+        };
+
+        foreach ($sales as $s) {
+            if ($s->is_fuel) {
+                $net = (float) $s->quantity * $ct / 100;
+                $ust = $net * 0.19;
+                $add($fuelAcct ?: '—', $net, $ust, $net + $ust);
+            } else {
+                $brutto = (float) $s->amount_gross;
+                $rate = $s->tax_rate;
+                $net = $rate > 0 ? $brutto / (1 + $rate / 100) : $brutto;
+                $add((string) ($s->ekw_konto ?: '—'), $net, $brutto - $net, $brutto);
+            }
+        }
+
+        $names = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
+            ->whereIn('number', array_keys($rows))->pluck('name', 'number');
+        foreach ($rows as $acct => &$r) {
+            $r['name'] = $names[$acct] ?? null;
+            $r['net'] = round($r['net'], 2);
+            $r['ust'] = round($r['ust'], 2);
+            $r['brutto'] = round($r['brutto'], 2);
+        }
+        unset($r);
+        ksort($rows);
+
+        return [
+            'rows' => array_values($rows),
+            'sum' => [
+                'net' => round(array_sum(array_column($rows, 'net')), 2),
+                'ust' => round(array_sum(array_column($rows, 'ust')), 2),
+                'brutto' => round(array_sum(array_column($rows, 'brutto')), 2),
+            ],
+            'fuel_account' => $fuelAcct,
         ];
     }
 }

@@ -81,6 +81,51 @@
             <p style="font-size:.78rem;opacity:.6;margin-top:.75rem;">Kraftstoff = Liter × Provision (je Tankstelle einstellbar unter Stammdaten → Betriebe). Sonstige Erlöse sind Bruttowerte laut Kasse.</p>
         </x-filament::section>
 
+        {{-- Verbuchung: Erlöse je eDTAS-Konto --}}
+        @php $bk = $this->booking; @endphp
+        <x-filament::section>
+            <x-slot name="heading">Verbuchung – Erlöse je eDTAS-Konto</x-slot>
+            <x-slot name="description">Jede Warengruppe wird automatisch auf ihr eDTAS-Konto (EKW) gebucht; Netto/USt aus dem Bruttobetrag. Kraftstoff als Provision auf das Provisionskonto der Tankstelle.</x-slot>
+
+            @if (! $bk['fuel_account'])
+                <div style="margin-bottom:.75rem;padding:.5rem .7rem;border:1px solid #f59e0b;border-radius:.5rem;background:rgba(254,243,199,.4);font-size:.82rem;">
+                    Kein <strong>eDTAS-Konto Kraftstoff-Provision</strong> hinterlegt – bitte beim Betrieb (Stammdaten → Betriebe) eintragen, sonst wird die Provision unter „—" geführt.
+                </div>
+            @endif
+
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                    <thead>
+                        <tr style="border-bottom:2px solid rgba(120,120,120,.25);text-align:left;">
+                            <th style="padding:.4rem .5rem;">eDTAS-Konto</th>
+                            <th style="padding:.4rem .5rem;">Bezeichnung</th>
+                            <th style="padding:.4rem .5rem;text-align:right;">Netto</th>
+                            <th style="padding:.4rem .5rem;text-align:right;">USt</th>
+                            <th style="padding:.4rem .5rem;text-align:right;">Brutto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($bk['rows'] as $r)
+                            <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                <td style="padding:.3rem .5rem;font-weight:600;">{{ $r['account'] }}</td>
+                                <td style="padding:.3rem .5rem;opacity:.8;">{{ $r['name'] ?? '—' }}</td>
+                                <td style="padding:.3rem .5rem;text-align:right;">{{ $money($r['net']) }}</td>
+                                <td style="padding:.3rem .5rem;text-align:right;opacity:.7;">{{ $money($r['ust']) }}</td>
+                                <td style="padding:.3rem .5rem;text-align:right;">{{ $money($r['brutto']) }}</td>
+                            </tr>
+                        @endforeach
+                        <tr style="font-weight:700;border-top:2px solid rgba(120,120,120,.3);">
+                            <td style="padding:.4rem .5rem;" colspan="2">Summe Erlöse</td>
+                            <td style="padding:.4rem .5rem;text-align:right;color:#059669;">{{ $money($bk['sum']['net']) }}</td>
+                            <td style="padding:.4rem .5rem;text-align:right;">{{ $money($bk['sum']['ust']) }}</td>
+                            <td style="padding:.4rem .5rem;text-align:right;">{{ $money($bk['sum']['brutto']) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">USt-Satz je Gruppe automatisch (7 % bei „erm."/„EM", 0 % bei Lotto/durchlaufend, sonst 19 %). Die Netto-Summe ist der Erlös für die GuV.</p>
+        </x-filament::section>
+
         {{-- Artikelgruppen --}}
         <x-filament::section>
             <x-slot name="heading">Artikelgruppen (Kasse)</x-slot>

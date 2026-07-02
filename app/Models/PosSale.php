@@ -22,4 +22,24 @@ class PosSale extends Model
     {
         return $this->belongsTo(Business::class);
     }
+
+    /**
+     * USt-Satz je Artikelgruppe (Heuristik aus der Bezeichnung):
+     * ermäßigt (7 %) bei „erm."/„EM", durchlaufend/neutral (0 %) bei Lotto/Toto,
+     * „ohne MwSt", Kommission; sonst voll (19 %).
+     */
+    public function getTaxRateAttribute(): float
+    {
+        $g = mb_strtolower($this->article_group);
+
+        if (str_contains($g, 'lotto') || str_contains($g, 'toto')
+            || str_contains($g, 'ohne mwst') || str_contains($g, 'kommission')) {
+            return 0.0;
+        }
+        if (str_contains($g, 'erm') || str_ends_with(rtrim($g), ' em')) {
+            return 7.0;
+        }
+
+        return 19.0;
+    }
 }
