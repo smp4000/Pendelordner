@@ -134,6 +134,17 @@ class Receipt extends Model
         return $query->whereDoesntHave('bankTransactions');
     }
 
+    /** Nur Belege, die nicht als mögliche Dublette isoliert sind. */
+    public function scopeNotDuplicate(Builder $query): Builder
+    {
+        return $query->whereNull('duplicate_of_id');
+    }
+
+    public function duplicateOf(): BelongsTo
+    {
+        return $this->belongsTo(Receipt::class, 'duplicate_of_id');
+    }
+
     public function scopeOcrPending(Builder $query): Builder
     {
         return $query->where('ocr_status', OcrStatus::Pending->value);

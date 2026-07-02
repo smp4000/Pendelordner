@@ -66,6 +66,7 @@ class MatchingEngine
 
         $candidates = Receipt::query()
             ->unallocated()
+            ->notDuplicate()
             ->when($transaction->business_id, fn ($q) => $q->where(function ($q) use ($transaction) {
                 $q->whereNull('business_id')->orWhere('business_id', $transaction->business_id);
             }))

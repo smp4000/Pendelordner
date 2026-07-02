@@ -124,6 +124,44 @@ class OcrService
         }
 
         $this->matchSupplier($receipt, $text);
+        $this->flagContentDuplicate($receipt);
+    }
+
+    /**
+     * Markiert den Beleg als mögliche Dublette, wenn bereits ein anderer Beleg
+     * mit derselben Rechnungsnummer existiert (gleicher Lieferant – oder
+     * gleicher Bruttobetrag, falls kein Lieferant erkannt wurde). Der Beleg
+     * wird dadurch isoliert, bis der Nutzer entscheidet (löschen/behalten).
+     */
+    private function flagContentDuplicate(Receipt $receipt): void
+    {
+        if (blank($receipt->invoice_number) || filled($receipt->duplicate_of_id)) {
+            return;
+        }
+
+        $original = Receipt::query()
+            ->whereKeyNot($receipt->id)
+            ->whereNull('duplicate_of_id')
+            ->where('invoice_number', $receipt->invoice_number)
+            ->when(
+                filled($receipt->supplier_id),
+                fn ($q) => $q->where('supplier_id', $receipt->supplier_id),
+                fn ($q) => $q->where('gross_amount', $receipt->gross_amount),
+            )
+            ->orderBy('id')
+            ->first();
+
+        if ($original) {
+            $receipt->duplicate_of_id = $original->id;
+
+            \Illuminate\Support\Facades\Log::info('Beleg als mögliche Dublette isoliert', [
+                'receipt_id' => $receipt->id,
+                'file' => $receipt->file_name,
+                'invoice_number' => $receipt->invoice_number,
+                'original_id' => $original->id,
+                'original_file' => $original->file_name,
+            ]);
+        }
     }
 
     /**

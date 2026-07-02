@@ -823,6 +823,7 @@ class Kontoumsatzdetails extends Page
     {
         return Receipt::query()
             ->with('supplier')
+            ->notDuplicate()
             ->when($this->searchAssigned === 'unassigned', fn ($q) => $q->whereDoesntHave('bankTransactions'))
             ->when($this->searchAssigned === 'assigned', fn ($q) => $q->whereHas('bankTransactions'))
             ->when($this->searchPaid === 'paid', fn ($q) => $q->where('paid', true))

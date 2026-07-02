@@ -127,6 +127,60 @@
             @endforelse
         </x-filament::section>
 
+        {{-- Mögliche Dubletten (isoliert, warten auf Entscheidung) --}}
+        @php $dups = $this->duplicateSuspects; @endphp
+        @if ($dups->isNotEmpty())
+            <x-filament::section>
+                <x-slot name="heading">Mögliche Dubletten ({{ $dups->count() }})</x-slot>
+                <x-slot name="description">Gleiche Rechnungsnummer wie ein vorhandener Beleg (andere Datei). Diese Belege sind isoliert – sie erscheinen in keiner Zuordnung, bis du entscheidest.</x-slot>
+
+                @foreach ($dups as $d)
+                    <div style="display:grid;grid-template-columns:1.4fr 1.4fr auto;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid rgba(120,120,120,.12);background:rgba(254,243,199,.25);border-left:3px solid #f59e0b;">
+                        {{-- Neuer (isolierter) Beleg --}}
+                        <div>
+                            <div style="font-size:.72rem;font-weight:700;color:#b45309;margin-bottom:.15rem;">NEU (isoliert)</div>
+                            <div style="font-weight:500;">{{ $d->invoice_number ?: ('Beleg #' . $d->id) }}</div>
+                            <div style="font-size:.8rem;opacity:.65;">
+                                {{ $d->supplier?->name }}
+                                @if ($d->invoice_date) · {{ $d->invoice_date->format('d.m.Y') }} @endif
+                                @if ($d->gross_amount) · {{ $money($d->gross_amount) }} @endif
+                                · {{ $d->file_name }}
+                            </div>
+                            @if ($d->preview_url)
+                                <a href="{{ $d->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
+                            @endif
+                        </div>
+                        {{-- Original --}}
+                        <div>
+                            <div style="font-size:.72rem;font-weight:700;opacity:.6;margin-bottom:.15rem;">ORIGINAL (bleibt)</div>
+                            @if ($d->duplicateOf)
+                                <div style="font-weight:500;">{{ $d->duplicateOf->invoice_number ?: ('Beleg #' . $d->duplicateOf->id) }}</div>
+                                <div style="font-size:.8rem;opacity:.65;">
+                                    @if ($d->duplicateOf->invoice_date) {{ $d->duplicateOf->invoice_date->format('d.m.Y') }} · @endif
+                                    @if ($d->duplicateOf->gross_amount) {{ $money($d->duplicateOf->gross_amount) }} · @endif
+                                    {{ $d->duplicateOf->file_name }}
+                                </div>
+                                @if ($d->duplicateOf->preview_url)
+                                    <a href="{{ $d->duplicateOf->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
+                                @endif
+                            @else
+                                <span style="opacity:.5;">Original nicht mehr vorhanden</span>
+                            @endif
+                        </div>
+                        {{-- Entscheidung --}}
+                        <div style="display:flex;flex-direction:column;gap:.35rem;text-align:right;">
+                            <x-filament::button wire:click="deleteDuplicate({{ $d->id }})" wire:confirm="Diese Dublette endgültig löschen?" size="sm" color="danger" icon="heroicon-o-trash">
+                                Dublette löschen
+                            </x-filament::button>
+                            <x-filament::button wire:click="keepDuplicate({{ $d->id }})" size="sm" color="gray">
+                                Kein Duplikat – behalten
+                            </x-filament::button>
+                        </div>
+                    </div>
+                @endforeach
+            </x-filament::section>
+        @endif
+
     </div>
 
     <x-filament-actions::modals />

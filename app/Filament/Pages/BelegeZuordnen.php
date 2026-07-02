@@ -67,6 +67,7 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
         return Receipt::query()
             ->with(['supplier', 'business'])
             ->unallocated()
+            ->notDuplicate()
             ->orderByDesc('created_at')
             ->limit(50)
             ->get();
@@ -76,6 +77,46 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
     public function suggestionFor(Receipt $receipt): ?array
     {
         return (new MatchingEngine())->suggestTransactions($receipt, 1)->first();
+    }
+
+    /** Isolierte mögliche Dubletten (gleiche Rechnung, andere Datei). */
+    public function getDuplicateSuspectsProperty(): Collection
+    {
+        return Receipt::query()
+            ->with(['supplier', 'duplicateOf'])
+            ->whereNotNull('duplicate_of_id')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+    }
+
+    /** Bestätigte Dublette löschen (inkl. Datei). */
+    public function deleteDuplicate(int $id): void
+    {
+        $receipt = Receipt::whereNotNull('duplicate_of_id')->find($id);
+        if (! $receipt) {
+            return;
+        }
+
+        try {
+            if ($receipt->file_path) {
+                \Illuminate\Support\Facades\Storage::disk(config('pendelordner.belege_disk', 'belege'))
+                    ->delete($receipt->file_path);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+        $receipt->forceDelete();
+
+        Notification::make()->title('Dublette gelöscht')->success()->send();
+    }
+
+    /** Fehlalarm: Beleg ist keine Dublette – freigeben. */
+    public function keepDuplicate(int $id): void
+    {
+        Receipt::whereKey($id)->update(['duplicate_of_id' => null]);
+
+        Notification::make()->title('Beleg freigegeben (keine Dublette)')->success()->send();
     }
 
     /** Mehrere Belege hochladen, OCR ausführen. */
@@ -89,10 +130,11 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
         $diskName = config('pendelordner.belege_disk', 'belege');
         $count = 0;
         $skipped = 0;
+        $isolated = 0;
 
         foreach ($this->uploadFiles as $file) {
             try {
-                // Dublettenprüfung über den Datei-Hash.
+                // Dublettenprüfung über den Datei-Hash (exakt gleiche Datei).
                 $hash = hash('sha256', $file->get());
                 if (Receipt::withTrashed()->where('file_hash', $hash)->exists()) {
                     $skipped++;
@@ -113,7 +155,13 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
                 ]);
 
                 (new OcrService())->process($receipt->refresh());
-                $count++;
+
+                // Inhaltliche Dublette (gleiche Rechnung, andere Datei) -> isoliert.
+                if ($receipt->fresh()->duplicate_of_id) {
+                    $isolated++;
+                } else {
+                    $count++;
+                }
             } catch (Throwable $e) {
                 report($e);
             }
@@ -123,9 +171,11 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
 
         Notification::make()
             ->title($count . ' Beleg(e) hochgeladen')
-            ->body('OCR ausgeführt.' . ($skipped > 0 ? ' ' . $skipped . ' Dublette(n) übersprungen.' : '')
+            ->body('OCR ausgeführt.'
+                . ($skipped > 0 ? ' ' . $skipped . ' Datei-Dublette(n) übersprungen.' : '')
+                . ($isolated > 0 ? ' ' . $isolated . ' mögliche Dublette(n) isoliert – bitte unten prüfen.' : '')
                 . ' Vorschläge zur Zuordnung werden unten angezeigt.')
-            ->success()->send();
+            ->{$isolated > 0 ? 'warning' : 'success'}()->send();
     }
 
     /**
