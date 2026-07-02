@@ -65,7 +65,7 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
     public function getUnassignedReceiptsProperty(): Collection
     {
         return Receipt::query()
-            ->with('supplier')
+            ->with(['supplier', 'business'])
             ->unallocated()
             ->orderByDesc('created_at')
             ->limit(50)

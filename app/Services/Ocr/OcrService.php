@@ -134,6 +134,8 @@ class OcrService
     {
         $this->matchSupplierByCustomerNumber($receipt);
         if (filled($receipt->supplier_id)) {
+            $this->matchBusinessByCustomerNumber($receipt);
+
             return;
         }
 
@@ -145,6 +147,7 @@ class OcrService
                 ->first();
             if ($supplier) {
                 $receipt->supplier_id = $supplier->id;
+                $this->matchBusinessByCustomerNumber($receipt);
 
                 return;
             }
@@ -157,7 +160,29 @@ class OcrService
                 ->first();
             if ($supplier) {
                 $receipt->supplier_id = $supplier->id;
+                $this->matchBusinessByCustomerNumber($receipt);
             }
+        }
+    }
+
+    /**
+     * Bestimmt die Tankstelle über Lieferant + Kundennummer: jede Tankstelle
+     * hat beim Lieferanten ihre eigene Kundennummer – ist der Lieferant bekannt
+     * (egal wie erkannt), liefert die Kundennummer die Tankstelle.
+     */
+    private function matchBusinessByCustomerNumber(Receipt $receipt): void
+    {
+        if (filled($receipt->business_id) || blank($receipt->customer_number) || blank($receipt->supplier_id)) {
+            return;
+        }
+
+        $businessIds = \App\Models\SupplierCustomerNumber::query()
+            ->where('supplier_id', $receipt->supplier_id)
+            ->where('customer_number', $receipt->customer_number)
+            ->pluck('business_id')->filter()->unique();
+
+        if ($businessIds->count() === 1) {
+            $receipt->business_id = $businessIds->first();
         }
     }
 

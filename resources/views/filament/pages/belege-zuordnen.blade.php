@@ -70,8 +70,8 @@
                             <a href="{{ $r->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
                         @endif
 
-                        {{-- Lieferant: erkannt anzeigen, sonst vorbefülltes Anlege-Modal --}}
-                        <div style="margin-top:.35rem;">
+                        {{-- Lieferant/Tankstelle/Kundennummer: erkannt anzeigen, sonst vorbefülltes Anlege-Modal --}}
+                        <div style="margin-top:.35rem;display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;">
                             @if ($r->supplier)
                                 <span style="font-size:.78rem;padding:.1rem .45rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;">
                                     Lieferant: {{ $r->supplier->display_name ?: $r->supplier->name }}
@@ -81,6 +81,20 @@
                                     wire:click="mountAction('createSupplier', { receipt: {{ $r->id }} })">
                                     Lieferant anlegen
                                 </x-filament::button>
+                            @endif
+                            @if ($r->business)
+                                <span style="font-size:.78rem;padding:.1rem .45rem;border-radius:.3rem;background:rgba(99,102,241,.15);color:#4f46e5;">
+                                    {{ $r->business->display_label }}
+                                </span>
+                            @elseif ($r->supplier)
+                                <span style="font-size:.78rem;padding:.1rem .45rem;border-radius:.3rem;background:rgba(245,158,11,.18);color:#b45309;" title="Tankstelle nicht eindeutig – Kundennummer beim Lieferanten prüfen">
+                                    Tankstelle ?
+                                </span>
+                            @endif
+                            @if ($r->customer_number)
+                                <span style="font-size:.78rem;padding:.1rem .45rem;border-radius:.3rem;background:rgba(120,120,120,.15);opacity:.85;">
+                                    Kd.-Nr. {{ $r->customer_number }}
+                                </span>
                             @endif
                         </div>
                     </div>
