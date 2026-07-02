@@ -76,6 +76,59 @@ class SplitTest extends TestCase
         $this->assertEqualsWithDelta(119.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
     }
 
+    public function test_splits_erscheinen_im_bericht(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Lotto Horas', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $l2610 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '2610'], ['name' => 'Agenturabrechnung Toto, Lotto']);
+        $l8093 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '8093'], ['name' => 'Provision Toto, Lotto']);
+        $l4700 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '4700'], ['name' => 'Kosten Toto, Lotto']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-24', 'counterparty' => 'Lotto Hessen',
+            'amount' => -2581.79, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Dreizeilen-Split inkl. negativer Provisions-Zeile über die Seite speichern.
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('splitMode', 'brutto')
+            ->set('splits', [
+                ['ledger_account_id' => $l2610->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '0', 'amount' => '2.905,20'],
+                ['ledger_account_id' => $l8093->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '-329,36'],
+                ['ledger_account_id' => $l4700->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '0', 'amount' => '5,95'],
+            ])
+            ->call('saveSplits');
+
+        $tx->refresh();
+        $this->assertSame(3, $tx->accountAssignments()->count());
+        $this->assertEqualsWithDelta(-329.36, (float) $tx->accountAssignments()->where('ledger_account_id', $l8093->id)->value('amount'), 0.001);
+
+        // Bericht-Vorspann rendern: die Split-Zeilen (Kontonummern) müssen erscheinen.
+        $tx = BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])->find($tx->id);
+        $html = view('pdf.steuerberater', [
+            'business' => Business::first(),
+            'account' => $account,
+            'periodLabel' => 'Juni 2026',
+            'generatedAt' => '01.07.2026',
+            'transactions' => collect([$tx]),
+            'stats' => ['count' => 1, 'income' => 0, 'expense' => -2581.79, 'receipts' => 0, 'withoutReceipt' => 1, 'unreviewed' => 1, 'appendedFiles' => 0, 'steuerFiles' => 0],
+            'receiptNumbers' => [],
+            'steuerNumbers' => [],
+            'steuerDocs' => collect(),
+            'reportNotes' => collect(),
+            'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
+        ])->render();
+
+        $this->assertStringContainsString('2610', $html);
+        $this->assertStringContainsString('8093', $html);
+        $this->assertStringContainsString('4700', $html);
+    }
+
     public function test_zugeordnete_belege_lassen_sich_sortieren(): void
     {
         $this->seed(DatabaseSeeder::class);
