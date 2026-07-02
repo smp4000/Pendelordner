@@ -34,8 +34,11 @@
         .note-lines { width: 100%; border-collapse: collapse; }
         .note-lines td { border: none; padding: 1px 4px; font-size: 10px; color: #1f2937; vertical-align: top; }
         .note-lines .note-amount { width: 90px; white-space: nowrap; font-weight: bold; }
-        .splits { width: 100%; margin-top: 3px; border-collapse: collapse; }
-        .splits td { border: none; border-bottom: 1px dotted #e5e7eb; padding: 1px 4px; font-size: 9px; color: #4b5563; }
+        .splits { width: 100%; margin: 1px 0 2px; border-collapse: collapse; }
+        .splits td { border: none; border-bottom: 1px dotted #e5e7eb; padding: 1.5px 6px; font-size: 9.5px; color: #4b5563; }
+        .splits .split-label { color: #065f46; font-weight: bold; width: 62px; }
+        tr.has-splits td { border-bottom: none; }
+        tr.split-row td { padding-top: 0; }
     </style>
 </head>
 <body>
@@ -135,7 +138,8 @@
     </thead>
     <tbody>
         @foreach ($transactions as $t)
-            <tr>
+            @php $hasSplits = $t->accountAssignments->isNotEmpty(); @endphp
+            <tr @if ($hasSplits) class="has-splits" @endif>
                 <td>{{ $t->booking_date?->format('d.m.Y') }}</td>
                 <td>
                     <strong>{{ $t->counterparty ?: '—' }}</strong>
@@ -152,18 +156,6 @@
                     @endif
                     @if (trim((string) $t->accountant_note) !== '')
                         <div class="memo"><span class="memo-label">Hinweis:</span> {{ $t->accountant_note }}</div>
-                    @endif
-                    @php $hasSplits = $t->accountAssignments->isNotEmpty(); @endphp
-                    @if ($hasSplits)
-                        <table class="splits">
-                            @foreach ($t->accountAssignments as $a)
-                                <tr>
-                                    <td>{{ $a->ledgerAccount ? $a->ledgerAccount->number . ' – ' . \Illuminate\Support\Str::limit($a->ledgerAccount->name, 34) : 'Sachkonto' }}</td>
-                                    <td style="width:34px;" class="num">{{ $a->tax_rate !== null ? rtrim(rtrim(number_format((float)$a->tax_rate,2,',','.'),'0'),',').'%' : '' }}</td>
-                                    <td style="width:60px;" class="num">{{ $money($a->amount) }}</td>
-                                </tr>
-                            @endforeach
-                        </table>
                     @endif
                 </td>
                 {{-- Bei einer Aufteilung sind die Split-Zeilen maßgeblich –
@@ -182,6 +174,30 @@
                 </td>
                 <td class="num {{ $t->amount < 0 ? 'neg' : 'pos' }}">{{ $money($t->amount) }}</td>
             </tr>
+            {{-- Aufteilung in voller Breite unter dem Umsatz (gut lesbar). --}}
+            @if ($hasSplits)
+                <tr class="split-row">
+                    <td></td>
+                    <td colspan="5">
+                        <table class="splits">
+                            @foreach ($t->accountAssignments as $a)
+                                @php
+                                    // Gruppen-Anhang aus dem Kontonamen entfernen (z. B. " A,Karten, …").
+                                    $splitName = $a->ledgerAccount
+                                        ? trim((string) preg_replace('/\s+[A-D],.*$/u', '', $a->ledgerAccount->name))
+                                        : 'Sachkonto fehlt!';
+                                @endphp
+                                <tr>
+                                    <td class="split-label">{{ $loop->first ? 'Aufteilung:' : '' }}</td>
+                                    <td>{{ $a->ledgerAccount ? $a->ledgerAccount->number . ' – ' . \Illuminate\Support\Str::limit($splitName, 70) : $splitName }}</td>
+                                    <td style="width:42px;" class="num">{{ $a->tax_rate !== null ? rtrim(rtrim(number_format((float)$a->tax_rate,2,',','.'),'0'),',').' %' : '' }}</td>
+                                    <td style="width:78px;" class="num">{{ $money($a->amount) }}</td>
+                                </tr>
+                            @endforeach
+                        </table>
+                    </td>
+                </tr>
+            @endif
         @endforeach
     </tbody>
 </table>
