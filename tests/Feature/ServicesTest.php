@@ -264,6 +264,29 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(6452.24, $data['gross_amount'], 0.001);
     }
 
+    public function test_parser_gesamtbetrag_statt_mwst_zeile(): void
+    {
+        // Hermes-Unternehmerabrechnung: Die MwSt-Zeile endet mit "EUR" und hat
+        // 3 Beträge – sie darf NICHT als Zahlbetrag gelten (225,80 = nur MwSt).
+        $text = "EUR 1.188,40Zwischensumme\n"
+            . "Nettobetrag\t1.188,40EUR\n"
+            . "MwSt 19,00 %  von: 1.188,40 EUR\t225,80EUR\n"
+            . "Gesamtbetrag\t1.414,20EUR";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertEqualsWithDelta(1414.20, $data['gross_amount'], 0.001);
+    }
+
+    public function test_parser_verkaufsstellennummer_als_kundennummer(): void
+    {
+        // Lotto-Abrechnung: Verkaufsstellennummer = Kundennummer.
+        $text = "WochentlicheAbrechnung\nVERKAUFSSTELLEN-\tLOTTO Hessen\n"
+            . "14.Abrechnungsbetrag\n3.420,65\nVerkaufsstelle 12792\n";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertSame('12792', $data['customer_number']);
+    }
+
     public function test_parser_kundennummer_in_tabellenlayouts(): void
     {
         $parser = new ReceiptParser();

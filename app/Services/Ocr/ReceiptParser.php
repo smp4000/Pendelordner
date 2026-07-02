@@ -80,6 +80,12 @@ class ReceiptParser
             }
         }
 
+        // Lotto-Abrechnungen: die Verkaufsstellennummer entspricht der
+        // Kundennummer ("Verkaufsstelle 12792").
+        if (preg_match('/verkaufsstellen?[\s\-]*(?:nr\.?|nummer)?\s*[:#]?\s*(\d{3,10})\b/i', $text, $m)) {
+            return $m[1];
+        }
+
         return null;
     }
 
@@ -212,6 +218,11 @@ class ReceiptParser
         // letzte Betrag vor "EUR" ist der Zahlbetrag.
         $amountRe = '\d{1,3}(?:[.\s]\d{3})*,\d{2}';
         foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            // Steuer-Ausweiszeilen ("MwSt 19,00 % von: 1.188,40 EUR  225,80EUR")
+            // sind nie der Zahlbetrag – überspringen.
+            if (preg_match('/mwst|mehrwertsteuer|umsatzsteuer|\bust\b/iu', $line)) {
+                continue;
+            }
             if (preg_match('/(' . $amountRe . ')-?\s*EUR\s*$/u', $line, $lm)
                 && preg_match_all('/' . $amountRe . '/u', $line) >= 3) {
                 return $this->parseAmount($lm[1]);
