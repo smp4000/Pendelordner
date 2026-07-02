@@ -287,6 +287,20 @@ class ServicesTest extends TestCase
         $this->assertSame('12792', $data['customer_number']);
     }
 
+    public function test_parser_label_block_layout_pvg(): void
+    {
+        // PVG-Layout: erst alle Labels (mit ":"), dann alle Werte in gleicher
+        // Reihenfolge. Kundennummer und Rechnungsnummer stehen versetzt.
+        $text = "Rechnungsdatum:\nRechnungsnummer:\nLeistungszeitraum:\nKundennummer:\nTour/FF:\n"
+            . "31.05.2026\n0026152012\n25.05.2026 - 31.05.2026\n01/05667\n115/100\n"
+            . "Zahlbetrag\t313,64 €";
+
+        $data = (new ReceiptParser())->extract($text);
+        $this->assertSame('0026152012', $data['invoice_number']);
+        $this->assertSame('01/05667', $data['customer_number']);
+        $this->assertEqualsWithDelta(313.64, $data['gross_amount'], 0.001);
+    }
+
     public function test_parser_kundennummer_in_tabellenlayouts(): void
     {
         $parser = new ReceiptParser();

@@ -44,6 +44,12 @@ class ReceiptParser
      */
     private function customerNumber(string $text): ?string
     {
+        // Label-Block-Layout (z. B. PVG): Labels untereinander, Werte darunter.
+        $block = $this->labelBlockValue($text, '(?:kunden(?:nummer|nr)|kd\.?[\s\-]*nr)\.?');
+        if ($block !== null && ($c = $this->customerNumberCandidate($block))) {
+            return $c;
+        }
+
         $label = '/(?:kunden(?:nummer|nr)|kd\.?[\s\-]*nr|debitor(?:en)?[\s\-]*(?:nr|nummer))\.?\s*[:#]?/i';
 
         $lines = preg_split('/\r?\n/', $text);
@@ -139,6 +145,13 @@ class ReceiptParser
 
     private function invoiceNumber(string $text): ?string
     {
+        // Label-Block-Layout (z. B. PVG): erst alle Labels („Rechnungsnummer:"
+        // untereinander), dann alle Werte in derselben Reihenfolge.
+        $block = $this->labelBlockValue($text, '(?:rechnung(?:s)?[\s\-]*(?:nr|nummer)|rg\.?[\s\-]*nr)\.?');
+        if ($block !== null && preg_match('/^[A-Z0-9][A-Z0-9\-\/]{2,}$/i', $block)) {
+            return $block;
+        }
+
         $patterns = [
             '/rechnung(?:s)?[\s\-]*(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{2,})/i',
             '/(?:beleg|rg)[\s\-]*(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{2,})/i',
@@ -148,6 +161,42 @@ class ReceiptParser
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, $text, $m)) {
                 return trim($m[1]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Wert für ein Label in „Label-Block"-Layouts: mehrere Label-Zeilen (jede
+     * endet mit „:") stehen untereinander, die Werte folgen darunter in
+     * derselben Reihenfolge. Liefert den Wert an der Position des Labels.
+     */
+    private function labelBlockValue(string $text, string $labelRegex): ?string
+    {
+        $lines = array_values(array_filter(
+            array_map('trim', preg_split('/\r?\n/', $text)),
+            fn ($l) => $l !== '',
+        ));
+
+        foreach ($lines as $i => $line) {
+            if (! preg_match('/^' . $labelRegex . '\s*:$/iu', $line)) {
+                continue;
+            }
+
+            // Grenzen des zusammenhängenden Label-Blocks („…:"-Zeilen) bestimmen.
+            $start = $i;
+            while ($start > 0 && str_ends_with($lines[$start - 1], ':')) {
+                $start--;
+            }
+            $end = $i;
+            while ($end + 1 < count($lines) && str_ends_with($lines[$end + 1], ':')) {
+                $end++;
+            }
+
+            $valueIndex = $end + 1 + ($i - $start);   // gleiche Position im Werte-Block
+            if (isset($lines[$valueIndex]) && ! str_ends_with($lines[$valueIndex], ':')) {
+                return $lines[$valueIndex];
             }
         }
 
