@@ -18,7 +18,13 @@ class Business extends Model
         'type' => BusinessType::class,
         'active' => 'boolean',
         'sort_order' => 'integer',
+        'fuel_commission_ct' => 'decimal:3',
     ];
+
+    public function posSales(): HasMany
+    {
+        return $this->hasMany(PosSale::class);
+    }
 
     /** Eindeutiges Anzeige-Label (Name + Ort), da mehrere Betriebe gleich heißen können. */
     public function getDisplayLabelAttribute(): string

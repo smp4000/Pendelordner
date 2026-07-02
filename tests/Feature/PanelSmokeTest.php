@@ -40,6 +40,7 @@ class PanelSmokeTest extends TestCase
             '/admin/belege-zuordnen',       // Modul 3/4 (Beleg-Upload + Vorschläge)
             '/admin/ledger-accounts',       // Modul 13 (Sachkonten/Kontenrahmen)
             '/admin/geschaeftsplanung',     // Geschäftsplanung (mehrjähriger Plan)
+            '/admin/kassenumsaetze',        // Kassenumsätze (Ist-Import)
         ];
 
         foreach ($pages as $url) {

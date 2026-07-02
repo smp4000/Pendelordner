@@ -38,6 +38,16 @@ class BusinessForm
                         TextInput::make('email')->label('E-Mail')->email()->columnSpanFull(),
                     ]),
 
+                Section::make('Kasse / Tankstelle')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('station_number')->label('Stationsnummer')
+                            ->helperText('Aral-Stationsnummer – für die Zuordnung der Kassenabrechnung.'),
+                        TextInput::make('fuel_commission_ct')->label('Kraftstoff-Provision (Cent/Liter)')
+                            ->numeric()->default(2.8)
+                            ->helperText('Provision je Liter für die Ist-Erlöse.'),
+                    ]),
+
                 Section::make('Steuer & Sonstiges')
                     ->columns(2)
                     ->schema([
