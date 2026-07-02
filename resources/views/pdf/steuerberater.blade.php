@@ -153,7 +153,8 @@
                     @if (trim((string) $t->accountant_note) !== '')
                         <div class="memo"><span class="memo-label">Hinweis:</span> {{ $t->accountant_note }}</div>
                     @endif
-                    @if ($t->accountAssignments->isNotEmpty())
+                    @php $hasSplits = $t->accountAssignments->isNotEmpty(); @endphp
+                    @if ($hasSplits)
                         <table class="splits">
                             @foreach ($t->accountAssignments as $a)
                                 <tr>
@@ -165,10 +166,14 @@
                         </table>
                     @endif
                 </td>
-                <td>{{ $t->category?->name ?? '—' }}</td>
+                {{-- Bei einer Aufteilung sind die Split-Zeilen maßgeblich –
+                     Kategorie und Konto der Hauptzuordnung ausblenden. --}}
+                <td>{{ $hasSplits ? '' : ($t->category?->name ?? '—') }}</td>
                 <td>{{ $t->costCenter?->name ?? '—' }}</td>
                 <td>
-                    @if ($t->ledgerAccount)
+                    @if ($hasSplits)
+                        <span class="receipts">→ Aufteilung</span>
+                    @elseif ($t->ledgerAccount)
                         <strong>{{ $t->ledgerAccount->number }}</strong>
                         <br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->ledgerAccount->name, 22) }}</span>
                     @else

@@ -127,6 +127,48 @@ class SplitTest extends TestCase
         $this->assertStringContainsString('2610', $html);
         $this->assertStringContainsString('8093', $html);
         $this->assertStringContainsString('4700', $html);
+        // Bei Aufteilung wird statt der Haupt-Konto-Spalte der Verweis gezeigt.
+        $this->assertStringContainsString('Aufteilung', $html);
+    }
+
+    public function test_bericht_blendet_kategorie_und_konto_bei_split_aus(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'GS', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3070'], ['name' => 'Einkauf Lebensmittel, USt voll']);
+        $category = Category::firstOrCreate(['name' => 'EinkaufTestKat'], ['active' => true]);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'category_id' => $category->id, 'ledger_account_id' => $la->id,
+            'booking_date' => '2026-06-05', 'counterparty' => 'SB Union',
+            'amount' => -100.00, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+        $tx->accountAssignments()->create([
+            'chart_of_accounts' => 'edtas', 'ledger_account_id' => $la->id,
+            'tax_rate' => 19, 'amount' => 100.00, 'booking_date' => $tx->booking_date,
+        ]);
+
+        $render = fn ($t) => view('pdf.steuerberater', [
+            'business' => Business::first(), 'account' => $account,
+            'periodLabel' => 'Juni 2026', 'generatedAt' => '01.07.2026',
+            'transactions' => collect([$t]),
+            'stats' => ['count' => 1, 'income' => 0, 'expense' => -100, 'receipts' => 0, 'withoutReceipt' => 1, 'unreviewed' => 1, 'appendedFiles' => 0, 'steuerFiles' => 0],
+            'receiptNumbers' => [], 'steuerNumbers' => [], 'steuerDocs' => collect(), 'reportNotes' => collect(),
+            'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
+        ])->render();
+
+        // MIT Split: Kategorie-Name der Hauptzuordnung erscheint nicht.
+        $tx = BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])->find($tx->id);
+        $this->assertStringNotContainsString('EinkaufTestKat', $render($tx));
+
+        // OHNE Split: Kategorie wird normal angezeigt.
+        $tx->accountAssignments()->delete();
+        $tx = $tx->fresh(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount']);
+        $this->assertStringContainsString('EinkaufTestKat', $render($tx));
     }
 
     public function test_zugeordnete_belege_lassen_sich_sortieren(): void

@@ -333,12 +333,20 @@ class Kontoumsatzdetails extends Page
         $this->loadSplits();
 
         $diff = $this->splitRemaining;
+        $ohneKonto = count(array_filter($rows, fn ($row) => empty($row['ledger_account_id'] ?? null)));
+
+        $hints = [];
+        $hints[] = abs($diff) < 0.005
+            ? 'Betrag vollständig auf Sachkonten aufgeteilt.'
+            : 'Achtung: Restbetrag ' . number_format($diff, 2, ',', '.') . ' € nicht zugeordnet.';
+        if ($ohneKonto > 0) {
+            $hints[] = 'Achtung: ' . $ohneKonto . ' Position(en) OHNE Sachkonto – bitte je Zeile ein Konto wählen.';
+        }
+
         Notification::make()
             ->title('Aufteilung gespeichert (' . count($rows) . ' Positionen)')
-            ->body(abs($diff) < 0.005
-                ? 'Betrag vollständig auf Sachkonten aufgeteilt.'
-                : 'Achtung: Restbetrag ' . number_format($diff, 2, ',', '.') . ' € nicht zugeordnet.')
-            ->success()->send();
+            ->body(implode(' ', $hints))
+            ->{(abs($diff) < 0.005 && $ohneKonto === 0) ? 'success' : 'warning'}()->send();
     }
 
     private function parseAmount(mixed $value): float
