@@ -36,22 +36,68 @@ class ReceiptParser
         ];
     }
 
-    /** Kundennummer beim Lieferanten, z. B. "Kundennummer  A8319" oder "Kd.-Nr.: 12345". */
+    /**
+     * Kundennummer beim Lieferanten, z. B. "Kundennummer  A8319" oder
+     * "Kd.-Nr.: 12345". Berücksichtigt Tabellenlayouts, bei denen der Wert
+     * VOR dem Label ("11145" ↵ "Kundennr.") oder in der Folgezeile steht –
+     * auch mit dem Datum verklebt ("Kundennr. Datum" ↵ "1114503.07.26").
+     */
     private function customerNumber(string $text): ?string
     {
-        $patterns = [
-            '/kunden(?:nummer|nr)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
-            '/kd\.?[\s\-]*nr\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
-            '/debitor(?:en)?[\s\-]*(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/]{1,})/i',
-        ];
+        $label = '/(?:kunden(?:nummer|nr)|kd\.?[\s\-]*nr|debitor(?:en)?[\s\-]*(?:nr|nummer))\.?\s*[:#]?/i';
 
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $text, $m)) {
-                return trim($m[1]);
+        $lines = preg_split('/\r?\n/', $text);
+        foreach ($lines as $i => $line) {
+            if (! preg_match($label, $line, $m, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            // 1) Kandidat im Zeilenrest hinter dem Label ("Kundennr.: 12345").
+            $rest = substr($line, $m[0][1] + strlen($m[0][0]));
+            if ($c = $this->customerNumberCandidate($rest)) {
+                return $c;
+            }
+
+            // 2) Wert in der Zeile davor – reines Nummern-Token ("11145" ↵ "Kundennr.").
+            if ($i > 0 && preg_match('/^\s*([A-Z]?\d{3,10})\s*$/i', $lines[$i - 1], $p)) {
+                return $p[1];
+            }
+
+            // 3) Wert in der nächsten nicht-leeren Zeile (Tabellenkopf) –
+            //    ggf. mit dem Datum verklebt ("1114503.07.26").
+            for ($j = $i + 1; $j <= min($i + 2, count($lines) - 1); $j++) {
+                $next = trim($lines[$j]);
+                if ($next === '') {
+                    continue;
+                }
+                if (preg_match('/^(\d{3,10}?)(\d{2}\.\d{2}\.\d{2,4})\b/', $next, $p)) {
+                    return $p[1];
+                }
+                if ($c = $this->customerNumberCandidate($next)) {
+                    return $c;
+                }
+                break; // nur die erste nicht-leere Folgezeile prüfen
             }
         }
 
         return null;
+    }
+
+    /** Erstes plausibles Kundennummer-Token: muss eine Ziffer enthalten, kein Datum. */
+    private function customerNumberCandidate(string $s): ?string
+    {
+        if (! preg_match('/([A-Z0-9][A-Z0-9\-\/]{1,14})/i', trim($s), $m)) {
+            return null;
+        }
+        $token = trim($m[1]);
+
+        // Muss eine Ziffer enthalten (schließt Wörter wie "Datum" aus) und
+        // darf kein Datum sein.
+        if (! preg_match('/\d/', $token) || preg_match('/^\d{1,2}\.\d{1,2}\./', $token)) {
+            return null;
+        }
+
+        return $token;
     }
 
     /** USt-IdNr. (z. B. "DE812499727") aus dem Text – separat, da keine Beleg-Spalte. */

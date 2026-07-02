@@ -250,6 +250,25 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(10.37, $data['gross_amount'], 0.001);
     }
 
+    public function test_parser_kundennummer_in_tabellenlayouts(): void
+    {
+        $parser = new ReceiptParser();
+
+        // Inline (klassisch): Label, dann Wert.
+        $this->assertSame('A8319', $parser->extract("Kundennummer  A8319\nBetrag 1,00")['customer_number']);
+
+        // Wert VOR dem Label (Hall-Tabakwaren-Layout, Blatt 1).
+        $text = "36100 Petersberg\n11145\nKundennr.\nDatum entspricht Rechnungsdatum und Lieferdatum";
+        $this->assertSame('11145', $parser->extract($text)['customer_number']);
+
+        // Tabellenkopf "Kundennr. Datum", Wert mit Datum verklebt in Folgezeile.
+        $text = "RECHNUNG\nKundennr. Datum\n1114503.07.26\nChristian Welle";
+        $this->assertSame('11145', $parser->extract($text)['customer_number']);
+
+        // Wörter wie "Datum" hinter dem Label sind KEINE Kundennummer.
+        $this->assertNull($parser->extract("Kundennr. Datum\nkein Wert weit und breit")['customer_number']);
+    }
+
     public function test_parser_erkennt_ustidnr_und_lieferantennamen(): void
     {
         $text = "Haufe Service Center GmbH\nMunzinger Straße 9\n79111 Freiburg\n"
