@@ -28,7 +28,15 @@
                     <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.5rem;">
                         <button wire:click="goTo('first')" style="{{ $navBtn }}" title="Erster">&#124;&#9664;</button>
                         <button wire:click="goTo('prev')" style="{{ $navBtn }}" title="Zurück">&#9664;</button>
-                        <span style="font-size:.85rem;min-width:10rem;text-align:center;">Kontosatz <strong>{{ $this->position }}</strong> von {{ $this->total }}</span>
+                        <span style="font-size:.85rem;min-width:10rem;text-align:center;">
+                            @if ($this->total === 0)
+                                <span style="color:#059669;font-weight:600;">Alle Umsätze geprüft ✓</span>
+                            @elseif ($this->position === 0)
+                                <span style="color:#059669;">geprüft ✓</span> · noch <strong>{{ $this->total }}</strong> offen
+                            @else
+                                Kontosatz <strong>{{ $this->position }}</strong> von {{ $this->total }}
+                            @endif
+                        </span>
                         <button wire:click="goTo('next')" style="{{ $navBtn }}" title="Weiter">&#9654;</button>
                         <button wire:click="goTo('last')" style="{{ $navBtn }}" title="Letzter">&#9654;&#124;</button>
                     </div>

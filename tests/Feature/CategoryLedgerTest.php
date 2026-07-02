@@ -167,6 +167,34 @@ class CategoryLedgerTest extends TestCase
         $this->assertTrue($first->refresh()->reviewed);
     }
 
+    /** Der Zähler „Kontosatz X von Y" zählt nur ungeprüfte Umsätze. */
+    public function test_zaehler_zeigt_nur_ungeprüfte_umsaetze(): void
+    {
+        $this->bootPanel();
+
+        $account = BankAccount::create([
+            'label' => 'Geschäftskonto', 'business_id' => Business::first()->id, 'currency' => 'EUR',
+        ]);
+        $make = fn (string $day, bool $reviewed) => BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => $day, 'counterparty' => 'X', 'amount' => -10.00,
+            'reviewed' => $reviewed, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+        $a = $make('2026-06-01', false);
+        $make('2026-06-02', false);
+        $make('2026-06-03', true); // bereits geprüft -> zählt nicht
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $a->id);
+        $this->assertSame(2, $comp->instance()->total);
+        $this->assertSame(1, $comp->instance()->position);
+
+        // Nach dem Prüfen des ersten: nur noch 1 offen, aktueller zählt nicht mehr mit.
+        $comp->call('markReviewed');
+        $this->assertSame(1, $comp->instance()->total);
+        $this->assertSame(0, $comp->instance()->position);
+    }
+
     /** Die operative Sachkonto-Suche liefert die eDTAS-Konten (edtas/gastro/kfz). */
     public function test_sachkonto_suche_edtas(): void
     {

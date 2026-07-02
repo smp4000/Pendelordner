@@ -722,17 +722,33 @@ class Kontoumsatzdetails extends Page
 
     // --- Navigation (Umsatz X von Y, vor/zurück) ----------------------------
 
+    /**
+     * Grundlage des Zählers „Kontosatz X von Y": standardmäßig nur die noch
+     * NICHT geprüften Umsätze. Nur wenn aus der Liste explizit nach
+     * „geprüft" gefiltert wurde, zählt die ganze (geprüfte) Liste.
+     *
+     * @return list<int>
+     */
+    private function counterIds(): array
+    {
+        $list = $this->openTransactions;
+        if ($this->filterReviewed !== '1') {
+            $list = $list->where('reviewed', false);
+        }
+
+        return $list->pluck('id')->values()->all();
+    }
+
     public function getPositionProperty(): int
     {
-        $ids = $this->openTransactions->pluck('id')->all();
-        $i = array_search($this->selectedTransactionId, $ids, true);
+        $i = array_search($this->selectedTransactionId, $this->counterIds(), true);
 
         return $i === false ? 0 : $i + 1;
     }
 
     public function getTotalProperty(): int
     {
-        return $this->openTransactions->count();
+        return count($this->counterIds());
     }
 
     public function goTo(string $where): void
