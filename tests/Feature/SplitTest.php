@@ -110,6 +110,42 @@ class SplitTest extends TestCase
         $this->assertSame(0, $tx->accountAssignments()->count());
     }
 
+    /**
+     * Ein (negativer) Betrag darf beim automatischen Speichern NICHT aus der
+     * Datenbank in das Eingabefeld zurückgeschrieben werden – sonst wird die
+     * laufende Eingabe überschrieben und z. B. auf 0 zurückgesetzt.
+     */
+    public function test_negativer_betrag_bleibt_beim_autospeichern_im_feld_erhalten(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '8093'], ['name' => 'Provision Toto, Lotto']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-03', 'counterparty' => 'Aral', 'amount' => -100.00,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('toggleSplit')
+            ->call('setSplitMode', 'brutto')
+            ->call('setSplitLedger', 0, $la->id);
+
+        // Negativen Betrag eintippen (löst updated()-Hook + Autospeichern aus).
+        $component->set('splits.0.amount', '-329,36');
+
+        // Feld behält exakt die Eingabe (nicht durch DB-Reload überschrieben/auf 0 gesetzt).
+        $this->assertSame('-329,36', $component->get('splits.0.amount'));
+
+        // Und in der Datenbank steht der negative Betrag korrekt.
+        $this->assertEqualsWithDelta(-329.36, (float) $tx->accountAssignments()->first()->amount, 0.001);
+    }
+
     public function test_splits_erscheinen_im_bericht(): void
     {
         $this->seed(DatabaseSeeder::class);

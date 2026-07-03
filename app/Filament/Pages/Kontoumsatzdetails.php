@@ -315,9 +315,14 @@ class Kontoumsatzdetails extends Page
      * Umsatzes) – ohne Meldung. Gemeinsamer Kern für den manuellen
      * Speichern-Button und das Autospeichern.
      *
+     * @param  bool  $reloadEditor  Editor-Felder ($this->splits) aus der Datenbank neu
+     *                              befüllen (Beträge/USt normalisieren). Beim Autospeichern
+     *                              MUSS das false sein, sonst wird der gerade getippte Wert
+     *                              (z. B. ein noch unfertiger negativer Betrag) mitten in der
+     *                              Eingabe überschrieben.
      * @return array{count: int, diff: float, ohneKonto: int, removed: bool}|null null, wenn kein Umsatz gewählt ist
      */
-    private function persistSplits(): ?array
+    private function persistSplits(bool $reloadEditor = true): ?array
     {
         $t = $this->selectedTransaction;
         if (! $t) {
@@ -335,7 +340,9 @@ class Kontoumsatzdetails extends Page
             // "selectedTransaction" liefert – die accountAssignments-Relation muss
             // hier hart neu geladen werden, sonst liest loadSplits() den alten Stand.
             $t->load('accountAssignments.ledgerAccount');
-            $this->loadSplits();
+            if ($reloadEditor) {
+                $this->loadSplits();
+            }
 
             return ['count' => 0, 'diff' => 0.0, 'ohneKonto' => 0, 'removed' => true];
         }
@@ -358,7 +365,9 @@ class Kontoumsatzdetails extends Page
         }
 
         $t->load('accountAssignments.ledgerAccount');
-        $this->loadSplits();
+        if ($reloadEditor) {
+            $this->loadSplits();
+        }
 
         return [
             'count' => count($rows),
@@ -397,11 +406,17 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
-     * Speichert die Aufteilung automatisch im Hintergrund (nach Betrags-/
-     * USt-Änderung, Kontoauswahl, Zeile hinzufügen/entfernen). Bewusst
-     * zurückhaltend mit Meldungen: nur bei einem echten Problem (Restbetrag
-     * oder fehlendes Konto) eine dezente Warnung, sonst still im Hintergrund –
-     * der manuelle Button bleibt für die bewusste, ausführliche Bestätigung.
+     * Speichert die Aufteilung automatisch und STILL im Hintergrund (nach
+     * Betrags-/USt-Änderung, Kontoauswahl, Zeile hinzufügen/entfernen).
+     *
+     * Bewusst OHNE Meldung und OHNE Editor-Reload:
+     *  - Kein loadSplits(): sonst würde der gerade getippte Wert (etwa ein noch
+     *    unfertiger negativer Betrag) mitten in der Eingabe aus der Datenbank
+     *    überschrieben und z. B. auf 0 zurückgesetzt.
+     *  - Keine Toast-Meldung: der offene Restbetrag und Positionen ohne Konto
+     *    sind bereits dauerhaft unten im Editor sichtbar; ein Toast bei jedem
+     *    Tastendruck wäre nur störend. Die ausführliche Rückmeldung gibt der
+     *    manuelle Button "Aufteilung speichern".
      */
     private function autoSaveSplits(): void
     {
@@ -409,25 +424,7 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        $result = $this->persistSplits();
-        if ($result === null || $result['removed']) {
-            return;
-        }
-
-        if (abs($result['diff']) >= 0.005 || $result['ohneKonto'] > 0) {
-            $hints = [];
-            if (abs($result['diff']) >= 0.005) {
-                $hints[] = 'Rest ' . number_format($result['diff'], 2, ',', '.') . ' € offen.';
-            }
-            if ($result['ohneKonto'] > 0) {
-                $hints[] = $result['ohneKonto'] . ' Position(en) ohne Sachkonto.';
-            }
-
-            Notification::make()
-                ->title('Automatisch gespeichert – bitte prüfen')
-                ->body(implode(' ', $hints))
-                ->warning()->send();
-        }
+        $this->persistSplits(reloadEditor: false);
     }
 
     /**
