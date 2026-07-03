@@ -168,6 +168,22 @@ class Kontoumsatzdetails extends Page
         $this->loadSplits();
     }
 
+    /**
+     * Verwirft den Livewire-Cache der berechneten Eigenschaften des ausgewählten
+     * Umsatzes und Belegs. Livewire merkt sich das Ergebnis von
+     * getSelectedTransactionProperty()/getSelectedReceiptProperty() für die
+     * Dauer einer Anfrage. Wird innerhalb derselben Anfrage die Belegzuordnung
+     * geändert (hochladen, verschieben, lösen, Betrag ändern), rendert die
+     * Seite sonst mit der ALTEN, gecachten Belegsammlung neu – man müsste die
+     * Seite manuell neu laden. Nach diesem Unset liest der anschließende Render
+     * frisch aus der Datenbank.
+     */
+    private function refreshSelected(): void
+    {
+        unset($this->selectedTransaction);
+        unset($this->selectedReceipt);
+    }
+
     /** Sichert noch nicht gespeicherte Eingaben des aktuellen Umsatzes (Mitteilung). */
     private function persistPending(): void
     {
@@ -1000,6 +1016,7 @@ class Kontoumsatzdetails extends Page
 
         $this->selectedReceiptId = $receipt->id;
         $this->activeTab = 'assigned';
+        $this->refreshSelected();
 
         Notification::make()->title('Beleg zugeordnet')->success()->send();
     }
@@ -1020,6 +1037,8 @@ class Kontoumsatzdetails extends Page
                 $transaction->receipts()->updateExistingPivot($rid, ['sort_order' => $pos++]);
             }
         }
+
+        $this->refreshSelected();
     }
 
     /** Verschiebt einen zugeordneten Beleg in der Reihenfolge (hoch/runter). */
@@ -1047,6 +1066,8 @@ class Kontoumsatzdetails extends Page
         foreach ($ids as $pos => $rid) {
             $transaction->receipts()->updateExistingPivot($rid, ['sort_order' => $pos]);
         }
+
+        $this->refreshSelected();
     }
 
     /** Zugeordneten (Teil-)Betrag eines Belegs ändern. */
@@ -1061,6 +1082,7 @@ class Kontoumsatzdetails extends Page
 
         $transaction->receipts()->updateExistingPivot($receiptId, ['amount' => $value]);
         $transaction->recalculateStatus();
+        $this->refreshSelected();
 
         Notification::make()->title('Betrag aktualisiert')->success()->send();
     }
@@ -1075,6 +1097,7 @@ class Kontoumsatzdetails extends Page
 
         $receipt->include_in_report = ! $receipt->include_in_report;
         $receipt->saveQuietly();
+        $this->refreshSelected();
 
         Notification::make()
             ->title($receipt->include_in_report
@@ -1092,6 +1115,8 @@ class Kontoumsatzdetails extends Page
 
         $transaction->receipts()->detach($receiptId);
         $transaction->recalculateStatus();
+        $this->fillAssign();
+        $this->refreshSelected();
 
         Notification::make()->title('Zuordnung gelöst')->success()->send();
     }
@@ -1109,6 +1134,7 @@ class Kontoumsatzdetails extends Page
         $transaction->accountant_note = trim($this->accountantNote) ?: null;
         $transaction->reviewed = true;
         $transaction->recalculateStatus();
+        $this->refreshSelected();
 
         Notification::make()->title('Umsatz als geprüft markiert')->success()->send();
     }
@@ -1123,6 +1149,7 @@ class Kontoumsatzdetails extends Page
         $transaction->accountant_note = trim($this->accountantNote) ?: null;
         $transaction->fully_paid = ! $transaction->fully_paid;
         $transaction->saveQuietly();
+        $this->refreshSelected();
     }
 
     /** Beleg hochladen (Upload online), OCR ausführen und dem Umsatz zuordnen. */
@@ -1198,6 +1225,7 @@ class Kontoumsatzdetails extends Page
             $this->selectedReceiptId = $lastId;
         }
         $this->activeTab = 'assigned';
+        $this->refreshSelected();
 
         Notification::make()->title($count . ' Beleg(e) hochgeladen & zugeordnet')->success()->send();
     }
