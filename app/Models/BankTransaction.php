@@ -184,7 +184,11 @@ class BankTransaction extends Model
     /** Status anhand der aktuellen Belegzuordnung neu berechnen. */
     public function recalculateStatus(bool $persist = true): TransactionStatus
     {
-        $this->loadMissing('receipts');
+        // Immer hart neu laden (nicht nur "wenn noch nicht geladen"): direkt vor
+        // diesem Aufruf können attach/detach/sync auf der Pivot-Tabelle
+        // stattgefunden haben, ohne dass eine bereits geladene Collection
+        // automatisch aktualisiert wurde.
+        $this->load('receipts');
 
         $status = match (true) {
             $this->reviewed => TransactionStatus::Reviewed,

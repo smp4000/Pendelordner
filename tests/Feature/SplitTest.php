@@ -76,6 +76,40 @@ class SplitTest extends TestCase
         $this->assertEqualsWithDelta(119.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
     }
 
+    /** Änderungen an einer Split-Zeile speichern automatisch, ohne den Button zu klicken. */
+    public function test_split_wird_automatisch_gespeichert(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3070'], ['name' => 'Einkauf Lebensmittel, USt voll']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-03', 'counterparty' => 'SB Union',
+            'amount' => -100.00, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('toggleSplit')
+            ->call('setSplitMode', 'brutto');
+
+        // Konto auswählen -> autospeichert sofort (kein saveSplits()-Call nötig).
+        $component->call('setSplitLedger', 0, $la->id);
+        $this->assertSame(1, $tx->accountAssignments()->count());
+
+        // Betrag ändern (Livewire-Feld-Update löst den updated()-Hook aus) -> wieder autospeichern.
+        $component->set('splits.0.amount', '100,00');
+        $this->assertEqualsWithDelta(100.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
+
+        // Position entfernen -> Aufteilung wird automatisch geleert.
+        $component->call('removeSplit', 0);
+        $this->assertSame(0, $tx->accountAssignments()->count());
+    }
+
     public function test_splits_erscheinen_im_bericht(): void
     {
         $this->seed(DatabaseSeeder::class);

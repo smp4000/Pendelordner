@@ -226,6 +226,7 @@ class Kontoumsatzdetails extends Page
     {
         unset($this->splits[$index]);
         $this->splits = array_values($this->splits);
+        $this->autoSaveSplits();
     }
 
     /** Bruttobetrag einer Zeile (im Netto-Modus inkl. USt hochgerechnet). */
@@ -280,6 +281,7 @@ class Kontoumsatzdetails extends Page
         $this->splits[$index]['ledger_account_id'] = $la->id;
         $this->splits[$index]['ledger_label'] = $la->number . ' – ' . $la->name;
         $this->splits[$index]['ledger_search'] = '';
+        $this->autoSaveSplits();
     }
 
     public function clearSplitLedger(int $index): void
@@ -292,12 +294,18 @@ class Kontoumsatzdetails extends Page
         $this->splits[$index]['ledger_search'] = '';
     }
 
-    /** Aufteilung speichern (ersetzt die bisherigen Positionen des Umsatzes). */
-    public function saveSplits(): void
+    /**
+     * Speichert die Aufteilung (ersetzt die bisherigen Positionen des
+     * Umsatzes) – ohne Meldung. Gemeinsamer Kern für den manuellen
+     * Speichern-Button und das Autospeichern.
+     *
+     * @return array{count: int, diff: float, ohneKonto: int, removed: bool}|null null, wenn kein Umsatz gewählt ist
+     */
+    private function persistSplits(): ?array
     {
         $t = $this->selectedTransaction;
         if (! $t) {
-            return;
+            return null;
         }
 
         $rows = array_values(array_filter($this->splits, function ($row) {
@@ -307,10 +315,13 @@ class Kontoumsatzdetails extends Page
 
         if (empty($rows)) {
             $t->accountAssignments()->delete();
+            // $t ist dasselbe Objekt, das die gecachte Livewire-Computed-Property
+            // "selectedTransaction" liefert – die accountAssignments-Relation muss
+            // hier hart neu geladen werden, sonst liest loadSplits() den alten Stand.
+            $t->load('accountAssignments.ledgerAccount');
             $this->loadSplits();
-            Notification::make()->title('Aufteilung entfernt')->success()->send();
 
-            return;
+            return ['count' => 0, 'diff' => 0.0, 'ohneKonto' => 0, 'removed' => true];
         }
 
         $chart = config('pendelordner.kontierung.standard_kontenrahmen', 'edtas');
@@ -330,23 +341,97 @@ class Kontoumsatzdetails extends Page
             ]);
         }
 
+        $t->load('accountAssignments.ledgerAccount');
         $this->loadSplits();
 
-        $diff = $this->splitRemaining;
-        $ohneKonto = count(array_filter($rows, fn ($row) => empty($row['ledger_account_id'] ?? null)));
+        return [
+            'count' => count($rows),
+            'diff' => $this->splitRemaining,
+            'ohneKonto' => count(array_filter($rows, fn ($row) => empty($row['ledger_account_id'] ?? null))),
+            'removed' => false,
+        ];
+    }
+
+    /** Aufteilung speichern (Button) – mit ausführlicher Erfolg-/Warn-Meldung. */
+    public function saveSplits(): void
+    {
+        $result = $this->persistSplits();
+        if ($result === null) {
+            return;
+        }
+
+        if ($result['removed']) {
+            Notification::make()->title('Aufteilung entfernt')->success()->send();
+
+            return;
+        }
 
         $hints = [];
-        $hints[] = abs($diff) < 0.005
+        $hints[] = abs($result['diff']) < 0.005
             ? 'Betrag vollständig auf Sachkonten aufgeteilt.'
-            : 'Achtung: Restbetrag ' . number_format($diff, 2, ',', '.') . ' € nicht zugeordnet.';
-        if ($ohneKonto > 0) {
-            $hints[] = 'Achtung: ' . $ohneKonto . ' Position(en) OHNE Sachkonto – bitte je Zeile ein Konto wählen.';
+            : 'Achtung: Restbetrag ' . number_format($result['diff'], 2, ',', '.') . ' € nicht zugeordnet.';
+        if ($result['ohneKonto'] > 0) {
+            $hints[] = 'Achtung: ' . $result['ohneKonto'] . ' Position(en) OHNE Sachkonto – bitte je Zeile ein Konto wählen.';
         }
 
         Notification::make()
-            ->title('Aufteilung gespeichert (' . count($rows) . ' Positionen)')
+            ->title('Aufteilung gespeichert (' . $result['count'] . ' Positionen)')
             ->body(implode(' ', $hints))
-            ->{(abs($diff) < 0.005 && $ohneKonto === 0) ? 'success' : 'warning'}()->send();
+            ->{(abs($result['diff']) < 0.005 && $result['ohneKonto'] === 0) ? 'success' : 'warning'}()->send();
+    }
+
+    /**
+     * Speichert die Aufteilung automatisch im Hintergrund (nach Betrags-/
+     * USt-Änderung, Kontoauswahl, Zeile hinzufügen/entfernen). Bewusst
+     * zurückhaltend mit Meldungen: nur bei einem echten Problem (Restbetrag
+     * oder fehlendes Konto) eine dezente Warnung, sonst still im Hintergrund –
+     * der manuelle Button bleibt für die bewusste, ausführliche Bestätigung.
+     */
+    private function autoSaveSplits(): void
+    {
+        if (! $this->showSplit) {
+            return;
+        }
+
+        $result = $this->persistSplits();
+        if ($result === null || $result['removed']) {
+            return;
+        }
+
+        if (abs($result['diff']) >= 0.005 || $result['ohneKonto'] > 0) {
+            $hints = [];
+            if (abs($result['diff']) >= 0.005) {
+                $hints[] = 'Rest ' . number_format($result['diff'], 2, ',', '.') . ' € offen.';
+            }
+            if ($result['ohneKonto'] > 0) {
+                $hints[] = $result['ohneKonto'] . ' Position(en) ohne Sachkonto.';
+            }
+
+            Notification::make()
+                ->title('Automatisch gespeichert – bitte prüfen')
+                ->body(implode(' ', $hints))
+                ->warning()->send();
+        }
+    }
+
+    /**
+     * Livewire-Hook: reagiert auf Änderungen einzelner Split-Felder
+     * (Betrag/USt-Satz kommen client-seitig bereits entprellt an) und speichert
+     * automatisch. Die Konto-Suchtext-Eingabe (ledger_search) löst kein
+     * Autospeichern aus – sie ist noch keine gültige Zuordnung.
+     */
+    public function updated(string $name): void
+    {
+        if (preg_match('/^splits\.\d+\.(amount|tax_rate)$/', $name)) {
+            $this->autoSaveSplits();
+        }
+    }
+
+    /** Netto/Brutto-Modus umschalten – Beträge bedeuten dann etwas anderes, daher direkt neu speichern. */
+    public function setSplitMode(string $mode): void
+    {
+        $this->splitMode = $mode;
+        $this->autoSaveSplits();
     }
 
     private function parseAmount(mixed $value): float

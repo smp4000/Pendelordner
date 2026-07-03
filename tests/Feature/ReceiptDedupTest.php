@@ -81,6 +81,36 @@ class ReceiptDedupTest extends TestCase
         $this->assertNotNull(Receipt::find($original->id));
     }
 
+    public function test_dublette_ohne_rechnungsnummer_wird_ueber_lieferant_und_betrag_erkannt(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $supplier = \App\Models\Supplier::create(['name' => 'SB Union Großmarkt', 'vat_id' => 'DE811180852', 'active' => true]);
+
+        // Original MIT Rechnungsnummer.
+        $original = Receipt::create([
+            'type' => 'incoming_invoice', 'supplier_id' => $supplier->id,
+            'invoice_number' => '227868487', 'gross_amount' => 305.65,
+        ]);
+
+        // Gleiche Rechnung nochmal, aber OHNE erkennbare Rechnungsnummer im Text
+        // (nur Lieferant per USt-Id + gleicher Betrag).
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML(
+            '<p>Lieferschein-Kopie</p><p>UST-ID-Nr. DE811180852</p><p>Zahlbetrag 305,65 €</p>'
+        )->output();
+
+        Livewire::test(BelegeZuordnen::class)
+            ->set('uploadFiles', [UploadedFile::fake()->createWithContent('kopie.pdf', $pdf)])
+            ->call('uploadReceipts');
+
+        $dup = Receipt::whereNotNull('duplicate_of_id')->first();
+        $this->assertNotNull($dup, 'Beleg ohne Rechnungsnummer mit gleichem Lieferant+Betrag muss isoliert werden.');
+        $this->assertSame($original->id, $dup->duplicate_of_id);
+    }
+
     public function test_faelschlich_isolierter_beleg_kann_freigegeben_werden(): void
     {
         Storage::fake('belege');

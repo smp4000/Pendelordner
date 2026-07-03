@@ -261,15 +261,16 @@
                                 {{-- Netto/Brutto-Schalter --}}
                                 <div style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;">
                                     <span style="opacity:.6;">Beträge:</span>
-                                    <button type="button" wire:click="$set('splitMode','brutto')"
+                                    <button type="button" wire:click="setSplitMode('brutto')"
                                         style="padding:.2rem .6rem;border-radius:.35rem;border:1px solid rgba(120,120,120,.3);cursor:pointer;{{ $splitMode==='brutto' ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:transparent;' }}">Brutto</button>
-                                    <button type="button" wire:click="$set('splitMode','netto')"
+                                    <button type="button" wire:click="setSplitMode('netto')"
                                         style="padding:.2rem .6rem;border-radius:.35rem;border:1px solid rgba(120,120,120,.3);cursor:pointer;{{ $splitMode==='netto' ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:transparent;' }}">Netto + USt</button>
                                 </div>
                             </div>
                             <p style="font-size:.78rem;opacity:.7;margin:0 0 .6rem;">
                                 Kategorie und Kostenstelle werden aus der Zuordnung oben übernommen.
                                 Im Modus „Netto + USt" wird je Position die Umsatzsteuer aufgeschlagen.
+                                Änderungen werden automatisch gespeichert.
                             </p>
 
                             <div style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">

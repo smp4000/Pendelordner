@@ -135,21 +135,41 @@ class OcrService
      */
     private function flagContentDuplicate(Receipt $receipt): void
     {
-        if (blank($receipt->invoice_number) || filled($receipt->duplicate_of_id)) {
+        if (filled($receipt->duplicate_of_id)) {
             return;
         }
 
-        $original = Receipt::query()
-            ->whereKeyNot($receipt->id)
-            ->whereNull('duplicate_of_id')
-            ->where('invoice_number', $receipt->invoice_number)
-            ->when(
-                filled($receipt->supplier_id),
-                fn ($q) => $q->where('supplier_id', $receipt->supplier_id),
-                fn ($q) => $q->where('gross_amount', $receipt->gross_amount),
-            )
-            ->orderBy('id')
-            ->first();
+        $original = null;
+
+        if (filled($receipt->invoice_number)) {
+            // Über die Rechnungsnummer (gleicher Lieferant bzw. gleicher Betrag).
+            $original = Receipt::query()
+                ->whereKeyNot($receipt->id)
+                ->whereNull('duplicate_of_id')
+                ->where('invoice_number', $receipt->invoice_number)
+                ->when(
+                    filled($receipt->supplier_id),
+                    fn ($q) => $q->where('supplier_id', $receipt->supplier_id),
+                    fn ($q) => $q->where('gross_amount', $receipt->gross_amount),
+                )
+                ->orderBy('id')
+                ->first();
+        } elseif (filled($receipt->supplier_id) && (float) $receipt->gross_amount > 0) {
+            // Ohne erkannte Rechnungsnummer: gleicher Lieferant + identischer
+            // Bruttobetrag ist ein starker Dubletten-Verdacht. Haben beide ein
+            // Rechnungsdatum, muss es übereinstimmen.
+            $original = Receipt::query()
+                ->whereKeyNot($receipt->id)
+                ->whereNull('duplicate_of_id')
+                ->where('supplier_id', $receipt->supplier_id)
+                ->where('gross_amount', $receipt->gross_amount)
+                ->when(filled($receipt->invoice_date), fn ($q) => $q->where(function ($q) use ($receipt) {
+                    $q->whereNull('invoice_date')
+                        ->orWhereDate('invoice_date', $receipt->invoice_date->toDateString());
+                }))
+                ->orderBy('id')
+                ->first();
+        }
 
         if ($original) {
             $receipt->duplicate_of_id = $original->id;
