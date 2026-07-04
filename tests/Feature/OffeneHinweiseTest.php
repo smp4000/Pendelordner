@@ -65,6 +65,22 @@ class OffeneHinweiseTest extends TestCase
         $this->assertFalse(OffeneHinweiseWidget::canView());
     }
 
+    public function test_topbar_badge_zeigt_anzahl_offener_hinweise(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $user = User::firstOrFail();
+
+        // Ohne offene Hinweise: keine Badge.
+        $this->actingAs($user)->get('/admin')->assertOk()->assertDontSee('offene Hinweise');
+
+        // Mit einem offenen Hinweis: Badge mit Anzahl erscheint in der Topbar.
+        $this->tx(['note_open' => true, 'accountant_note' => 'Gutschrift angefordert']);
+
+        $this->actingAs($user)->get('/admin')
+            ->assertOk()
+            ->assertSee('1 offene Hinweis');
+    }
+
     public function test_ohne_hinweistext_kein_offener_hinweis(): void
     {
         $this->seed(DatabaseSeeder::class);
