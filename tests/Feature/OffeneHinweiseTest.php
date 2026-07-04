@@ -65,20 +65,28 @@ class OffeneHinweiseTest extends TestCase
         $this->assertFalse(OffeneHinweiseWidget::canView());
     }
 
-    public function test_topbar_badge_zeigt_anzahl_offener_hinweise(): void
+    public function test_offener_hinweis_landet_in_der_glocke_und_verschwindet_beim_erledigen(): void
     {
         $this->seed(DatabaseSeeder::class);
         $user = User::firstOrFail();
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        // Ohne offene Hinweise: keine Badge.
-        $this->actingAs($user)->get('/admin')->assertOk()->assertDontSee('offene Hinweise');
+        $tx = $this->tx();
 
-        // Mit einem offenen Hinweis: Badge mit Anzahl erscheint in der Topbar.
-        $this->tx(['note_open' => true, 'accountant_note' => 'Gutschrift angefordert']);
+        // Hinweis als offen speichern -> Glocken-Benachrichtigung für den Nutzer.
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('accountantNote', 'Gutschrift angefordert')
+            ->set('noteOpen', true)
+            ->call('saveNote');
 
-        $this->actingAs($user)->get('/admin')
-            ->assertOk()
-            ->assertSee('1 offene Hinweis');
+        $this->assertSame(1, $user->notifications()->count());
+        $this->assertStringContainsString('Gutschrift angefordert', $user->notifications()->first()->data['body'] ?? '');
+
+        // Über das Dashboard-Widget erledigen -> Glocken-Meldung wird entfernt.
+        Livewire::test(OffeneHinweiseWidget::class)->callTableAction('erledigt', $tx);
+
+        $this->assertSame(0, $user->fresh()->notifications()->count());
     }
 
     public function test_ohne_hinweistext_kein_offener_hinweis(): void

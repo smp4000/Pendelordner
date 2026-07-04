@@ -482,6 +482,11 @@ class Kontoumsatzdetails extends Page
         BankTransaction::whereKey($this->selectedTransactionId)
             ->update(['accountant_note' => $note !== '' ? $note : null, 'note_open' => $open]);
 
+        // Glocke synchron halten (Meldung anlegen bzw. entfernen).
+        if ($t = BankTransaction::find($this->selectedTransactionId)) {
+            \App\Support\OffeneHinweisGlocke::sync($t);
+        }
+
         $this->accountantNote = $note;
         $this->noteOpen = $open;
         $this->showNote = $note !== '';

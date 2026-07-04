@@ -12,7 +12,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
-use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -63,11 +62,10 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
-            // Badge in der Topbar: Anzahl offener Hinweise (verlinkt aufs Dashboard).
-            ->renderHook(
-                PanelsRenderHook::TOPBAR_END,
-                fn (): string => view('filament.hooks.offene-hinweise-badge')->render(),
-            )
+            // Glocke in der Kopfleiste: offene Hinweise erscheinen als
+            // Datenbank-Benachrichtigung, bis sie erledigt sind.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

@@ -84,6 +84,7 @@ class OffeneHinweiseWidget extends TableWidget
                     ->modalDescription('Der Hinweistext bleibt am Umsatz erhalten, verschwindet aber aus dieser Liste.')
                     ->action(function (BankTransaction $record): void {
                         $record->update(['note_open' => false]);
+                        \App\Support\OffeneHinweisGlocke::clear($record->id);
                         Notification::make()->title('Hinweis erledigt')->success()->send();
                     }),
             ]);
