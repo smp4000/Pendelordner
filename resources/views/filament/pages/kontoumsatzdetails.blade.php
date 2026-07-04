@@ -218,6 +218,28 @@
                                     </x-filament::input.select>
                                 </div>
                             </div>
+
+                            {{-- Optionales zweites Kriterium (UND) – nötig bei mehreren Verträgen derselben Gesellschaft --}}
+                            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.5rem;margin-top:.5rem;">
+                                <div>
+                                    <label style="display:block;font-size:.75rem;opacity:.7;margin-bottom:.15rem;">und zusätzlich (optional)</label>
+                                    <x-filament::input.wrapper>
+                                        <x-filament::input type="text" wire:model="rulePattern2" placeholder="z. B. Vertragsnummer AL-9876085614" />
+                                    </x-filament::input.wrapper>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:.75rem;opacity:.7;margin-bottom:.15rem;">Feld</label>
+                                    <x-filament::input.select wire:model="rulePatternType2">
+                                        <option value="purpose">Verwendungszweck</option>
+                                        <option value="counterparty">Empfänger</option>
+                                        <option value="iban">IBAN</option>
+                                        <option value="any">Beliebig</option>
+                                    </x-filament::input.select>
+                                </div>
+                            </div>
+                            <div style="font-size:.72rem;opacity:.6;margin-top:.25rem;">
+                                Beide Kriterien müssen zutreffen (UND). Jeweils „enthält"-Suche, ohne Groß-/Kleinschreibung.
+                            </div>
                             <div style="font-size:.78rem;opacity:.75;margin-top:.5rem;">
                                 Übernimmt:
                                 <strong>{{ $tx->category?->name ?? '—' }}</strong> (Kategorie),

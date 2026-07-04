@@ -131,6 +131,11 @@ class Kontoumsatzdetails extends Page
 
     public string $rulePatternType = 'counterparty';
 
+    /** Optionales zweites Kriterium (UND-Verknüpfung), z. B. Vertragsnummer im Verwendungszweck. */
+    public string $rulePattern2 = '';
+
+    public string $rulePatternType2 = 'purpose';
+
     public bool $ruleApplyExisting = true;
 
     public function mount(): void
@@ -659,6 +664,9 @@ class Kontoumsatzdetails extends Page
             $t = $this->selectedTransaction;
             $this->rulePattern = trim((string) ($t?->counterparty ?: $t?->counterparty_iban ?: ''));
             $this->rulePatternType = $t?->counterparty ? 'counterparty' : ($t?->counterparty_iban ? 'iban' : 'counterparty');
+            // Zweites Kriterium bleibt leer (optional); Standardfeld Verwendungszweck.
+            $this->rulePattern2 = '';
+            $this->rulePatternType2 = 'purpose';
             $this->ruleApplyExisting = true;
         }
     }
@@ -694,9 +702,16 @@ class Kontoumsatzdetails extends Page
         $type = in_array($this->rulePatternType, ['counterparty', 'purpose', 'iban', 'any'], true)
             ? $this->rulePatternType : 'counterparty';
 
+        // Optionales zweites Kriterium (UND). Nur speichern, wenn ausgefüllt.
+        $pattern2 = trim($this->rulePattern2);
+        $type2 = in_array($this->rulePatternType2, ['counterparty', 'purpose', 'iban', 'any'], true)
+            ? $this->rulePatternType2 : 'purpose';
+
         $rule = MatchingRule::create([
             'pattern' => $pattern,
             'pattern_type' => $type,
+            'pattern2' => $pattern2 !== '' ? $pattern2 : null,
+            'pattern_type2' => $pattern2 !== '' ? $type2 : null,
             'category_id' => $t->category_id,
             'cost_center_id' => $t->cost_center_id,
             'ledger_account_id' => $t->ledger_account_id,

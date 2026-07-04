@@ -222,12 +222,29 @@ class MatchingEngine
 
     private function ruleMatches(MatchingRule $rule, BankTransaction $transaction): bool
     {
-        $needle = $rule->pattern;
-        if ($needle === null || $needle === '') {
+        // Erstes Kriterium muss passen …
+        if (! $this->patternMatches($transaction, $rule->pattern, $rule->pattern_type)) {
             return false;
         }
 
-        $haystacks = match ($rule->pattern_type) {
+        // … und, falls gesetzt, zusätzlich das zweite (UND-Verknüpfung). So lassen
+        // sich mehrere Verträge derselben Gesellschaft (gleicher Empfänger)
+        // über z. B. die Vertragsnummer im Verwendungszweck unterscheiden.
+        if ($rule->pattern2 !== null && trim((string) $rule->pattern2) !== '') {
+            return $this->patternMatches($transaction, $rule->pattern2, $rule->pattern_type2 ?: 'purpose');
+        }
+
+        return true;
+    }
+
+    /** "Enthält"-Prüfung eines Musters gegen das gewählte Umsatzfeld (LIKE, ohne Groß-/Kleinschreibung). */
+    private function patternMatches(BankTransaction $transaction, ?string $needle, ?string $type): bool
+    {
+        if ($needle === null || trim($needle) === '') {
+            return false;
+        }
+
+        $haystacks = match ($type) {
             'counterparty' => [$transaction->counterparty],
             'purpose' => [$transaction->purpose],
             'iban' => [$transaction->counterparty_iban],

@@ -213,6 +213,45 @@ class ServicesTest extends TestCase
         $this->assertNull($geprueft->refresh()->category_id); // geprüfte bleiben unberührt
     }
 
+    public function test_regel_mit_zwei_kriterien_trennt_vertraege_derselben_gesellschaft(): void
+    {
+        $account = $this->account();
+        $leben = Category::firstOrCreate(['name' => 'Lebensversicherung'], ['active' => true]);
+
+        $make = fn (string $purpose) => BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'business_id' => $account->business_id,
+            'booking_date' => '2026-06-01',
+            'counterparty' => 'AXA Life Europe',
+            'purpose' => $purpose,
+            'amount' => -136.08,
+            'reviewed' => false,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Zwei Verträge derselben Gesellschaft – gleicher Empfänger, andere Vertragsnummer.
+        $vertragA = $make('Vertrag AL-9876085614 PrivRent InvestFlex');
+        $vertragB = $make('Vertrag AL-1111111111 Risikoschutz');
+
+        // Regel mit ZWEITEM Kriterium (UND): Empfänger AXA + Vertragsnummer im Zweck.
+        $rule = MatchingRule::create([
+            'pattern' => 'AXA Life Europe',
+            'pattern_type' => 'counterparty',
+            'pattern2' => 'AL-9876085614',
+            'pattern_type2' => 'purpose',
+            'category_id' => $leben->id,
+            'priority' => 10,
+            'active' => true,
+        ]);
+
+        $changed = (new MatchingEngine())->applyRuleToExisting($rule, onlyUnreviewed: true);
+
+        // Nur der Vertrag mit passender Nummer wird zugeordnet, der andere nicht.
+        $this->assertSame(1, $changed);
+        $this->assertSame($leben->id, $vertragA->refresh()->category_id);
+        $this->assertNull($vertragB->refresh()->category_id);
+    }
+
     public function test_matching_per_belegnummer_im_verwendungszweck(): void
     {
         $account = $this->account();
