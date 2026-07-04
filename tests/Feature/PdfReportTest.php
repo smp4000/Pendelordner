@@ -79,6 +79,53 @@ class PdfReportTest extends TestCase
         $this->assertLessThan($withReceipt, $withoutReceipt);
     }
 
+    public function test_zip_sicherung_enthaelt_auch_nicht_ausgedruckte_belege(): void
+    {
+        Storage::fake('belege');
+        $this->seed(MasterDataSeeder::class);
+        $this->seed(SupplierSeeder::class);
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
+            . "08.01.2026;ARAL AG;Sammellastschrift;-1018,07\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+        $transaction = $account->bankTransactions()->first();
+
+        // Zwei zugeordnete Belege: einer im Bericht, einer NICHT.
+        Storage::disk('belege')->put('2026/01/gedruckt.pdf', '%PDF gedruckt');
+        Storage::disk('belege')->put('2026/01/nur-sicherung.pdf', '%PDF sicherung');
+
+        $gedruckt = Receipt::create([
+            'type' => 'incoming_invoice', 'invoice_number' => 'RG-PRINT', 'gross_amount' => 500,
+            'file_path' => '2026/01/gedruckt.pdf', 'mime_type' => 'application/pdf', 'include_in_report' => true,
+        ]);
+        $nurSicherung = Receipt::create([
+            'type' => 'incoming_invoice', 'invoice_number' => 'RG-BACKUP', 'gross_amount' => 518.07,
+            'file_path' => '2026/01/nur-sicherung.pdf', 'mime_type' => 'application/pdf', 'include_in_report' => false,
+        ]);
+        $transaction->receipts()->attach([$gedruckt->id => ['amount' => 500], $nurSicherung->id => ['amount' => 518.07]]);
+
+        $service = new PdfReportService();
+        $from = Carbon::parse('2026-01-01');
+        $to = Carbon::parse('2026-01-31');
+
+        // Gedruckte Anhänge: nur der Bericht-Beleg.
+        $printed = collect($service->attachmentFiles($from, $to, null, $account))->pluck('absolute');
+        $this->assertTrue($printed->contains(fn ($p) => str_contains($p, 'gedruckt.pdf')));
+        $this->assertFalse($printed->contains(fn ($p) => str_contains($p, 'nur-sicherung.pdf')));
+
+        // Sicherung: enthält den NICHT ausgedruckten Beleg, nicht aber den bereits gedruckten.
+        $backup = collect($service->unprintedReceiptFiles($from, $to, null, $account));
+        $this->assertTrue($backup->pluck('absolute')->contains(fn ($p) => str_contains($p, 'nur-sicherung.pdf')));
+        $this->assertFalse($backup->pluck('absolute')->contains(fn ($p) => str_contains($p, 'gedruckt.pdf')));
+        // Sprechender Dateiname mit Datum, Empfänger und Rechnungsnummer.
+        $this->assertStringContainsString('ARAL', $backup->first()['name']);
+        $this->assertStringContainsString('RG-BACKUP', $backup->first()['name']);
+    }
+
     public function test_steuerbuero_datei_wird_angehaengt(): void
     {
         Storage::fake('belege');

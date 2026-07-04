@@ -152,6 +152,72 @@ class PdfReportService
         return $out;
     }
 
+    /**
+     * Zusätzlich zugeordnete Belege, die NICHT im Bericht ausgedruckt werden
+     * (include_in_report = false). Für die vollständige Sicherung im ZIP, damit
+     * kein zugeordneter Beleg verloren geht. Der Dateiname enthält Datum,
+     * Empfänger und Rechnungsnummer/Beleg-Nr. zur Wiedererkennung; gruppiert je
+     * Monat. Ein Beleg, der an mehreren Umsätzen hängt, wird nur einmal
+     * aufgenommen.
+     *
+     * @return list<array{name: string, absolute: string}>
+     */
+    public function unprintedReceiptFiles(Carbon $from, Carbon $to, ?Business $business = null, ?BankAccount $account = null): array
+    {
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+
+        $transactions = BankTransaction::query()
+            ->with(['receipts'])
+            ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
+            ->when(! $account && $business, fn ($q) => $q->where('business_id', $business->id))
+            ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('booking_date')->orderBy('id')
+            ->get();
+
+        $out = [];
+        $seenReceipts = [];
+        $usedNames = [];
+        foreach ($transactions as $transaction) {
+            $key = $transaction->booking_date?->format('Y-m') ?? '0000-00';
+            foreach ($transaction->receipts as $receipt) {
+                if ($receipt->include_in_report) {
+                    continue; // bereits als nummerierter Anhang enthalten
+                }
+                if (! $receipt->file_path || ! $disk->exists($receipt->file_path)) {
+                    continue;
+                }
+                if (isset($seenReceipts[$receipt->id])) {
+                    continue; // gleicher Beleg an mehreren Umsätzen nur einmal
+                }
+                $seenReceipts[$receipt->id] = true;
+
+                $label = $this->sanitizeFileName(
+                    ($transaction->booking_date?->format('Y-m-d') ?? '')
+                    . '_' . ($transaction->counterparty ?: 'Beleg')
+                    . '_' . ($receipt->invoice_number ?: ('Nr' . $receipt->id))
+                );
+
+                $name = $key . '/' . $label . '.' . $this->fileExtension($receipt->file_path);
+                if (isset($usedNames[$name])) {
+                    $name = $key . '/' . $label . '_' . $receipt->id . '.' . $this->fileExtension($receipt->file_path);
+                }
+                $usedNames[$name] = true;
+
+                $out[] = ['name' => $name, 'absolute' => $disk->path($receipt->file_path)];
+            }
+        }
+
+        return $out;
+    }
+
+    private function sanitizeFileName(string $name): string
+    {
+        $name = preg_replace('/[^\p{L}\p{N}\-_ ]+/u', '', $name) ?? '';
+        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+
+        return mb_substr($name !== '' ? $name : 'Beleg', 0, 80);
+    }
+
     private function fileExtension(?string $path): string
     {
         $ext = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));

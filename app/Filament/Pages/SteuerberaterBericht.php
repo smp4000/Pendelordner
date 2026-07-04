@@ -171,6 +171,12 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
                     foreach ($service->attachmentFiles($from, $to, $business, $account) as $file) {
                         $entries[$folder . '/Belege/' . $file['name']] = $file['absolute'];
                     }
+
+                    // Zur Sicherung: alle zugeordneten Belege, die NICHT im
+                    // Bericht ausgedruckt werden, zusätzlich mit aufnehmen.
+                    foreach ($service->unprintedReceiptFiles($from, $to, $business, $account) as $file) {
+                        $entries[$folder . '/Belege_nicht_im_Bericht/' . $file['name']] = $file['absolute'];
+                    }
                 }
 
                 if (empty($entries)) {

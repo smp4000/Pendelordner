@@ -33,7 +33,10 @@
                     <span>
                         <strong style="font-weight:600;color:rgb(75,85,99);">Pro Konto je PDF (ZIP)</strong>
                         erzeugt für jedes Konto mit Umsätzen im Zeitraum einen eigenen Pendelordner und
-                        bündelt sie als ZIP. Die Konto-Auswahl oben wird dabei ignoriert.
+                        bündelt sie als ZIP. Die Konto-Auswahl oben wird dabei ignoriert. Zur Sicherung
+                        enthält das ZIP zusätzlich <strong style="font-weight:600;color:rgb(75,85,99);">alle
+                        zugeordneten Belege</strong> – auch die nicht im Bericht ausgedruckten
+                        (Ordner „Belege_nicht_im_Bericht").
                     </span>
                 </div>
             </div>
