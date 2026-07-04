@@ -530,7 +530,7 @@
                 @if ($receipt && $receipt->preview_url)
                     @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
                     <div wire:key="preview-{{ $receipt->id }}"
-                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="init()">
+                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})">
 
                         {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab --}}
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);">
@@ -607,6 +607,8 @@
                 zoom: 1,          // 1 = 100 %
                 baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
                 pdf: null,
+                renderRun: 0,     // laufende Render-Kennung (verhindert Überlappung)
+                // Alpine ruft init() automatisch beim Initialisieren auf.
                 init() {
                     if (this.isPdf) { this.load(); }
                 },
@@ -632,9 +634,13 @@
                 async renderPdf() {
                     if (!this.pdf) { return; }
                     const container = this.$refs.pages;
+                    if (!container) { return; }
+                    // Nur der jeweils neueste Aufruf darf zeichnen (z. B. bei schnellem Zoomen).
+                    const run = ++this.renderRun;
                     container.innerHTML = '';
                     const scale = this.baseScale * this.zoom;
                     for (let i = 1; i <= this.pdf.numPages; i++) {
+                        if (run !== this.renderRun) { return; }
                         const page = await this.pdf.getPage(i);
                         const viewport = page.getViewport({ scale: scale });
                         const canvas = document.createElement('canvas');
@@ -643,6 +649,7 @@
                         canvas.style.maxWidth = '100%';
                         canvas.style.background = '#fff';
                         canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                        if (run !== this.renderRun) { return; }
                         container.appendChild(canvas);
                         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                     }
