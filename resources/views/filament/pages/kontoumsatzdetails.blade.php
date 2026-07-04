@@ -530,7 +530,7 @@
                 @if ($receipt && $receipt->preview_url)
                     @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
                     <div wire:key="preview-{{ $receipt->id }}"
-                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})">
+                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="load()">
 
                         {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab --}}
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);">
@@ -608,11 +608,15 @@
                 baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
                 pdf: null,
                 renderRun: 0,     // laufende Render-Kennung (verhindert Überlappung)
-                // Alpine ruft init() automatisch beim Initialisieren auf.
+                loadStarted: false,
+                // Alpine ruft init() automatisch auf; zusätzlich x-init="load()".
+                // load() ist idempotent (loadStarted), läuft also genau einmal.
                 init() {
                     if (this.isPdf) { this.load(); }
                 },
                 async load() {
+                    if (!this.isPdf || this.loadStarted) { return; }
+                    this.loadStarted = true;
                     try {
                         let tries = 0;
                         while (!window.pdfjsLib && tries < 160) {
