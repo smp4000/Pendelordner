@@ -35,6 +35,9 @@ class LedgerAccountSeeder extends Seeder
                     'number' => $r['number'],
                     'name' => mb_substr($r['name'], 0, 255),
                     'group' => $r['group'] ? mb_substr($r['group'], 0, 255) : null,
+                    // USt-Satz, soweit im Namen vermerkt (USt voll/erm./frei); sonst
+                    // leer und in der Sachkonten-Verwaltung pflegbar.
+                    'tax_rate' => LedgerAccount::deriveTaxRateFromName($r['name']),
                     'active' => true,
                     'created_at' => $now,
                     'updated_at' => $now,

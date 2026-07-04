@@ -335,6 +335,13 @@ class Kontoumsatzdetails extends Page
         $this->splits[$index]['ledger_account_id'] = $la->id;
         $this->splits[$index]['ledger_label'] = $la->number . ' – ' . $la->name;
         $this->splits[$index]['ledger_search'] = '';
+
+        // Steuersatz des Kontos übernehmen, sofern hinterlegt (19/7/0).
+        if ($la->tax_rate !== null) {
+            $rate = (float) $la->tax_rate;
+            $this->splits[$index]['tax_rate'] = rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',');
+        }
+
         $this->autoSaveSplits();
     }
 

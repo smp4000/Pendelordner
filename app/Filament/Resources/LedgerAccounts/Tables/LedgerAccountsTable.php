@@ -27,6 +27,8 @@ class LedgerAccountsTable
                 TextColumn::make('number')->label('Konto')->searchable()->sortable()->weight('bold'),
                 TextColumn::make('name')->label('Bezeichnung')->searchable()->wrap(),
                 TextColumn::make('group')->label('Zuordnung (GA)')->badge()->color('gray')->placeholder('—')->toggleable(),
+                TextColumn::make('tax_rate')->label('USt %')->alignEnd()->placeholder('—')
+                    ->formatStateUsing(fn ($state) => $state === null ? null : (int) $state . ' %'),
                 IconColumn::make('active')->label('Aktiv')->boolean()->alignCenter(),
             ])
             ->filters([

@@ -146,6 +146,40 @@ class SplitTest extends TestCase
         $this->assertEqualsWithDelta(-329.36, (float) $tx->accountAssignments()->first()->amount, 0.001);
     }
 
+    public function test_sachkonto_setzt_hinterlegten_steuersatz(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        // Konto mit hinterlegtem ermäßigtem Satz (7 %).
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3750'], ['name' => 'Einkauf Tiefkühlkost']);
+        $la->update(['tax_rate' => 7]);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-23', 'counterparty' => 'Lekkerland', 'amount' => -100.00,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('toggleSplit')
+            ->call('setSplitMode', 'brutto')
+            ->call('setSplitLedger', 0, $la->id);
+
+        // Steuersatz der Zeile wurde automatisch auf 7 gesetzt (statt Vorgabe 19).
+        $this->assertSame('7', $component->get('splits.0.tax_rate'));
+    }
+
+    public function test_steuersatz_aus_kontoname_abgeleitet(): void
+    {
+        $this->assertSame(19.0, LedgerAccount::deriveTaxRateFromName('Einkauf Lebensmittel, USt voll A,Lebensmittel'));
+        $this->assertSame(7.0, LedgerAccount::deriveTaxRateFromName('Einkauf Zeitschriften, USt erm. A,Lebensmittel'));
+        $this->assertNull(LedgerAccount::deriveTaxRateFromName('Einkauf Tiefkühlkost A,Sonstige Waren'));
+    }
+
     public function test_ust_schnellsummen_je_satz(): void
     {
         $this->seed(DatabaseSeeder::class);
