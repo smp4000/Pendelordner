@@ -600,84 +600,92 @@
     {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
     @script
         <script>
-            Alpine.data('receiptViewer', (url, isPdf) => ({
-                url: url,
-                isPdf: isPdf,
-                error: false,
-                zoom: 1,          // 1 = 100 %
-                baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
-                pdf: null,
-                renderRun: 0,     // laufende Render-Kennung (verhindert Überlappung)
-                loadStarted: false,
-                // Alpine ruft init() automatisch auf; zusätzlich x-init="load()".
-                // load() ist idempotent (loadStarted), läuft also genau einmal.
-                init() {
-                    if (this.isPdf) { this.load(); }
-                },
-                async load() {
-                    if (!this.isPdf || this.loadStarted) { return; }
-                    this.loadStarted = true;
-                    try {
-                        let tries = 0;
-                        while (!window.pdfjsLib && tries < 160) {
-                            await new Promise((r) => setTimeout(r, 50));
-                            tries++;
+            Alpine.data('receiptViewer', (url, isPdf) => {
+                // WICHTIG: Das PDF-Dokument NICHT im reaktiven Alpine-Objekt
+                // ablegen. Alpine würde es in einen Proxy packen; pdf.js greift
+                // intern auf private Felder (#…) zu, was durch den Proxy bricht
+                // ("can't access private field"). Daher als nicht-reaktive
+                // Closure-Variable halten.
+                let pdfDoc = null;
+                let renderRun = 0;
+
+                return {
+                    url: url,
+                    isPdf: isPdf,
+                    error: false,
+                    zoom: 1,          // 1 = 100 %
+                    baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
+                    loadStarted: false,
+                    // Alpine ruft init() automatisch auf; zusätzlich x-init="load()".
+                    // load() ist idempotent (loadStarted), läuft also genau einmal.
+                    init() {
+                        if (this.isPdf) { this.load(); }
+                    },
+                    async load() {
+                        if (!this.isPdf || this.loadStarted) { return; }
+                        this.loadStarted = true;
+                        try {
+                            let tries = 0;
+                            while (!window.pdfjsLib && tries < 160) {
+                                await new Promise((r) => setTimeout(r, 50));
+                                tries++;
+                            }
+                            if (!window.pdfjsLib) { this.error = true; return; }
+
+                            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                            pdfDoc = await window.pdfjsLib.getDocument(this.url).promise;
+                            await this.renderPdf();
+                        } catch (e) {
+                            console.error(e);
+                            this.error = true;
                         }
-                        if (!window.pdfjsLib) { this.error = true; return; }
-
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-                        this.pdf = await window.pdfjsLib.getDocument(this.url).promise;
-                        await this.renderPdf();
-                    } catch (e) {
-                        console.error(e);
-                        this.error = true;
-                    }
-                },
-                async renderPdf() {
-                    if (!this.pdf) { return; }
-                    const container = this.$refs.pages;
-                    if (!container) { return; }
-                    // Nur der jeweils neueste Aufruf darf zeichnen (z. B. bei schnellem Zoomen).
-                    const run = ++this.renderRun;
-                    container.innerHTML = '';
-                    const scale = this.baseScale * this.zoom;
-                    for (let i = 1; i <= this.pdf.numPages; i++) {
-                        if (run !== this.renderRun) { return; }
-                        const page = await this.pdf.getPage(i);
-                        const viewport = page.getViewport({ scale: scale });
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        canvas.style.maxWidth = '100%';
-                        canvas.style.background = '#fff';
-                        canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
-                        if (run !== this.renderRun) { return; }
-                        container.appendChild(canvas);
-                        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-                    }
-                },
-                zoomIn() {
-                    this.zoom = Math.min(4, +(this.zoom + 0.2).toFixed(2));
-                    if (this.isPdf) { this.renderPdf(); }
-                },
-                zoomOut() {
-                    this.zoom = Math.max(0.4, +(this.zoom - 0.2).toFixed(2));
-                    if (this.isPdf) { this.renderPdf(); }
-                },
-                reset() {
-                    this.zoom = 1;
-                    if (this.isPdf) { this.renderPdf(); }
-                },
-                printReceipt() {
-                    // Öffnet den Beleg in einem neuen Fenster und ruft den Druckdialog auf.
-                    const w = window.open(this.url, '_blank');
-                    if (w) {
-                        try { w.addEventListener('load', () => w.print()); } catch (e) { /* Popup evtl. blockiert */ }
-                    }
-                },
-            }));
+                    },
+                    async renderPdf() {
+                        if (!pdfDoc) { return; }
+                        const container = this.$refs.pages;
+                        if (!container) { return; }
+                        // Nur der jeweils neueste Aufruf darf zeichnen (z. B. bei schnellem Zoomen).
+                        const run = ++renderRun;
+                        container.innerHTML = '';
+                        const scale = this.baseScale * this.zoom;
+                        for (let i = 1; i <= pdfDoc.numPages; i++) {
+                            if (run !== renderRun) { return; }
+                            const page = await pdfDoc.getPage(i);
+                            const viewport = page.getViewport({ scale: scale });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            canvas.style.maxWidth = '100%';
+                            canvas.style.background = '#fff';
+                            canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                            if (run !== renderRun) { return; }
+                            container.appendChild(canvas);
+                            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                        }
+                    },
+                    zoomIn() {
+                        this.zoom = Math.min(4, +(this.zoom + 0.2).toFixed(2));
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    zoomOut() {
+                        this.zoom = Math.max(0.4, +(this.zoom - 0.2).toFixed(2));
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    reset() {
+                        this.zoom = 1;
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    printReceipt() {
+                        // Öffnet den Beleg in einem neuen Fenster und ruft den Druckdialog auf.
+                        const w = window.open(this.url, '_blank');
+                        if (w) {
+                            try { w.addEventListener('load', () => w.print()); } catch (e) { /* Popup evtl. blockiert */ }
+                        }
+                    },
+                };
+            });
 
             // Drag & Drop für die Reihenfolge der zugeordneten Belege.
             Alpine.data('receiptSorter', () => ({
