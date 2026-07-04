@@ -123,8 +123,8 @@
     @endif
 </div>
 
-{{-- Seite 3 ff.: Chronologische Umsatzliste --}}
-<h3>Chronologische Umsatzliste</h3>
+{{-- Seite 3 ff.: Umsatzliste (Zeitraum + Konto in der Überschrift) --}}
+<h3>Umsätze {{ $periodLabel }}@if (! empty($account)) · Konto {{ $account->label }}@if ($account->iban) ({{ $account->iban }})@endif @endif</h3>
 <table>
     <thead>
         <tr>
