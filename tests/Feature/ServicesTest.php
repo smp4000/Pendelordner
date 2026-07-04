@@ -252,6 +252,44 @@ class ServicesTest extends TestCase
         $this->assertNull($vertragB->refresh()->category_id);
     }
 
+    public function test_regel_kann_ueber_den_betrag_matchen(): void
+    {
+        $account = $this->account();
+        $leben = Category::firstOrCreate(['name' => 'Lebensversicherung'], ['active' => true]);
+
+        $make = fn (float $amount) => BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'business_id' => $account->business_id,
+            'booking_date' => '2026-06-01',
+            'counterparty' => 'AXA Life Europe',
+            'purpose' => 'Beitrag',
+            'amount' => $amount,
+            'reviewed' => false,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Zwei Verträge, gleicher Empfänger, unterschiedlicher Betrag.
+        $tx136 = $make(-136.08);
+        $tx200 = $make(-200.00);
+
+        // Regel: Empfänger AXA UND Betrag 136,08 (Vorzeichen egal, deutsches Format).
+        $rule = MatchingRule::create([
+            'pattern' => 'AXA Life Europe',
+            'pattern_type' => 'counterparty',
+            'pattern2' => '136,08',
+            'pattern_type2' => 'amount',
+            'category_id' => $leben->id,
+            'priority' => 10,
+            'active' => true,
+        ]);
+
+        $changed = (new MatchingEngine())->applyRuleToExisting($rule, onlyUnreviewed: true);
+
+        $this->assertSame(1, $changed);
+        $this->assertSame($leben->id, $tx136->refresh()->category_id);
+        $this->assertNull($tx200->refresh()->category_id);
+    }
+
     public function test_matching_per_belegnummer_im_verwendungszweck(): void
     {
         $account = $this->account();

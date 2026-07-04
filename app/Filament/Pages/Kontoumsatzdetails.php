@@ -699,12 +699,12 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        $type = in_array($this->rulePatternType, ['counterparty', 'purpose', 'iban', 'any'], true)
+        $type = in_array($this->rulePatternType, ['counterparty', 'purpose', 'iban', 'any', 'amount'], true)
             ? $this->rulePatternType : 'counterparty';
 
         // Optionales zweites Kriterium (UND). Nur speichern, wenn ausgefüllt.
         $pattern2 = trim($this->rulePattern2);
-        $type2 = in_array($this->rulePatternType2, ['counterparty', 'purpose', 'iban', 'any'], true)
+        $type2 = in_array($this->rulePatternType2, ['counterparty', 'purpose', 'iban', 'any', 'amount'], true)
             ? $this->rulePatternType2 : 'purpose';
 
         $rule = MatchingRule::create([

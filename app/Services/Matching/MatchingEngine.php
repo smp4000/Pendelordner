@@ -244,6 +244,11 @@ class MatchingEngine
             return false;
         }
 
+        // Betrag ist kein Text: exakter Vergleich (Vorzeichen egal, kleine Toleranz).
+        if ($type === 'amount') {
+            return $this->amountMatches($transaction, $needle);
+        }
+
         $haystacks = match ($type) {
             'counterparty' => [$transaction->counterparty],
             'purpose' => [$transaction->purpose],
@@ -263,6 +268,22 @@ class MatchingEngine
     private function textContains(string $haystack, string $needle): bool
     {
         return str_contains(mb_strtolower($haystack), mb_strtolower(trim($needle)));
+    }
+
+    /**
+     * Exakter Betragsvergleich für das Feld "Betrag". Das Vorzeichen wird
+     * ignoriert (der Nutzer gibt i. d. R. 136,08 ein, auch wenn der Umsatz
+     * -136,08 ist); eine kleine Toleranz fängt Rundungen ab. Deutsches Format
+     * (Tausenderpunkt, Komma) wird unterstützt.
+     */
+    private function amountMatches(BankTransaction $transaction, string $needle): bool
+    {
+        $value = (float) str_replace(',', '.', str_replace(['.', ' '], '', trim($needle)));
+        if ($value == 0.0) {
+            return false;
+        }
+
+        return abs(abs((float) $transaction->amount) - abs($value)) < 0.005;
     }
 
     private function normalizeIban(string $iban): string

@@ -214,6 +214,7 @@
                                         <option value="counterparty">Empfänger</option>
                                         <option value="purpose">Verwendungszweck</option>
                                         <option value="iban">IBAN</option>
+                                        <option value="amount">Betrag</option>
                                         <option value="any">Beliebig</option>
                                     </x-filament::input.select>
                                 </div>
@@ -233,12 +234,13 @@
                                         <option value="purpose">Verwendungszweck</option>
                                         <option value="counterparty">Empfänger</option>
                                         <option value="iban">IBAN</option>
+                                        <option value="amount">Betrag</option>
                                         <option value="any">Beliebig</option>
                                     </x-filament::input.select>
                                 </div>
                             </div>
                             <div style="font-size:.72rem;opacity:.6;margin-top:.25rem;">
-                                Beide Kriterien müssen zutreffen (UND). Jeweils „enthält"-Suche, ohne Groß-/Kleinschreibung.
+                                Beide Kriterien müssen zutreffen (UND). Text: „enthält"-Suche ohne Groß-/Kleinschreibung; Betrag: exakter Wert (Vorzeichen egal).
                             </div>
                             <div style="font-size:.78rem;opacity:.75;margin-top:.5rem;">
                                 Übernimmt:
