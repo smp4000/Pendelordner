@@ -349,11 +349,21 @@
                             @endforeach
 
                             @php $rest = $this->splitRemaining; @endphp
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.4rem;font-size:.82rem;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.4rem;font-size:.82rem;">
                                 <span>Aufgeteilt (brutto): <strong>{{ number_format($this->splitTotal, 2, ',', '.') }} €</strong>
                                     von {{ number_format(abs((float) $tx->amount), 2, ',', '.') }} €</span>
-                                <span style="color:{{ abs($rest) < 0.005 ? '#059669' : '#d97706' }};">
-                                    Rest: {{ number_format($rest, 2, ',', '.') }} €
+                                <span style="display:flex;align-items:center;gap:.75rem;">
+                                    {{-- Schnellsummen je USt-Satz (Netto), USt+Brutto im Tooltip --}}
+                                    @foreach ($this->splitTaxSummary as $satz => $s)
+                                        <span title="Netto {{ number_format($s['net'], 2, ',', '.') }} € · USt {{ number_format($s['tax'], 2, ',', '.') }} € · Brutto {{ number_format($s['gross'], 2, ',', '.') }} €"
+                                            style="white-space:nowrap;opacity:.85;">
+                                            <span style="opacity:.65;">{{ $satz }} %:</span>
+                                            <strong>{{ number_format($s['net'], 2, ',', '.') }} €</strong>
+                                        </span>
+                                    @endforeach
+                                    <span style="color:{{ abs($rest) < 0.005 ? '#059669' : '#d97706' }};">
+                                        Rest: {{ number_format($rest, 2, ',', '.') }} €
+                                    </span>
                                 </span>
                             </div>
 
@@ -517,44 +527,65 @@
 
             {{-- RECHTS: Belegvorschau --}}
             <x-filament::section style="padding:0;overflow:hidden;">
-                <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
-                <div style="padding:.5rem;position:relative;">
-                    {{-- Status-Stempel über der Vorschau: bezahlt / gebucht (wie im Bericht). --}}
-                    @if (($tx->fully_paid || $tx->reviewed) && $receipt && $receipt->preview_url)
-                        <div style="position:absolute;top:1rem;right:1.25rem;z-index:20;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;pointer-events:none;">
-                            @if ($tx->fully_paid)
-                                <span style="transform:rotate(-8deg);border:2.5px solid #d97706;color:#d97706;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Bezahlt</span>
+                @if ($receipt && $receipt->preview_url)
+                    @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
+                    <div wire:key="preview-{{ $receipt->id }}"
+                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="init()">
+
+                        {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab --}}
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);">
+                            <span style="font-weight:600;">Belegvorschau</span>
+                            <span style="display:flex;align-items:center;gap:.3rem;">
+                                <button type="button" @click="zoomOut()" title="Verkleinern" style="{{ $btn }}">−</button>
+                                <span x-text="Math.round(zoom*100)+' %'" style="min-width:3rem;text-align:center;font-size:.78rem;opacity:.75;"></span>
+                                <button type="button" @click="zoomIn()" title="Vergrößern" style="{{ $btn }}">+</button>
+                                <button type="button" @click="reset()" title="Originalgröße" style="{{ $btn }}">⟲</button>
+                                <button type="button" @click="printReceipt()" title="Drucken" style="{{ $btn }}">🖨</button>
+                                <a :href="url" target="_blank" title="In neuem Tab öffnen" style="{{ $btn }}">↗</a>
+                            </span>
+                        </div>
+
+                        <div style="padding:.5rem;position:relative;">
+                            {{-- Status-Stempel über der Vorschau: bezahlt / gebucht (wie im Bericht). --}}
+                            @if ($tx->fully_paid || $tx->reviewed)
+                                <div style="position:absolute;top:1rem;right:1.25rem;z-index:20;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;pointer-events:none;">
+                                    @if ($tx->fully_paid)
+                                        <span style="transform:rotate(-8deg);border:2.5px solid #d97706;color:#d97706;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Bezahlt</span>
+                                    @endif
+                                    @if ($tx->reviewed)
+                                        <span style="transform:rotate(-8deg);border:2.5px solid #0d9488;color:#0d9488;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Gebucht</span>
+                                    @endif
+                                </div>
                             @endif
-                            @if ($tx->reviewed)
-                                <span style="transform:rotate(-8deg);border:2.5px solid #0d9488;color:#0d9488;background:rgba(255,255,255,.6);font-weight:800;font-size:.95rem;letter-spacing:1.5px;text-transform:uppercase;padding:.15rem .65rem;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12);">✓ Gebucht</span>
+
+                            @if ($receipt->is_pdf)
+                                {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
+                                <div style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
+                                    {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
+                                         bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
+                                         bleiben und nicht weggemorpht werden. --}}
+                                    <div wire:ignore x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
+                                    <template x-if="error">
+                                        <div style="color:#374151;padding:1rem;text-align:center;">
+                                            Inline-Vorschau nicht möglich.
+                                            <a :href="url" target="_blank" style="color:#9ae6b4;text-decoration:underline;">Im neuen Tab öffnen</a>
+                                        </div>
+                                    </template>
+                                </div>
+                            @else
+                                <div style="height:80vh;overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
+                                    <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
+                                        style="border-radius:.5rem;">
+                                </div>
                             @endif
                         </div>
-                    @endif
-                    @if ($receipt && $receipt->preview_url)
-                        @if ($receipt->is_pdf)
-                            {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
-                            <div wire:key="pdf-{{ $receipt->id }}" x-data="pdfViewer(@js($receipt->preview_url))" x-init="load()"
-                                style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
-                                {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
-                                     bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
-                                     bleiben und nicht weggemorpht werden. --}}
-                                <div wire:ignore x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
-                                <template x-if="error">
-                                    <div style="color:#374151;padding:1rem;text-align:center;">
-                                        Inline-Vorschau nicht möglich.
-                                        <a :href="url" target="_blank" style="color:#9ae6b4;text-decoration:underline;">Im neuen Tab öffnen</a>
-                                    </div>
-                                </template>
-                            </div>
-                        @else
-                            <img src="{{ $receipt->preview_url }}" alt="Beleg" style="max-height:80vh;width:100%;object-fit:contain;border-radius:.5rem;">
-                        @endif
-                    @else
-                        <div style="height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
-                            Kein Beleg zur Vorschau ausgewählt
-                        </div>
-                    @endif
-                </div>
+                    </div>
+                @else
+                    <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
+                    <div style="height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
+                        Kein Beleg zur Vorschau ausgewählt
+                    </div>
+                @endif
             </x-filament::section>
 
         </div>
@@ -569,9 +600,16 @@
     {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
     @script
         <script>
-            Alpine.data('pdfViewer', (url) => ({
+            Alpine.data('receiptViewer', (url, isPdf) => ({
                 url: url,
+                isPdf: isPdf,
                 error: false,
+                zoom: 1,          // 1 = 100 %
+                baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
+                pdf: null,
+                init() {
+                    if (this.isPdf) { this.load(); }
+                },
                 async load() {
                     try {
                         let tries = 0;
@@ -584,24 +622,48 @@
                         window.pdfjsLib.GlobalWorkerOptions.workerSrc =
                             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-                        const pdf = await window.pdfjsLib.getDocument(this.url).promise;
-                        const container = this.$refs.pages;
-                        container.innerHTML = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const viewport = page.getViewport({ scale: 1.4 });
-                            const canvas = document.createElement('canvas');
-                            canvas.width = viewport.width;
-                            canvas.height = viewport.height;
-                            canvas.style.maxWidth = '100%';
-                            canvas.style.background = '#fff';
-                            canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
-                            container.appendChild(canvas);
-                            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-                        }
+                        this.pdf = await window.pdfjsLib.getDocument(this.url).promise;
+                        await this.renderPdf();
                     } catch (e) {
                         console.error(e);
                         this.error = true;
+                    }
+                },
+                async renderPdf() {
+                    if (!this.pdf) { return; }
+                    const container = this.$refs.pages;
+                    container.innerHTML = '';
+                    const scale = this.baseScale * this.zoom;
+                    for (let i = 1; i <= this.pdf.numPages; i++) {
+                        const page = await this.pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: scale });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        canvas.style.maxWidth = '100%';
+                        canvas.style.background = '#fff';
+                        canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                        container.appendChild(canvas);
+                        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                    }
+                },
+                zoomIn() {
+                    this.zoom = Math.min(4, +(this.zoom + 0.2).toFixed(2));
+                    if (this.isPdf) { this.renderPdf(); }
+                },
+                zoomOut() {
+                    this.zoom = Math.max(0.4, +(this.zoom - 0.2).toFixed(2));
+                    if (this.isPdf) { this.renderPdf(); }
+                },
+                reset() {
+                    this.zoom = 1;
+                    if (this.isPdf) { this.renderPdf(); }
+                },
+                printReceipt() {
+                    // Öffnet den Beleg in einem neuen Fenster und ruft den Druckdialog auf.
+                    const w = window.open(this.url, '_blank');
+                    if (w) {
+                        try { w.addEventListener('load', () => w.print()); } catch (e) { /* Popup evtl. blockiert */ }
                     }
                 },
             }));

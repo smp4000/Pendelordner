@@ -281,6 +281,35 @@ class Kontoumsatzdetails extends Page
         return round($total - $this->splitTotal, 2);
     }
 
+    /**
+     * Schnelle Summen je USt-Satz über alle Split-Positionen: Netto-, USt- und
+     * Brutto-Summe. Für den Abgleich mit der Rechnung (z. B. 19 % / 7 %).
+     *
+     * @return array<string, array{rate: float, net: float, tax: float, gross: float}>
+     */
+    public function getSplitTaxSummaryProperty(): array
+    {
+        $sum = [];
+        foreach ($this->splits as $row) {
+            $gross = $this->splitGross($row);
+            if (abs($gross) < 0.005) {
+                continue;
+            }
+            $rate = $this->parseAmount($row['tax_rate'] ?? '0');
+            $net = $rate != 0.0 ? $gross / (1 + $rate / 100) : $gross;
+            // Schlüssel ohne Nachkommastelle, z. B. "19", "7", "0".
+            $key = rtrim(rtrim(number_format($rate, 2, ',', ''), '0'), ',');
+
+            $sum[$key]['rate'] = $rate;
+            $sum[$key]['net'] = ($sum[$key]['net'] ?? 0) + $net;
+            $sum[$key]['tax'] = ($sum[$key]['tax'] ?? 0) + ($gross - $net);
+            $sum[$key]['gross'] = ($sum[$key]['gross'] ?? 0) + $gross;
+        }
+        uasort($sum, fn ($a, $b) => $b['rate'] <=> $a['rate']);
+
+        return $sum;
+    }
+
     /** Sachkonto-Treffer für die Suche einer Split-Zeile. */
     public function splitLedgerResults(string $search): Collection
     {

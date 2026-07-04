@@ -146,6 +146,41 @@ class SplitTest extends TestCase
         $this->assertEqualsWithDelta(-329.36, (float) $tx->accountAssignments()->first()->amount, 0.001);
     }
 
+    public function test_ust_schnellsummen_je_satz(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Testkonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3170'], ['name' => 'Einkauf Getränke']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-23', 'counterparty' => 'Lekkerland', 'amount' => -226.00,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Netto-Modus: eingegebene Beträge sind netto, USt wird aufgeschlagen.
+        $component = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('splitMode', 'netto')
+            ->set('splits', [
+                ['ledger_account_id' => $la->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '100,00'],
+                ['ledger_account_id' => $la->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '7', 'amount' => '100,00'],
+                ['ledger_account_id' => $la->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '50,00'],
+            ]);
+
+        $summary = $component->instance()->splitTaxSummary;
+
+        // 19 %: 100 + 50 = 150 netto, USt 28,50; 7 %: 100 netto, USt 7,00.
+        $this->assertEqualsWithDelta(150.00, $summary['19']['net'], 0.01);
+        $this->assertEqualsWithDelta(28.50, $summary['19']['tax'], 0.01);
+        $this->assertEqualsWithDelta(178.50, $summary['19']['gross'], 0.01);
+        $this->assertEqualsWithDelta(100.00, $summary['7']['net'], 0.01);
+        $this->assertEqualsWithDelta(7.00, $summary['7']['tax'], 0.01);
+    }
+
     public function test_splits_erscheinen_im_bericht(): void
     {
         $this->seed(DatabaseSeeder::class);
