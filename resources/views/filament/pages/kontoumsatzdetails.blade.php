@@ -270,6 +270,10 @@
                                     placeholder="z. B. Betrifft privates Fahrzeug"
                                     style="width:100%;border:none;background:transparent;outline:none;resize:vertical;font-size:.85rem;padding:.3rem;"></textarea>
                             </x-filament::input.wrapper>
+                            <label style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:.8rem;cursor:pointer;">
+                                <x-filament::input.checkbox wire:model="noteOpen" />
+                                ⚠ Erfordert Reaktion – als offenen Hinweis im Dashboard merken (bis erledigt)
+                            </label>
                             <div style="display:flex;gap:.5rem;margin-top:.5rem;">
                                 <x-filament::button wire:click="saveNote" icon="heroicon-o-check" color="warning" size="sm">Mitteilung speichern</x-filament::button>
                                 <x-filament::button wire:click="toggleNote" color="gray" size="sm">Schließen</x-filament::button>

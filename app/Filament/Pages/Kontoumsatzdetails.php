@@ -108,6 +108,9 @@ class Kontoumsatzdetails extends Page
 
     public string $accountantNote = '';
 
+    /** Hinweis erfordert Reaktion – bleibt als offenes To-Do im Dashboard sichtbar. */
+    public bool $noteOpen = false;
+
     // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
 
@@ -169,6 +172,7 @@ class Kontoumsatzdetails extends Page
         $this->categorySearch = '';
         $this->editingCategory = false;
         $this->accountantNote = (string) ($t?->accountant_note ?? '');
+        $this->noteOpen = (bool) ($t?->note_open ?? false);
         $this->showNote = $this->accountantNote !== '';
         $this->loadSplits();
     }
@@ -473,14 +477,18 @@ class Kontoumsatzdetails extends Page
         }
 
         $note = trim($this->accountantNote);
+        // Ohne Hinweistext gibt es auch keinen offenen Hinweis.
+        $open = $note !== '' && $this->noteOpen;
         BankTransaction::whereKey($this->selectedTransactionId)
-            ->update(['accountant_note' => $note !== '' ? $note : null]);
+            ->update(['accountant_note' => $note !== '' ? $note : null, 'note_open' => $open]);
 
         $this->accountantNote = $note;
+        $this->noteOpen = $open;
         $this->showNote = $note !== '';
 
         Notification::make()
             ->title($note !== '' ? 'Mitteilung gespeichert' : 'Mitteilung entfernt')
+            ->body($open ? 'Als offener Hinweis im Dashboard vorgemerkt.' : null)
             ->success()->send();
     }
 

@@ -31,6 +31,7 @@ class BankTransaction extends Model
         'import_source' => ImportSource::class,
         'reviewed' => 'boolean',
         'fully_paid' => 'boolean',
+        'note_open' => 'boolean',
     ];
 
     // ---- Beziehungen -------------------------------------------------------
@@ -229,5 +230,13 @@ class BankTransaction extends Model
     public function scopeIncome(Builder $query): Builder
     {
         return $query->where('amount', '>', 0);
+    }
+
+    /** Umsätze mit einem offenen Hinweis (erfordert Reaktion, noch nicht erledigt). */
+    public function scopeOpenNote(Builder $query): Builder
+    {
+        return $query->where('note_open', true)
+            ->whereNotNull('accountant_note')
+            ->where('accountant_note', '!=', '');
     }
 }
