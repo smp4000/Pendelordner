@@ -45,8 +45,14 @@ class OffeneHinweisGlocke
                     ->url(Kontoumsatzdetails::getUrl() . '?tx=' . $transaction->id),
             ]);
 
+        // notifyNow statt sendToDatabase()/notify(): Filaments DatabaseNotification
+        // ist ShouldQueue. Bei QUEUE_CONNECTION=database ohne laufenden Worker
+        // (Shared Hosting) würde notify() die Meldung nur in die jobs-Tabelle
+        // legen und nie in die notifications-Tabelle schreiben – die Glocke bliebe
+        // leer. notifyNow() schreibt sie sofort synchron.
+        $message = $notification->toDatabase();
         foreach (User::all() as $user) {
-            $notification->sendToDatabase($user, isEventDispatched: true);
+            $user->notifyNow($message);
         }
     }
 

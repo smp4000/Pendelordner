@@ -104,6 +104,27 @@ class OffeneHinweiseTest extends TestCase
         $this->assertSame(1, $user->fresh()->notifications()->count());
     }
 
+    /**
+     * Filaments DatabaseNotification ist ShouldQueue. Ohne laufenden Worker
+     * (Shared Hosting, QUEUE_CONNECTION=database) muss die Glocken-Meldung
+     * trotzdem sofort geschrieben werden (notifyNow) – sonst bleibt die Glocke
+     * leer, obwohl der Befehl "erledigt" meldet.
+     */
+    public function test_glocke_wird_ohne_queue_worker_gefuellt(): void
+    {
+        config(['queue.default' => 'database']);
+        $this->seed(DatabaseSeeder::class);
+        $user = User::firstOrFail();
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $tx = $this->tx(['note_open' => true, 'accountant_note' => 'Bitte prüfen']);
+        \App\Support\OffeneHinweisGlocke::sync($tx->refresh());
+
+        // Meldung liegt sofort in notifications (nicht nur als Job in der Queue).
+        $this->assertGreaterThanOrEqual(1, $user->fresh()->notifications()->count());
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('jobs')->count());
+    }
+
     public function test_ohne_hinweistext_kein_offener_hinweis(): void
     {
         $this->seed(DatabaseSeeder::class);
