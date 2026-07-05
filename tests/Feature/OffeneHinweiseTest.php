@@ -89,6 +89,21 @@ class OffeneHinweiseTest extends TestCase
         $this->assertSame(0, $user->fresh()->notifications()->count());
     }
 
+    public function test_sync_befehl_uebernimmt_bestehende_offene_hinweise_in_die_glocke(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $user = User::firstOrFail();
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        // Offener Hinweis, der VOR der Glocken-Funktion angelegt wurde (kein Glocken-Eintrag).
+        $this->tx(['note_open' => true, 'accountant_note' => 'Gutschrift angefordert']);
+        $this->assertSame(0, $user->notifications()->count());
+
+        $this->artisan('hinweise:sync-glocke')->assertSuccessful();
+
+        $this->assertSame(1, $user->fresh()->notifications()->count());
+    }
+
     public function test_ohne_hinweistext_kein_offener_hinweis(): void
     {
         $this->seed(DatabaseSeeder::class);
