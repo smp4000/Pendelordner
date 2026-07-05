@@ -18,7 +18,7 @@ use Filament\Widgets\TableWidget;
  */
 class OffeneAufteilungenWidget extends TableWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = -1;
 
     protected int|string|array $columnSpan = 'full';
 

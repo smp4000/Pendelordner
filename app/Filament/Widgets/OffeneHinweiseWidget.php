@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OffeneHinweiseWidget extends TableWidget
 {
-    protected static ?int $sort = 0;
+    protected static ?int $sort = -2;
 
     protected int|string|array $columnSpan = 'full';
 
