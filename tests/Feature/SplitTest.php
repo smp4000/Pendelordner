@@ -177,6 +177,10 @@ class SplitTest extends TestCase
     {
         $this->assertSame(19.0, LedgerAccount::deriveTaxRateFromName('Einkauf Lebensmittel, USt voll A,Lebensmittel'));
         $this->assertSame(7.0, LedgerAccount::deriveTaxRateFromName('Einkauf Zeitschriften, USt erm. A,Lebensmittel'));
+        $this->assertSame(0.0, LedgerAccount::deriveTaxRateFromName('Einkauf Telefonkarten nicht steuerbar A,Telefon-/Wertkarten'));
+        $this->assertSame(0.0, LedgerAccount::deriveTaxRateFromName('Erlöse, USt frei'));
+        // Ohne eindeutigen Hinweis (z. B. Shopping-Cards) bleibt es leer -> manuell pflegen.
+        $this->assertNull(LedgerAccount::deriveTaxRateFromName('Einkauf Shopping-Cards A,Telefon-/Wertkarten'));
         $this->assertNull(LedgerAccount::deriveTaxRateFromName('Einkauf Tiefkühlkost A,Sonstige Waren'));
     }
 
