@@ -194,6 +194,11 @@
                             :color="$tx->accountAssignments->isNotEmpty() ? 'info' : 'gray'" size="sm">
                             {{ $tx->accountAssignments->isNotEmpty() ? 'Aufteilung (' . $tx->accountAssignments->count() . ')' : 'Betrag aufteilen' }}
                         </x-filament::button>
+                        <x-filament::button wire:click="toggleSplitOpen" icon="heroicon-o-clock"
+                            :color="$tx->split_open ? 'warning' : 'gray'" size="sm"
+                            title="Umsatz als geprüft/bezahlt in den Bericht nehmen, Aufteilung später ergänzen">
+                            {{ $tx->split_open ? 'Aufteilung offen ✓' : 'Aufteilung offen merken' }}
+                        </x-filament::button>
                         <x-filament::button tag="a" href="{{ \App\Filament\Resources\BankTransactions\BankTransactionResource::getUrl('edit', ['record' => $tx]) }}" icon="heroicon-o-pencil-square" color="gray" size="sm">Bearbeiten</x-filament::button>
                     </div>
 

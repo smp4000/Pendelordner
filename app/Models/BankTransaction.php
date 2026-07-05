@@ -32,6 +32,7 @@ class BankTransaction extends Model
         'reviewed' => 'boolean',
         'fully_paid' => 'boolean',
         'note_open' => 'boolean',
+        'split_open' => 'boolean',
     ];
 
     // ---- Beziehungen -------------------------------------------------------
@@ -238,5 +239,24 @@ class BankTransaction extends Model
         return $query->where('note_open', true)
             ->whereNotNull('accountant_note')
             ->where('accountant_note', '!=', '');
+    }
+
+    /** Umsätze, deren Aufteilung noch ergänzt werden muss. */
+    public function scopeOpenSplit(Builder $query): Builder
+    {
+        return $query->where('split_open', true);
+    }
+
+    /**
+     * Noch nicht auf Sachkonten aufgeteilter (Brutto-)Restbetrag: Umsatzbetrag
+     * minus Summe der gespeicherten Aufteilungs-Positionen.
+     */
+    public function getSplitRemainingAttribute(): float
+    {
+        $allocated = $this->relationLoaded('accountAssignments')
+            ? (float) $this->accountAssignments->sum('amount')
+            : (float) $this->accountAssignments()->sum('amount');
+
+        return round(abs((float) $this->amount) - $allocated, 2);
     }
 }

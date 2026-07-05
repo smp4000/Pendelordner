@@ -111,6 +111,9 @@ class Kontoumsatzdetails extends Page
     /** Hinweis erfordert Reaktion – bleibt als offenes To-Do im Dashboard sichtbar. */
     public bool $noteOpen = false;
 
+    /** Aufteilung noch offen – Umsatz erscheint im Dashboard "Offene Aufteilungen". */
+    public bool $splitOpen = false;
+
     // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
 
@@ -173,6 +176,7 @@ class Kontoumsatzdetails extends Page
         $this->editingCategory = false;
         $this->accountantNote = (string) ($t?->accountant_note ?? '');
         $this->noteOpen = (bool) ($t?->note_open ?? false);
+        $this->splitOpen = (bool) ($t?->split_open ?? false);
         $this->showNote = $this->accountantNote !== '';
         $this->loadSplits();
     }
@@ -410,6 +414,15 @@ class Kontoumsatzdetails extends Page
         }
 
         $t->load('accountAssignments.ledgerAccount');
+
+        // Ist der Umsatz jetzt vollständig aufgeteilt (Rest 0), den Merker
+        // "Aufteilung offen" automatisch entfernen.
+        if ($t->split_open && abs($this->splitRemaining) < 0.005) {
+            $t->update(['split_open' => false]);
+            $this->splitOpen = false;
+            unset($this->selectedTransaction);
+        }
+
         if ($reloadEditor) {
             $this->loadSplits();
         }
@@ -503,6 +516,27 @@ class Kontoumsatzdetails extends Page
     public function toggleNote(): void
     {
         $this->showNote = ! $this->showNote;
+    }
+
+    /**
+     * Merker "Aufteilung noch offen" umschalten. Der Umsatz kann so als
+     * geprüft/bezahlt in den Bericht, bleibt aber im Dashboard-Widget
+     * "Offene Aufteilungen" sichtbar, bis die Aufteilung ergänzt ist.
+     */
+    public function toggleSplitOpen(): void
+    {
+        if (! $this->selectedTransactionId) {
+            return;
+        }
+
+        $this->splitOpen = ! $this->splitOpen;
+        BankTransaction::whereKey($this->selectedTransactionId)->update(['split_open' => $this->splitOpen]);
+        unset($this->selectedTransaction);
+
+        Notification::make()
+            ->title($this->splitOpen ? 'Als „Aufteilung offen" gemerkt' : 'Merker entfernt')
+            ->body($this->splitOpen ? 'Erscheint im Dashboard unter „Offene Aufteilungen".' : null)
+            ->success()->send();
     }
 
     /** Mitteilung an den Steuerberater am aktuellen Umsatz speichern. */
