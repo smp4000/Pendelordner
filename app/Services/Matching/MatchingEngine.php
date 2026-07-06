@@ -81,6 +81,67 @@ class MatchingEngine
     }
 
     /**
+     * Erkennt ein Zahlungsavis / eine Sammel-Lastschrift: ein Beleg (das Avis),
+     * dessen OCR-Text die Rechnungsnummern mehrerer anderer offener Belege
+     * enthält, deren Summe dem Umsatzbetrag entspricht. So schlägt die App bei
+     * einer Sammelzahlung die zugehörigen Einzelrechnungen vor – statt nur des
+     * Avis, dessen Einzelbetrag zufällig passt.
+     *
+     * @return array{advice: Receipt, invoices: Collection<int, Receipt>, sum: float}|null
+     */
+    public function suggestFromAdvice(BankTransaction $transaction): ?array
+    {
+        $target = abs((float) $transaction->amount);
+        if ($target <= 0.0) {
+            return null;
+        }
+
+        $tolerance = max((float) config('pendelordner.matching.betrag_toleranz', 0.01), 0.02);
+
+        $receipts = Receipt::query()->unallocated()->notDuplicate()
+            ->when($transaction->business_id, fn ($q) => $q->where(function ($q) use ($transaction) {
+                $q->whereNull('business_id')->orWhere('business_id', $transaction->business_id);
+            }))
+            ->get();
+
+        // Avis-Kandidaten zuerst prüfen, deren eigener Betrag ~ Umsatzbetrag ist
+        // (das Avis nennt die Gesamtsumme) – das ist der wahrscheinlichste Fall.
+        $advices = $receipts->filter(fn (Receipt $r) => filled($r->ocr_text))
+            ->sortByDesc(fn (Receipt $r) => abs((float) $r->gross_amount - $target) <= $tolerance ? 1 : 0)
+            ->values();
+
+        foreach ($advices as $advice) {
+            $text = $this->normalizeText((string) $advice->ocr_text);
+
+            $matched = $receipts->filter(function (Receipt $r) use ($advice, $text) {
+                if ($r->id === $advice->id) {
+                    return false;
+                }
+                $no = $this->normalizeText((string) $r->invoice_number);
+
+                return mb_strlen($no) >= 4 && str_contains($text, $no);
+            })->values();
+
+            if ($matched->count() < 2) {
+                continue;
+            }
+
+            $sum = round((float) $matched->sum(fn (Receipt $r) => (float) $r->gross_amount), 2);
+            if (abs($sum - $target) <= $tolerance) {
+                return ['advice' => $advice, 'invoices' => $matched, 'sum' => $sum];
+            }
+        }
+
+        return null;
+    }
+
+    /** Text auf Buchstaben/Ziffern reduzieren und kleinschreiben (für Nummern-Vergleich). */
+    private function normalizeText(string $s): string
+    {
+        return mb_strtolower(preg_replace('/[^\p{L}\p{N}]+/u', '', $s) ?? '');
+    }
+
+    /**
      * Umgekehrter Vorschlag: passende Bankumsätze zu einem Beleg.
      *
      * @return Collection<int, array{transaction: BankTransaction, score: float}>

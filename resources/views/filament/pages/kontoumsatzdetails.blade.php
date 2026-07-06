@@ -395,6 +395,26 @@
                     </div>
 
                     <div style="padding:.5rem;">
+                        {{-- Sammel-/Avis-Vorschlag: mehrere Rechnungen ergeben zusammen den Umsatz --}}
+                        @php $advice = $this->adviceSuggestion; @endphp
+                        @if ($advice)
+                            <div style="margin-bottom:.6rem;padding:.7rem .8rem;border:1px solid rgba(16,185,129,.4);border-radius:.5rem;background:rgba(16,185,129,.08);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                                    <div style="font-size:.85rem;">
+                                        <strong>📄 Zahlungsavis erkannt</strong> – verweist auf
+                                        <strong>{{ $advice['invoices']->count() }} Rechnungen</strong>
+                                        (Summe {{ number_format($advice['sum'], 2, ',', '.') }} €).
+                                        <div style="opacity:.75;margin-top:.2rem;">
+                                            {{ $advice['invoices']->map(fn ($r) => ($r->invoice_number ?: ('#' . $r->id)) . ' · ' . number_format((float) $r->gross_amount, 2, ',', '.') . ' €')->join('  |  ') }}
+                                        </div>
+                                    </div>
+                                    <x-filament::button wire:click="attachAdviceInvoices" icon="heroicon-o-check" color="success" size="sm">
+                                        {{ $advice['invoices']->count() }} Rechnungen zuordnen
+                                    </x-filament::button>
+                                </div>
+                            </div>
+                        @endif
+
                         {{-- TAB: Zugeordnete Belege (per Drag & Drop sortierbar) --}}
                         @if ($activeTab === 'assigned')
                             @if ($tx->receipts->isEmpty())

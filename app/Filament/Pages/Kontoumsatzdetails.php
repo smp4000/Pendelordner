@@ -1038,6 +1038,56 @@ class Kontoumsatzdetails extends Page
         return $transaction ? (new MatchingEngine())->suggestReceipts($transaction, 20) : collect();
     }
 
+    /**
+     * Sammel-/Avis-Vorschlag: mehrere Einzelrechnungen, deren Nummern auf einem
+     * Zahlungsavis stehen und deren Summe dem Umsatzbetrag entspricht.
+     *
+     * @return array{advice: Receipt, invoices: Collection<int, Receipt>, sum: float}|null
+     */
+    public function getAdviceSuggestionProperty(): ?array
+    {
+        $transaction = $this->selectedTransaction;
+
+        return $transaction ? (new MatchingEngine())->suggestFromAdvice($transaction) : null;
+    }
+
+    /** Alle vom Avis referenzierten Einzelrechnungen auf einmal zuordnen. */
+    public function attachAdviceInvoices(): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $suggestion = (new MatchingEngine())->suggestFromAdvice($transaction);
+        if (! $suggestion) {
+            Notification::make()->title('Kein Zahlungsavis erkannt')->warning()->send();
+
+            return;
+        }
+
+        foreach ($suggestion['invoices'] as $receipt) {
+            $transaction->receipts()->syncWithoutDetaching([
+                $receipt->id => [
+                    'amount' => round((float) $receipt->gross_amount, 2),
+                    'match_type' => 'advice',
+                    'sort_order' => $transaction->receipts()->count(),
+                ],
+            ]);
+            (new \App\Services\Matching\SupplierDefaults())->applyToTransaction($transaction, $receipt);
+        }
+
+        $transaction->recalculateStatus();
+        $this->fillAssign();
+        $this->activeTab = 'assigned';
+        $this->refreshSelected();
+
+        Notification::make()
+            ->title($suggestion['invoices']->count() . ' Rechnungen aus Zahlungsavis zugeordnet')
+            ->body('Summe ' . number_format($suggestion['sum'], 2, ',', '.') . ' €')
+            ->success()->send();
+    }
+
     /** Ergebnisse der manuellen Belegsuche. */
     public function getSearchResultsProperty(): Collection
     {
