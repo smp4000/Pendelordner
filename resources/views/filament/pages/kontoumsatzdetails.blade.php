@@ -180,7 +180,7 @@
                     </div>
                     <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
                         <x-filament::button wire:click="markReviewed"
-                            icon="heroicon-o-shield-check" color="success" size="sm"
+                            icon="heroicon-o-shield-check" :color="$tx->reviewed ? 'success' : 'warning'" size="sm"
                             :title="$tx->reviewed ? 'Prüfung zurücknehmen – Status wieder offen' : 'Als geprüft markieren'">
                             {{ $tx->reviewed ? 'Geprüft ✓ – zurücknehmen' : 'Als geprüft markieren' }}
                         </x-filament::button>
