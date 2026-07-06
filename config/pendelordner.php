@@ -104,8 +104,16 @@ return [
         'processed_folder' => env('MAIL_INGEST_PROCESSED_FOLDER', ''),
         // Welcher Betrieb neuen Mail-Belegen zugeordnet wird (leer = keiner).
         'business_id' => env('MAIL_INGEST_BUSINESS_ID') ?: null,
-        // Zugelassene Anhang-Endungen.
-        'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff'],
+        // Zugelassene Anhang-Endungen. Standard: nur PDF – so werden Signatur-
+        // und Logo-Bilder (PNG/JPG/GIF in der Mail) NICHT als Belege importiert.
+        // Bei Bedarf per .env erweitern, z. B. MAIL_INGEST_EXTENSIONS="pdf,jpg".
+        'extensions' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('MAIL_INGEST_EXTENSIONS', 'pdf'))
+        ))),
+        // Anhänge unter dieser Größe (Bytes) überspringen – fängt kleine
+        // Logos/Icons ab. 0 = keine Mindestgröße.
+        'min_bytes' => (int) env('MAIL_INGEST_MIN_BYTES', 6000),
         // Abrufzeit (HH:MM) bzw. -frequenz im Scheduler.
         'fetch_time' => env('MAIL_INGEST_FETCH_TIME', '*/15'), // alle 15 Min
     ],

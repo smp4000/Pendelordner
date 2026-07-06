@@ -76,6 +76,12 @@ class FetchInvoiceEmails extends Command
                 // Jeder Anhang wird ein eigener Beleg – mehrere Rechnungen in
                 // einer Mail werden also einzeln getrennt.
                 foreach ($message->getAttachments() as $attachment) {
+                    // Inline-Anhänge (z. B. Logos/Signaturbilder in der Mail)
+                    // sind keine Rechnungen -> überspringen.
+                    if (strtolower((string) $attachment->getDisposition()) === 'inline') {
+                        continue;
+                    }
+
                     $name = (string) $attachment->getName();
                     $ext = strtolower((string) ($attachment->getExtension() ?: pathinfo($name, PATHINFO_EXTENSION)));
                     $content = (string) ($attachment->getContent() ?? '');
@@ -123,6 +129,12 @@ class FetchInvoiceEmails extends Command
         $ext = strtolower($ext);
 
         if (! in_array($ext, $allowed, true) || $content === '') {
+            return null;
+        }
+
+        // Zu kleine Anhänge (Logos/Icons) überspringen.
+        $minBytes = (int) ($cfg['min_bytes'] ?? 0);
+        if ($minBytes > 0 && strlen($content) < $minBytes) {
             return null;
         }
 
