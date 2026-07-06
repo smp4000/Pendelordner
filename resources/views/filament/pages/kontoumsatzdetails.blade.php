@@ -401,7 +401,7 @@
                             <div style="margin-bottom:.6rem;padding:.7rem .8rem;border:1px solid rgba(16,185,129,.4);border-radius:.5rem;background:rgba(16,185,129,.08);">
                                 <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;">
                                     <div style="font-size:.85rem;">
-                                        <strong>📄 Zahlungsavis erkannt</strong> – verweist auf
+                                        <strong>📄 Sammelzahlung erkannt</strong> – verweist auf
                                         <strong>{{ $advice['invoices']->count() }} Rechnungen</strong>
                                         (Summe {{ number_format($advice['sum'], 2, ',', '.') }} €).
                                         <div style="opacity:.75;margin-top:.2rem;">

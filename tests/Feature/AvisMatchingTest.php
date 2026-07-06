@@ -68,6 +68,31 @@ class AvisMatchingTest extends TestCase
         $this->assertEqualsWithDelta(0.0, (float) $tx->fresh()->difference, 0.001);
     }
 
+    public function test_rechnungsnummern_im_verwendungszweck_ohne_avis(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $account = BankAccount::create(['label' => 'Geschäftskonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Sammel-Lastschrift, deren Verwendungszweck die Rechnungsnummern nennt
+        // (wie im echten SEPA-Text) – KEIN Avis hochgeladen.
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-25', 'counterparty' => 'SB UNION Großmarkt GmbH',
+            'purpose' => 'RE1356294 14.6.2026RE1359225 18.6.2026RE1360314 19.6.2026 EREF: 0601957562',
+            'amount' => -524.37, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'RE1356294', 'gross_amount' => 286.33]);
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'RE1359225', 'gross_amount' => 217.57]);
+        $r3 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'RE1360314', 'gross_amount' => 20.47]);
+
+        $result = (new MatchingEngine())->suggestFromAdvice($tx);
+        $this->assertNotNull($result);
+        $this->assertNull($result['advice']); // Quelle ist der Verwendungszweck, kein Beleg
+        $this->assertEqualsCanonicalizing([$r1->id, $r2->id, $r3->id], $result['invoices']->pluck('id')->all());
+    }
+
     public function test_kein_avis_kein_vorschlag(): void
     {
         $this->seed(DatabaseSeeder::class);

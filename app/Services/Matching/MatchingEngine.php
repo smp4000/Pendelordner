@@ -104,22 +104,35 @@ class MatchingEngine
             }))
             ->get();
 
-        // Avis-Kandidaten zuerst prüfen, deren eigener Betrag ~ Umsatzbetrag ist
-        // (das Avis nennt die Gesamtsumme) – das ist der wahrscheinlichste Fall.
+        // Textquellen, die die Rechnungsnummern nennen können:
+        //  1. Verwendungszweck/Referenz des Bankumsatzes selbst (SEPA-Sammel-
+        //     lastschrift listet die Nummern oft direkt) – braucht kein Avis.
+        //  2. Ein hochgeladenes Zahlungsavis (Beleg-OCR-Text), bevorzugt eines,
+        //     dessen eigener Betrag ~ Umsatzbetrag ist (= die Gesamtsumme).
+        $sources = [];
+
+        $txText = $this->normalizeText((string) $transaction->purpose . ' ' . (string) $transaction->bank_reference);
+        if (mb_strlen($txText) >= 8) {
+            $sources[] = ['advice' => null, 'text' => $txText];
+        }
+
         $advices = $receipts->filter(fn (Receipt $r) => filled($r->ocr_text))
             ->sortByDesc(fn (Receipt $r) => abs((float) $r->gross_amount - $target) <= $tolerance ? 1 : 0)
             ->values();
-
         foreach ($advices as $advice) {
-            $text = $this->normalizeText((string) $advice->ocr_text);
+            $sources[] = ['advice' => $advice, 'text' => $this->normalizeText((string) $advice->ocr_text)];
+        }
 
-            $matched = $receipts->filter(function (Receipt $r) use ($advice, $text) {
-                if ($r->id === $advice->id) {
+        foreach ($sources as $src) {
+            $adviceId = $src['advice']?->id;
+
+            $matched = $receipts->filter(function (Receipt $r) use ($adviceId, $src) {
+                if ($adviceId !== null && $r->id === $adviceId) {
                     return false;
                 }
                 $no = $this->normalizeText((string) $r->invoice_number);
 
-                return mb_strlen($no) >= 4 && str_contains($text, $no);
+                return mb_strlen($no) >= 4 && str_contains($src['text'], $no);
             })->values();
 
             if ($matched->count() < 2) {
@@ -128,7 +141,7 @@ class MatchingEngine
 
             $sum = round((float) $matched->sum(fn (Receipt $r) => (float) $r->gross_amount), 2);
             if (abs($sum - $target) <= $tolerance) {
-                return ['advice' => $advice, 'invoices' => $matched, 'sum' => $sum];
+                return ['advice' => $src['advice'], 'invoices' => $matched, 'sum' => $sum];
             }
         }
 
