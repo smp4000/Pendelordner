@@ -93,6 +93,21 @@ class AvisMatchingTest extends TestCase
         $this->assertEqualsCanonicalizing([$r1->id, $r2->id, $r3->id], $result['invoices']->pluck('id')->all());
     }
 
+    public function test_diagnose_befehl_laeuft(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-25', 'counterparty' => 'SB Union', 'amount' => -524.37,
+            'purpose' => 'RE1356294 RE1359225 RE1360314', 'reviewed' => false,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $this->artisan('belege:sammel-diagnose 524,37')->assertSuccessful();
+    }
+
     public function test_kein_avis_kein_vorschlag(): void
     {
         $this->seed(DatabaseSeeder::class);
