@@ -159,12 +159,18 @@ class CategoryLedgerTest extends TestCase
             'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
         ]);
 
-        Livewire::test(Kontoumsatzdetails::class)
+        $comp = Livewire::test(Kontoumsatzdetails::class)
             ->set('selectedTransactionId', $first->id)
             ->call('markReviewed')
             ->assertSet('selectedTransactionId', $first->id);
 
         $this->assertTrue($first->refresh()->reviewed);
+
+        // Nochmal klicken -> Prüfung zurückgenommen, Status wieder offen.
+        $comp->call('markReviewed');
+        $first->refresh();
+        $this->assertFalse($first->reviewed);
+        $this->assertSame(\App\Enums\TransactionStatus::Open, $first->status);
     }
 
     /** Der Zähler „Kontosatz X von Y" zählt nur ungeprüfte Umsätze. */

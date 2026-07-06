@@ -1216,6 +1216,11 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Zuordnung gelöst')->success()->send();
     }
 
+    /**
+     * Prüf-Status umschalten: nicht geprüft -> geprüft und wieder zurück.
+     * Beim Zurücknehmen berechnet recalculateStatus() den Status neu (offen /
+     * teilweise / vollständig zugeordnet – je nach Belegen).
+     */
     public function markReviewed(): void
     {
         $transaction = $this->selectedTransaction;
@@ -1223,15 +1228,15 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        // Nur speichern und auf dem Umsatz bleiben – das Weiterblättern
-        // erfolgt ausschließlich über die Navigation (Pfeile oben).
         // Mitteilung direkt am Modell sichern (recalculateStatus speichert mit).
         $transaction->accountant_note = trim($this->accountantNote) ?: null;
-        $transaction->reviewed = true;
+        $transaction->reviewed = ! $transaction->reviewed;
         $transaction->recalculateStatus();
         $this->refreshSelected();
 
-        Notification::make()->title('Umsatz als geprüft markiert')->success()->send();
+        Notification::make()
+            ->title($transaction->reviewed ? 'Umsatz als geprüft markiert' : 'Prüfung zurückgenommen – Status wieder offen')
+            ->success()->send();
     }
 
     public function togglePaid(): void

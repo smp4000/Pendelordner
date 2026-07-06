@@ -179,7 +179,12 @@
                             <span style="color:{{ abs($tx->difference) < 0.01 ? '#059669' : '#d97706' }};">{{ $money($tx->difference) }}</span></div>
                     </div>
                     <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
-                        <x-filament::button wire:click="markReviewed" icon="heroicon-o-shield-check" color="success" size="sm">Als geprüft markieren</x-filament::button>
+                        <x-filament::button wire:click="markReviewed"
+                            :icon="$tx->reviewed ? 'heroicon-o-arrow-uturn-left' : 'heroicon-o-shield-check'"
+                            :color="$tx->reviewed ? 'warning' : 'success'" size="sm"
+                            :title="$tx->reviewed ? 'Prüfung zurücknehmen – Status wieder offen' : 'Als geprüft markieren'">
+                            {{ $tx->reviewed ? 'Geprüft ✓ – zurücknehmen' : 'Als geprüft markieren' }}
+                        </x-filament::button>
                         <x-filament::button wire:click="togglePaid" icon="heroicon-o-banknotes" :color="$tx->fully_paid ? 'success' : 'gray'" size="sm">
                             {{ $tx->fully_paid ? 'Vollständig bezahlt ✓' : 'Als bezahlt markieren' }}
                         </x-filament::button>
