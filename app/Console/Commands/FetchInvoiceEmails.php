@@ -69,56 +69,27 @@ class FetchInvoiceEmails extends Command
         $messages = $folder->query()->whereUnseen()->limit((int) $this->option('limit'))->get();
         $this->info($messages->count() . ' ungelesene Mail(s) gefunden.');
 
-        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
-        $allowed = array_map('strtolower', $cfg['extensions'] ?? ['pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff']);
         $created = 0;
 
         foreach ($messages as $message) {
             try {
+                // Jeder Anhang wird ein eigener Beleg – mehrere Rechnungen in
+                // einer Mail werden also einzeln getrennt.
                 foreach ($message->getAttachments() as $attachment) {
                     $name = (string) $attachment->getName();
                     $ext = strtolower((string) ($attachment->getExtension() ?: pathinfo($name, PATHINFO_EXTENSION)));
+                    $content = (string) ($attachment->getContent() ?? '');
 
-                    if (! in_array($ext, $allowed, true)) {
-                        continue;
+                    $receipt = $this->storeAttachmentAsReceipt(
+                        $content, $name, $ext, $attachment->getMimeType(), (string) $message->getSubject()
+                    );
+
+                    if ($receipt) {
+                        $created++;
+                        $this->line('  + Beleg #' . $receipt->id . ': ' . $name);
+                    } else {
+                        $this->line('  = übersprungen (Dublette oder unzulässiger Anhang): ' . $name);
                     }
-
-                    $content = $attachment->getContent();
-                    if ($content === null || $content === '') {
-                        continue;
-                    }
-
-                    // Dublettenprüfung über den Datei-Hash (gleiche Datei doppelt).
-                    $hash = hash('sha256', $content);
-                    if (Receipt::withTrashed()->where('file_hash', $hash)->exists()) {
-                        $this->line('  = Dublette übersprungen: ' . $name);
-
-                        continue;
-                    }
-
-                    $path = date('Y/m') . '/' . Str::random(40) . '.' . $ext;
-                    $disk->put($path, $content);
-
-                    $receipt = Receipt::create([
-                        'type' => ReceiptType::IncomingInvoice,
-                        'business_id' => $cfg['business_id'] ?: null,
-                        'file_path' => $path,
-                        'file_name' => $name ?: ('mail-beleg.' . $ext),
-                        'mime_type' => $attachment->getMimeType(),
-                        'file_size' => strlen($content),
-                        'file_hash' => $hash,
-                        'status' => 'new',
-                        'note' => 'Per E-Mail empfangen: ' . Str::limit((string) $message->getSubject(), 120),
-                    ]);
-
-                    try {
-                        (new OcrService())->process($receipt->refresh());
-                    } catch (Throwable $e) {
-                        report($e); // OCR-Fehler darf den Import nicht stoppen
-                    }
-
-                    $created++;
-                    $this->line('  + Beleg #' . $receipt->id . ': ' . $name);
                 }
 
                 // Mail als verarbeitet markieren bzw. verschieben.
@@ -135,5 +106,54 @@ class FetchInvoiceEmails extends Command
         $this->info("Fertig: $created Beleg(e) aus E-Mail angelegt.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Speichert einen einzelnen Mail-Anhang als eigenen Beleg (inkl. OCR). So
+     * wird JEDER Anhang einer Mail zu einem separaten Beleg – mehrere
+     * Rechnungen in einer Mail werden getrennt.
+     *
+     * Gibt null zurück, wenn die Endung nicht zugelassen, der Inhalt leer oder
+     * es eine Dublette (gleicher Datei-Hash) ist.
+     */
+    public function storeAttachmentAsReceipt(string $content, string $name, string $ext, ?string $mime, string $subject): ?Receipt
+    {
+        $cfg = config('pendelordner.mail_ingest');
+        $allowed = array_map('strtolower', $cfg['extensions'] ?? ['pdf', 'jpg', 'jpeg', 'png', 'tif', 'tiff']);
+        $ext = strtolower($ext);
+
+        if (! in_array($ext, $allowed, true) || $content === '') {
+            return null;
+        }
+
+        // Dublettenprüfung über den Datei-Hash (gleiche Datei doppelt).
+        $hash = hash('sha256', $content);
+        if (Receipt::withTrashed()->where('file_hash', $hash)->exists()) {
+            return null;
+        }
+
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+        $path = date('Y/m') . '/' . Str::random(40) . '.' . $ext;
+        $disk->put($path, $content);
+
+        $receipt = Receipt::create([
+            'type' => ReceiptType::IncomingInvoice,
+            'business_id' => $cfg['business_id'] ?: null,
+            'file_path' => $path,
+            'file_name' => $name ?: ('mail-beleg.' . $ext),
+            'mime_type' => $mime,
+            'file_size' => strlen($content),
+            'file_hash' => $hash,
+            'status' => 'new',
+            'note' => 'Per E-Mail empfangen: ' . Str::limit($subject, 120),
+        ]);
+
+        try {
+            (new OcrService())->process($receipt->refresh());
+        } catch (Throwable $e) {
+            report($e); // OCR-Fehler darf den Import nicht stoppen
+        }
+
+        return $receipt;
     }
 }
