@@ -318,6 +318,47 @@ class SplitTest extends TestCase
         $this->assertStringContainsString('EinkaufTestKat', $render($tx));
     }
 
+    public function test_ust_aufteilung_ueber_mehrere_belege_summiert(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Konto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id,
+            'booking_date' => '2026-06-01',
+            'amount' => -1064.02, // Summe der drei Bruttobeträge
+            'reviewed' => false,
+            'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Zwei SB-Union-Rechnungen mit gemischten Steuersätzen (Summenblock).
+        $ocr = fn (string $n19, string $u19, string $b19, string $n7, string $u7, string $b7) =>
+            "19%USt.: $n19 $u19 $b19 7%USt.: $n7 $u7 $b7";
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 454.71,
+            'ocr_text' => $ocr('382,11', '72,60', '454,71', '285,77', '20,00', '305,77')]);
+        // r1 hat brutto 454,71 (19%) + 305,77 (7%) = 760,48
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 303.54,
+            'ocr_text' => "19%USt.: 210,00 39,90 249,90 7%USt.: 50,13 3,51 53,64"]);
+        // r2 hat brutto 249,90 (19%) + 53,64 (7%) = 303,54
+        $tx->receipts()->attach($r1->id, ['amount' => 760.48, 'sort_order' => 0]);
+        $tx->receipts()->attach($r2->id, ['amount' => 303.54, 'sort_order' => 1]);
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('fillSplitFromReceiptTax');
+
+        $splits = $comp->get('splits');
+        $this->assertCount(2, $splits);
+        // 19 % zuerst: 454,71 + 249,90 = 704,61
+        $this->assertSame('19', $splits[0]['tax_rate']);
+        $this->assertSame('704,61', $splits[0]['amount']);
+        // 7 %: 305,77 + 53,64 = 359,41
+        $this->assertSame('7', $splits[1]['tax_rate']);
+        $this->assertSame('359,41', $splits[1]['amount']);
+    }
+
     public function test_zugeordnete_belege_lassen_sich_sortieren(): void
     {
         $this->seed(DatabaseSeeder::class);

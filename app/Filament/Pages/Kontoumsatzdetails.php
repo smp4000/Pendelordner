@@ -328,11 +328,13 @@ class Kontoumsatzdetails extends Page
     }
 
     /**
-     * Aufteilung aus der USt-Tabelle des Belegs erzeugen: liest aus dem
-     * OCR-Text des ausgewählten (bzw. ersten zugeordneten) Belegs die
-     * Steuersätze mit ihren Bruttobeträgen und legt je Satz eine Zeile an
-     * (z. B. SB-Union: 454,71 € @ 19 % + 305,77 € @ 7 %). Das Sachkonto
-     * bleibt zur Auswahl offen, Betrag und USt-Satz sind vorbelegt.
+     * Aufteilung aus der USt-Tabelle der Belege erzeugen: liest den
+     * Steuer-Summenblock JEDES zugeordneten Belegs (nicht nur eines) und zählt
+     * die Bruttobeträge je Steuersatz ÜBER ALLE Belege zusammen. So ergibt eine
+     * Zahlung über mehrere Rechnungen (z. B. drei SB-Union-Rechnungen) genau
+     * zwei Zeilen: Summe 19 % und Summe 7 %. Belege ohne erkennbaren
+     * Summenblock, aber mit einem einzelnen Satz + Bruttobetrag, fließen mit
+     * diesem Betrag in den passenden Satz ein. Das Sachkonto bleibt offen.
      */
     public function fillSplitFromReceiptTax(): void
     {
@@ -341,36 +343,57 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        $receipt = $this->selectedReceipt
-            ?: $transaction->receipts->first(fn (Receipt $r) => filled($r->ocr_text));
+        $parser = new \App\Services\Ocr\ReceiptParser();
+        $byRate = [];        // Steuersatz => aufsummierter Bruttobetrag
+        $usedReceipts = 0;
 
-        if (! $receipt || blank($receipt->ocr_text)) {
-            Notification::make()->title('Kein Beleg mit erkanntem Text ausgewählt')
-                ->body('Bitte zuerst den Beleg zuordnen bzw. auswählen.')->warning()->send();
+        foreach ($transaction->receipts as $r) {
+            $rates = filled($r->ocr_text) ? $parser->taxBreakdown((string) $r->ocr_text) : [];
+
+            if (! empty($rates)) {
+                foreach ($rates as $row) {
+                    $byRate[$row['rate']] = round(($byRate[$row['rate']] ?? 0) + $row['gross'], 2);
+                }
+                $usedReceipts++;
+
+                continue;
+            }
+
+            // Kein Summenblock: Beleg mit genau einem Satz + Bruttobetrag
+            // trotzdem berücksichtigen (z. B. reine 19 %- oder 7 %-Rechnung).
+            $gross = (float) $r->gross_amount;
+            $rate = $r->tax_rate !== null ? (int) round((float) $r->tax_rate) : null;
+            if ($gross != 0.0 && in_array($rate, [19, 7], true)) {
+                $byRate[$rate] = round(($byRate[$rate] ?? 0) + $gross, 2);
+                $usedReceipts++;
+            }
+        }
+
+        if (empty($byRate)) {
+            Notification::make()->title('Keine USt-Aufteilung in den Belegen gefunden')
+                ->body('Kein zugeordneter Beleg weist einen Steuer-Summenblock (19 %/7 %) aus.')
+                ->warning()->send();
 
             return;
         }
 
-        $rates = (new \App\Services\Ocr\ReceiptParser())->taxBreakdown((string) $receipt->ocr_text);
-        if (empty($rates)) {
-            Notification::make()->title('Keine USt-Aufteilung im Beleg gefunden')
-                ->body('Der Beleg weist keinen Steuer-Summenblock (19 %/7 %) aus.')->warning()->send();
+        krsort($byRate); // 19 % vor 7 %
 
-            return;
+        $this->splits = [];
+        foreach ($byRate as $rate => $gross) {
+            $this->splits[] = [
+                'ledger_account_id' => null,
+                'ledger_label' => '',
+                'ledger_search' => '',
+                'tax_rate' => (string) $rate,
+                'amount' => number_format($gross, 2, ',', ''),
+            ];
         }
-
-        $this->splits = array_map(fn (array $r) => [
-            'ledger_account_id' => null,
-            'ledger_label' => '',
-            'ledger_search' => '',
-            'tax_rate' => (string) $r['rate'],
-            'amount' => number_format($r['gross'], 2, ',', ''),
-        ], $rates);
         $this->splitMode = 'brutto';
         $this->showSplit = true;
 
-        Notification::make()->title(count($rates) . ' Steuersätze aus Beleg übernommen')
-            ->body('Bruttobeträge je Satz eingetragen – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
+        Notification::make()->title(count($byRate) . ' Steuersätze aus ' . $usedReceipts . ' Beleg(en) übernommen')
+            ->body('Bruttobeträge je Satz aufsummiert – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
             ->success()->send();
     }
 
