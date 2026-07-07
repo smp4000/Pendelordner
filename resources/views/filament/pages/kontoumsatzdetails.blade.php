@@ -593,6 +593,8 @@
                                 <span x-text="Math.round(zoom*100)+' %'" style="min-width:3rem;text-align:center;font-size:.78rem;opacity:.75;"></span>
                                 <button type="button" @click="zoomIn()" title="Vergrößern" style="{{ $btn }}">+</button>
                                 <button type="button" @click="reset()" title="Originalgröße" style="{{ $btn }}">⟲</button>
+                                <button type="button" @click="lens = !lens" title="Lupe (beim Drüberfahren vergrößern)"
+                                    :style="'{{ $btn }}' + (lens ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : '')">🔍</button>
                                 <button type="button" @click="printReceipt()" title="Drucken" style="{{ $btn }}">🖨</button>
                                 <a :href="url" target="_blank" title="In neuem Tab öffnen" style="{{ $btn }}">↗</a>
                             </span>
@@ -613,7 +615,9 @@
 
                             @if ($receipt->is_pdf)
                                 {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
-                                <div style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
+                                <div style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                    :style="lens ? 'cursor:none;' : ''"
+                                    @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
                                          bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
                                          bleiben und nicht weggemorpht werden. --}}
@@ -626,11 +630,17 @@
                                     </template>
                                 </div>
                             @else
-                                <div style="height:80vh;overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;">
+                                <div style="height:80vh;overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                    :style="lens ? 'cursor:none;' : ''"
+                                    @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
                                         style="border-radius:.5rem;">
                                 </div>
                             @endif
+
+                            {{-- Lupe: folgt dem Cursor und zeigt den Bereich vergrößert --}}
+                            <canvas x-ref="lens" x-show="lens && lensVisible" width="240" height="180"
+                                style="position:fixed;pointer-events:none;z-index:9999;width:240px;height:180px;border:2px solid #0ea5e9;border-radius:10px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);"></canvas>
                         </div>
                     </div>
                 @else
@@ -669,6 +679,9 @@
                     zoom: 1,          // 1 = 100 %
                     baseScale: 1.4,   // Grundschärfe der PDF-Darstellung
                     loadStarted: false,
+                    lens: false,        // Lupe an/aus
+                    lensVisible: false, // Lupe gerade sichtbar (Cursor über Beleg)
+                    lensZoom: 2.6,      // Vergrößerungsfaktor der Lupe
                     // Alpine ruft init() automatisch auf; zusätzlich x-init="load()".
                     // load() ist idempotent (loadStarted), läuft also genau einmal.
                     init() {
@@ -736,6 +749,48 @@
                         if (w) {
                             try { w.addEventListener('load', () => w.print()); } catch (e) { /* Popup evtl. blockiert */ }
                         }
+                    },
+                    // Lupe: zeichnet den Bereich unter dem Cursor vergrößert in die
+                    // Lupen-Fläche. Funktioniert für PDF-Canvas UND Bild.
+                    magnify(e) {
+                        if (!this.lens) { this.lensVisible = false; return; }
+                        const src = e.target;
+                        if (!src || (src.tagName !== 'CANVAS' && src.tagName !== 'IMG')) {
+                            this.lensVisible = false;
+                            return;
+                        }
+                        const lensEl = this.$refs.lens;
+                        if (!lensEl) { return; }
+
+                        const rect = src.getBoundingClientRect();
+                        const srcW = src.tagName === 'IMG' ? (src.naturalWidth || rect.width) : src.width;
+                        const srcH = src.tagName === 'IMG' ? (src.naturalHeight || rect.height) : src.height;
+
+                        // Cursorposition als Anteil im Quellbild -> Quell-Pixel.
+                        const fx = (e.clientX - rect.left) / rect.width;
+                        const fy = (e.clientY - rect.top) / rect.height;
+                        const cx = fx * srcW;
+                        const cy = fy * srcH;
+
+                        // Auszuschneidender Bereich (in Quell-Pixeln), abhängig vom Zoom.
+                        const lw = lensEl.width, lh = lensEl.height;
+                        const regionW = (lw / this.lensZoom) * (srcW / rect.width);
+                        const regionH = (lh / this.lensZoom) * (srcH / rect.height);
+
+                        const ctx = lensEl.getContext('2d');
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(0, 0, lw, lh);
+                        try {
+                            ctx.drawImage(src, cx - regionW / 2, cy - regionH / 2, regionW, regionH, 0, 0, lw, lh);
+                        } catch (err) { return; }
+
+                        // Lupe neben dem Cursor positionieren (im Viewport halten).
+                        let px = e.clientX + 18, py = e.clientY + 18;
+                        if (px + lw > window.innerWidth) { px = e.clientX - lw - 18; }
+                        if (py + lh > window.innerHeight) { py = e.clientY - lh - 18; }
+                        lensEl.style.left = px + 'px';
+                        lensEl.style.top = py + 'px';
+                        this.lensVisible = true;
                     },
                 };
             });
