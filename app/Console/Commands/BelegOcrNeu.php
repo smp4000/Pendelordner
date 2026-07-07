@@ -19,7 +19,8 @@ class BelegOcrNeu extends Command
 {
     protected $signature = 'belege:ocr-neu
         {id? : Beleg-ID; ohne Angabe alle Belege ohne Text}
-        {--limit=200 : Maximalzahl bei Massenlauf}';
+        {--limit=200 : Maximalzahl bei Massenlauf}
+        {--pause=1500 : Pause in Millisekunden zwischen den Belegen (schont das Cloud-OCR-Limit)}';
 
     protected $description = 'OCR für Belege erneut ausführen (und diagnostizieren)';
 
@@ -78,6 +79,12 @@ class BelegOcrNeu extends Command
                 (string) $receipt->invoice_number,
                 number_format((float) $receipt->gross_amount, 2, ',', '.')
             ));
+
+            // Kurze Pause, damit wir das Cloud-OCR-Tempo-Limit nicht überrennen.
+            $pause = (int) $this->option('pause');
+            if ($pause > 0 && $receipts->count() > 1) {
+                usleep($pause * 1000);
+            }
         }
 
         $this->newLine();

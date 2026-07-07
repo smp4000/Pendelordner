@@ -142,18 +142,29 @@ class OcrService
         }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout((int) ($cfg['timeout'] ?? 60))
-                ->attach('file', (string) file_get_contents($absolutePath), basename($absolutePath))
-                ->post((string) ($cfg['endpoint'] ?? 'https://api.ocr.space/parse/image'), [
-                    'apikey' => (string) $cfg['api_key'],
-                    'language' => (string) ($cfg['language'] ?? 'ger'),
-                    'isOverlayRequired' => 'false',
-                    'scale' => 'true',
-                    'OCREngine' => (string) ($cfg['engine'] ?? 2),
-                    'filetype' => str_contains(strtolower($mime), 'pdf') ? 'PDF' : 'Auto',
-                ]);
+            $content = (string) file_get_contents($absolutePath);
+            $response = null;
 
-            if (! $response->ok()) {
+            // Bei 429 (Rate-Limit von OCR.space) kurz warten und erneut versuchen.
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                $response = \Illuminate\Support\Facades\Http::timeout((int) ($cfg['timeout'] ?? 60))
+                    ->attach('file', $content, basename($absolutePath))
+                    ->post((string) ($cfg['endpoint'] ?? 'https://api.ocr.space/parse/image'), [
+                        'apikey' => (string) $cfg['api_key'],
+                        'language' => (string) ($cfg['language'] ?? 'ger'),
+                        'isOverlayRequired' => 'false',
+                        'scale' => 'true',
+                        'OCREngine' => (string) ($cfg['engine'] ?? 2),
+                        'filetype' => str_contains(strtolower($mime), 'pdf') ? 'PDF' : 'Auto',
+                    ]);
+
+                if ($response->status() !== 429) {
+                    break;
+                }
+                sleep(3 + $attempt * 3); // 3s, 6s Backoff
+            }
+
+            if (! $response || ! $response->ok()) {
                 return '';
             }
             $data = $response->json();
