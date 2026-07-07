@@ -105,6 +105,10 @@ class SplitTest extends TestCase
         $component->set('splits.0.amount', '100,00');
         $this->assertEqualsWithDelta(100.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
 
+        // Summen-Eingabe: mehrere Beträge mit + werden addiert und so gespeichert.
+        $component->set('splits.0.amount', '50+411,32+311,70');
+        $this->assertEqualsWithDelta(773.02, (float) $tx->accountAssignments()->first()->amount, 0.001);
+
         // Position entfernen -> Aufteilung wird automatisch geleert.
         $component->call('removeSplit', 0);
         $this->assertSame(0, $tx->accountAssignments()->count());

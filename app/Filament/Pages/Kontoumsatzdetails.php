@@ -596,10 +596,28 @@ class Kontoumsatzdetails extends Page
 
     private function parseAmount(mixed $value): float
     {
+        // Deutsches Format: Tausenderpunkt entfernen, Komma -> Dezimalpunkt.
         $s = str_replace([' ', '.'], '', (string) $value);
         $s = str_replace(',', '.', $s);
 
+        // Summen-Eingabe: mehrere Beträge mit + / - werden addiert, z. B.
+        // "565,08+655,77+774,91" -> 1995,76. Ein einzelner Wert bleibt wie bisher.
+        if (preg_match_all('/[-+]?\d+(?:\.\d+)?/', $s, $m) && count($m[0]) > 1) {
+            return round(array_sum(array_map('floatval', $m[0])), 2);
+        }
+
         return (float) $s;
+    }
+
+    /**
+     * Formatierte Brutto-Summe einer Split-Zeile – für die Anzeige „= X €"
+     * neben dem Betragsfeld, wenn dort eine Summe (mit +) eingegeben wurde.
+     */
+    public function splitRowSum(int $index): string
+    {
+        $row = $this->splits[$index] ?? null;
+
+        return $row ? number_format($this->splitGross($row), 2, ',', '.') : '0,00';
     }
 
     public function toggleNote(): void

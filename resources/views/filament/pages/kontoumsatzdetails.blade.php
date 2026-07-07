@@ -307,7 +307,8 @@
                             <p style="font-size:.78rem;opacity:.7;margin:0 0 .5rem;">
                                 Kategorie und Kostenstelle werden aus der Zuordnung oben übernommen.
                                 Im Modus „Netto + USt" wird je Position die Umsatzsteuer aufgeschlagen.
-                                Änderungen werden automatisch gespeichert.
+                                <strong>Tipp:</strong> Im Betragsfeld mehrere Positionen mit <strong>+</strong> eingeben
+                                (z. B. <code>50+411,32+311,70</code>) – wird automatisch addiert. Änderungen werden automatisch gespeichert.
                             </p>
 
                             {{-- Aufteilungsvorlagen: fertige Konto-Sätze laden / aktuelle als Vorlage speichern --}}
@@ -367,9 +368,14 @@
                                         <option value="7">7</option>
                                         <option value="0">0</option>
                                     </x-filament::input.select>
-                                    <x-filament::input.wrapper>
-                                        <x-filament::input type="text" wire:model.live.debounce.400ms="splits.{{ $i }}.amount" placeholder="0,00" />
-                                    </x-filament::input.wrapper>
+                                    <div>
+                                        <x-filament::input.wrapper>
+                                            <x-filament::input type="text" wire:model.live.debounce.500ms="splits.{{ $i }}.amount" placeholder="z. B. 50+411,32+311,70" />
+                                        </x-filament::input.wrapper>
+                                        @if (str_contains((string) ($row['amount'] ?? ''), '+'))
+                                            <div style="font-size:.72rem;color:#059669;margin-top:.15rem;padding-left:.2rem;">= {{ $this->splitRowSum($i) }} €</div>
+                                        @endif
+                                    </div>
                                     <button type="button" wire:click="removeSplit({{ $i }})" title="Position entfernen"
                                         style="color:#dc2626;background:none;border:none;cursor:pointer;padding:.3rem;">✕</button>
                                 </div>
