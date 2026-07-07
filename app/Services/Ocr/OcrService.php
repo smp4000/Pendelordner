@@ -95,17 +95,46 @@ class OcrService
         $isPdf = $mimeType === 'application/pdf' || str_ends_with(strtolower($absolutePath), '.pdf');
 
         if ($isPdf) {
-            $text = $this->extractPdfText($absolutePath);
             $minLength = (int) config('pendelordner.ocr.pdf_text_mindestlaenge', 80);
 
+            // 1. Eingebetteten Text mit smalot lesen (schnell, rein PHP).
+            $text = $this->extractPdfText($absolutePath);
             if (mb_strlen(trim($text)) >= $minLength) {
                 return $text;
             }
-            // Zu wenig eingebetteter Text -> Bild-OCR versuchen (falls möglich).
-            return $this->ocrImage($absolutePath) ?: $text;
+
+            // 2. pdftotext (Poppler) – liest viele PDFs, an denen smalot scheitert
+            //    (Font-Kodierungen etc.). No-op, falls das Binary/shell_exec fehlt.
+            $poppler = $this->pdftotextExtract($absolutePath);
+            if (mb_strlen(trim($poppler)) >= $minLength) {
+                return $poppler;
+            }
+
+            // 3. Echter Scan/Bild-PDF -> Tesseract-OCR versuchen.
+            return $this->ocrImage($absolutePath) ?: ($poppler !== '' ? $poppler : $text);
         }
 
         return $this->ocrImage($absolutePath) ?? '';
+    }
+
+    /** Extrahiert PDF-Text via pdftotext (Poppler), falls verfügbar. */
+    private function pdftotextExtract(string $path): string
+    {
+        if (! function_exists('shell_exec')) {
+            return '';
+        }
+
+        try {
+            $bin = (string) config('pendelordner.ocr.pdftotext_pfad', 'pdftotext');
+            $cmd = escapeshellarg($bin) . ' -layout -enc UTF-8 ' . escapeshellarg($path) . ' - 2>/dev/null';
+            $out = @shell_exec($cmd);
+
+            return is_string($out) ? $out : '';
+        } catch (Throwable $e) {
+            report($e);
+
+            return '';
+        }
     }
 
     private function extractPdfText(string $path): string

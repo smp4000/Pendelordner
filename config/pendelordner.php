@@ -19,9 +19,11 @@ return [
     'ocr' => [
         'tesseract_pfad' => env('TESSERACT_PATH', 'tesseract'),
         'sprache' => env('TESSERACT_LANG', 'deu'),
-        // Erst versuchen, eingebetteten PDF-Text zu lesen (smalot/pdfparser),
-        // nur bei zu wenig Text auf Tesseract-OCR ausweichen.
+        // Erst eingebetteten PDF-Text lesen (smalot/pdfparser); reicht der Text
+        // nicht, pdftotext (Poppler) probieren – liest viele PDFs, an denen
+        // smalot scheitert; erst danach Tesseract-Bild-OCR.
         'pdf_text_mindestlaenge' => 80,
+        'pdftotext_pfad' => env('PDFTOTEXT_PATH', 'pdftotext'),
     ],
 
     /*
