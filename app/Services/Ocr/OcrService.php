@@ -36,7 +36,10 @@ class OcrService
         $absolutePath = $disk->path($receipt->file_path);
 
         try {
-            $text = $this->extractText($absolutePath, (string) $receipt->mime_type);
+            // WICHTIG: nach UTF-8 wandeln. smalot liefert bei manchen PDFs
+            // Latin-1/Windows-1252 (ß, ä, ü …); ungewandelt lehnt MySQL (utf8mb4)
+            // das Speichern ab ("Incorrect string value") und die OCR bliebe leer.
+            $text = self::ensureUtf8($this->extractText($absolutePath, (string) $receipt->mime_type));
 
             $receipt->ocr_text = $text;
             $receipt->ocr_status = trim($text) === '' ? OcrStatus::Failed->value : OcrStatus::Processed->value;
@@ -51,9 +54,37 @@ class OcrService
             $receipt->ocr_processed_at = now();
         }
 
-        $receipt->saveQuietly();
+        try {
+            $receipt->saveQuietly();
+        } catch (Throwable $e) {
+            // Notfall: defekten Text verwerfen, damit ein einzelner Beleg den
+            // Import/Lauf nicht abbricht – Status als fehlgeschlagen sichern.
+            report($e);
+            $receipt->ocr_text = null;
+            $receipt->ocr_status = OcrStatus::Failed->value;
+            $receipt->saveQuietly();
+        }
 
         return $receipt;
+    }
+
+    /**
+     * Stellt sicher, dass der Text gültiges UTF-8 ist. Bereits gültiges UTF-8
+     * bleibt unverändert; sonst wird von Windows-1252 (Superset von ISO-8859-1)
+     * gewandelt, notfalls werden ungültige Bytes entfernt.
+     */
+    public static function ensureUtf8(string $text): string
+    {
+        if ($text === '' || mb_check_encoding($text, 'UTF-8')) {
+            return $text;
+        }
+
+        $converted = @mb_convert_encoding($text, 'UTF-8', 'Windows-1252');
+        if (is_string($converted) && mb_check_encoding($converted, 'UTF-8')) {
+            return $converted;
+        }
+
+        return (string) @iconv('UTF-8', 'UTF-8//IGNORE', $text);
     }
 
     /**
