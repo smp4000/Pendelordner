@@ -304,11 +304,29 @@
                                         style="padding:.2rem .6rem;border-radius:.35rem;border:1px solid rgba(120,120,120,.3);cursor:pointer;{{ $splitMode==='netto' ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : 'background:transparent;' }}">Netto + USt</button>
                                 </div>
                             </div>
-                            <p style="font-size:.78rem;opacity:.7;margin:0 0 .6rem;">
+                            <p style="font-size:.78rem;opacity:.7;margin:0 0 .5rem;">
                                 Kategorie und Kostenstelle werden aus der Zuordnung oben übernommen.
                                 Im Modus „Netto + USt" wird je Position die Umsatzsteuer aufgeschlagen.
                                 Änderungen werden automatisch gespeichert.
                             </p>
+
+                            {{-- Aufteilungsvorlagen: fertige Konto-Sätze laden / aktuelle als Vorlage speichern --}}
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.6rem;font-size:.8rem;">
+                                @if ($this->splitTemplates->isNotEmpty())
+                                    <span style="opacity:.6;">Vorlage:</span>
+                                    <x-filament::input.select wire:change="applyTemplate($event.target.value)" style="max-width:16rem;">
+                                        <option value="">– Vorlage laden –</option>
+                                        @foreach ($this->splitTemplates as $tpl)
+                                            <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
+                                        @endforeach
+                                    </x-filament::input.select>
+                                @endif
+                                <span style="opacity:.4;">|</span>
+                                <x-filament::input.wrapper style="max-width:12rem;">
+                                    <x-filament::input type="text" wire:model="newTemplateName" placeholder="Als Vorlage speichern…" />
+                                </x-filament::input.wrapper>
+                                <x-filament::button wire:click="saveSplitAsTemplate" icon="heroicon-o-bookmark" color="gray" size="sm">Speichern</x-filament::button>
+                            </div>
 
                             <div style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">
                                 <span>Sachkonto (Kontenrahmen)</span>

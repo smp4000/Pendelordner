@@ -122,6 +122,9 @@ class Kontoumsatzdetails extends Page
     /** Aufteilung noch offen – Umsatz erscheint im Dashboard "Offene Aufteilungen". */
     public bool $splitOpen = false;
 
+    /** Name für "aktuelle Aufteilung als Vorlage speichern". */
+    public string $newTemplateName = '';
+
     // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
 
@@ -249,6 +252,79 @@ class Kontoumsatzdetails extends Page
         // Gespeicherte Beträge sind brutto (sie summieren sich zum Umsatzbetrag).
         $this->splitMode = 'brutto';
         $this->showSplit = ! empty($this->splits);
+    }
+
+    /** Verfügbare Aufteilungsvorlagen (für das Auswahl-Menü). */
+    public function getSplitTemplatesProperty(): Collection
+    {
+        return \App\Models\SplitTemplate::orderBy('name')->get();
+    }
+
+    /**
+     * Aufteilungsvorlage anwenden: Konten + USt-Sätze vorbelegen, Beträge leer
+     * lassen (die trägt der Nutzer je Umsatz ein). Überschreibt die aktuellen
+     * Split-Zeilen.
+     */
+    public function applyTemplate(int $templateId): void
+    {
+        $template = \App\Models\SplitTemplate::find($templateId);
+        if (! $template) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($template->rows as $r) {
+            $la = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
+                ->where('number', (string) ($r['ledger_number'] ?? ''))->first();
+            $rows[] = [
+                'ledger_account_id' => $la?->id,
+                'ledger_label' => $la ? $la->number . ' – ' . $la->name : (string) ($r['label'] ?? ''),
+                'ledger_search' => '',
+                'tax_rate' => (string) ($r['tax_rate'] ?? '19'),
+                'amount' => '',
+            ];
+        }
+
+        $this->splits = $rows;
+        $this->showSplit = true;
+
+        Notification::make()->title('Vorlage „' . $template->name . '" geladen')
+            ->body('Jetzt nur noch die Beträge je Zeile eintragen.')->success()->send();
+    }
+
+    /** Aktuelle Aufteilung (nur Konten + USt) als wiederverwendbare Vorlage speichern. */
+    public function saveSplitAsTemplate(): void
+    {
+        $name = trim($this->newTemplateName);
+        if ($name === '') {
+            Notification::make()->title('Bitte einen Namen für die Vorlage angeben')->warning()->send();
+
+            return;
+        }
+
+        $rows = [];
+        foreach ($this->splits as $r) {
+            if (empty($r['ledger_account_id'] ?? null)) {
+                continue;
+            }
+            $la = LedgerAccount::find($r['ledger_account_id']);
+            $rows[] = [
+                'ledger_number' => (string) ($la?->number ?? ''),
+                'tax_rate' => (string) ($r['tax_rate'] ?? ''),
+                'label' => (string) ($la?->name ?? ''),
+            ];
+        }
+
+        if (empty($rows)) {
+            Notification::make()->title('Keine Konten zum Speichern')->warning()->send();
+
+            return;
+        }
+
+        \App\Models\SplitTemplate::updateOrCreate(['name' => $name], ['rows' => $rows]);
+        $this->newTemplateName = '';
+
+        Notification::make()->title('Vorlage „' . $name . '" gespeichert (' . count($rows) . ' Konten)')->success()->send();
     }
 
     /** Neue, leere Position – Betrag mit dem Restbetrag vorbelegen. */
