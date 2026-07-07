@@ -327,6 +327,53 @@ class Kontoumsatzdetails extends Page
         Notification::make()->title('Vorlage „' . $name . '" gespeichert (' . count($rows) . ' Konten)')->success()->send();
     }
 
+    /**
+     * Aufteilung aus der USt-Tabelle des Belegs erzeugen: liest aus dem
+     * OCR-Text des ausgewählten (bzw. ersten zugeordneten) Belegs die
+     * Steuersätze mit ihren Bruttobeträgen und legt je Satz eine Zeile an
+     * (z. B. SB-Union: 454,71 € @ 19 % + 305,77 € @ 7 %). Das Sachkonto
+     * bleibt zur Auswahl offen, Betrag und USt-Satz sind vorbelegt.
+     */
+    public function fillSplitFromReceiptTax(): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $receipt = $this->selectedReceipt
+            ?: $transaction->receipts->first(fn (Receipt $r) => filled($r->ocr_text));
+
+        if (! $receipt || blank($receipt->ocr_text)) {
+            Notification::make()->title('Kein Beleg mit erkanntem Text ausgewählt')
+                ->body('Bitte zuerst den Beleg zuordnen bzw. auswählen.')->warning()->send();
+
+            return;
+        }
+
+        $rates = (new \App\Services\Ocr\ReceiptParser())->taxBreakdown((string) $receipt->ocr_text);
+        if (empty($rates)) {
+            Notification::make()->title('Keine USt-Aufteilung im Beleg gefunden')
+                ->body('Der Beleg weist keinen Steuer-Summenblock (19 %/7 %) aus.')->warning()->send();
+
+            return;
+        }
+
+        $this->splits = array_map(fn (array $r) => [
+            'ledger_account_id' => null,
+            'ledger_label' => '',
+            'ledger_search' => '',
+            'tax_rate' => (string) $r['rate'],
+            'amount' => number_format($r['gross'], 2, ',', ''),
+        ], $rates);
+        $this->splitMode = 'brutto';
+        $this->showSplit = true;
+
+        Notification::make()->title(count($rates) . ' Steuersätze aus Beleg übernommen')
+            ->body('Bruttobeträge je Satz eingetragen – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
+            ->success()->send();
+    }
+
     /** Neue, leere Position – Betrag mit dem Restbetrag vorbelegen. */
     public function addSplit(): void
     {
@@ -1186,10 +1233,14 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
+        $amounts = $suggestion['amounts'] ?? [];
         foreach ($suggestion['invoices'] as $receipt) {
+            // Maßgeblich ist der aus der Avis-Zeile gelesene Betrag (mit
+            // Vorzeichen); nur ersatzweise der Belegbetrag.
+            $applied = $amounts[$receipt->id] ?? round((float) $receipt->gross_amount, 2);
             $transaction->receipts()->syncWithoutDetaching([
                 $receipt->id => [
-                    'amount' => round((float) $receipt->gross_amount, 2),
+                    'amount' => round((float) $applied, 2),
                     'match_type' => 'advice',
                     'sort_order' => $transaction->receipts()->count(),
                 ],
@@ -1263,12 +1314,15 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        $amount = min(
-            $receipt->open_amount > 0 ? $receipt->open_amount : (float) $receipt->gross_amount,
-            $transaction->difference > 0 ? $transaction->difference : abs((float) $transaction->amount)
-        );
-        if ($amount <= 0) {
-            $amount = abs((float) $transaction->amount);
+        // Eigenen (offenen) Belegbetrag MIT Vorzeichen übernehmen – nicht auf den
+        // Umsatz-Restbetrag kappen. Bei Sammelzahlungen/Avisen kann eine einzelne
+        // Zeile den Netto-Umsatz deutlich übersteigen (Gutschrift gegen Soll), und
+        // ein negativer Belegbetrag darf nicht auf den positiven Netto gedreht
+        // werden. Nur wenn der Beleg gar keinen Betrag hat, den Restbetrag setzen.
+        $open = round((float) $receipt->open_amount, 2);
+        $amount = abs($open) >= 0.005 ? $open : round((float) $receipt->gross_amount, 2);
+        if (abs($amount) < 0.005) {
+            $amount = round(abs((float) $transaction->amount), 2);
         }
 
         $transaction->receipts()->syncWithoutDetaching([

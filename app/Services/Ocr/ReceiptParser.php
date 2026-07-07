@@ -317,6 +317,53 @@ class ReceiptParser
         return null;
     }
 
+    /**
+     * USt-Aufteilung aus dem Steuer-Summenblock einer Rechnung, die mehrere
+     * Steuersätze mischt (typisch SB-Union/Großhandel: 19 % + 7 %). Liest je
+     * Satz Netto-, Steuer- und Bruttobetrag aus Zeilen wie
+     *   "19%USt.:  382,11  72,60  454,71"
+     *   " 7%USt.:  285,77  20,00  305,77"
+     * (auch wenn OCR Wörter wie "Betrag:" dazwischen streut). Nur Sätze, bei
+     * denen Netto + Steuer ≈ Brutto aufgeht, werden übernommen.
+     *
+     * @return array<int, array{rate: int, net: float, tax: float, gross: float}>
+     */
+    public function taxBreakdown(string $text): array
+    {
+        $text = str_replace('<>', '', $text);
+        // Tausendertrenner nur Punkt: die drei Spalten sind selbst durch
+        // Leerzeichen getrennt, ein Leerzeichen im Betrag würde sie verkleben.
+        $amount = '\d{1,3}(?:\.\d{3})*,\d{2}';
+
+        // Rate (19|7), gefolgt von "% USt", dann drei Beträge (Netto, Steuer, Brutto).
+        // (?<!\d) verhindert Treffer wie "119%"; \D+? überspringt Wörter/Trenner.
+        $re = '/(?<!\d)(19|7)\s*%\s*ust[.\s:]*\D*?(' . $amount . ')\D+?(' . $amount . ')\D+?(' . $amount . ')/iu';
+
+        $out = [];
+        if (preg_match_all($re, $text, $ms, PREG_SET_ORDER)) {
+            foreach ($ms as $m) {
+                $rate = (int) $m[1];
+                if (isset($out[$rate])) {
+                    continue;
+                }
+                $net = $this->parseAmount($m[2]);
+                $tax = $this->parseAmount($m[3]);
+                $gross = $this->parseAmount($m[4]);
+
+                // Plausibilität: Netto + Steuer muss den Bruttobetrag ergeben.
+                if (abs($net + $tax - $gross) > 0.02) {
+                    continue;
+                }
+
+                $out[$rate] = ['rate' => $rate, 'net' => $net, 'tax' => $tax, 'gross' => $gross];
+            }
+        }
+
+        krsort($out); // 19 % vor 7 %
+
+        return array_values($out);
+    }
+
     private function taxAmount(string $text): ?float
     {
         $keywords = ['mwst', 'mehrwertsteuer', 'ust', 'umsatzsteuer', 'steuer'];

@@ -420,6 +420,29 @@ class ServicesTest extends TestCase
         $this->assertSame('Lekkerland SE', $parser->supplierNameGuess($text));
     }
 
+    public function test_parser_erkennt_ust_aufteilung_gemischt(): void
+    {
+        // SB-Union-Rechnung mit gemischten Steuersätzen: der Steuer-Summenblock
+        // weist je Satz Netto/USt/Brutto aus. OCR streut Wörter dazwischen.
+        $text = "NettoBetrag:USt.-Betrag: Brutto\n"
+            . "19%USt.: 382,11 72,60 Betrag: 454,71\n"
+            . "7%USt.: 285,77 20,00 305,77\n"
+            . "Summe: 667,88 92,60 760,48\n"
+            . "Rechnungssumme EUR: 760,48";
+
+        $rates = (new ReceiptParser())->taxBreakdown($text);
+
+        $this->assertCount(2, $rates);
+        // 19 % zuerst.
+        $this->assertSame(19, $rates[0]['rate']);
+        $this->assertEqualsWithDelta(454.71, $rates[0]['gross'], 0.001);
+        $this->assertEqualsWithDelta(72.60, $rates[0]['tax'], 0.001);
+        $this->assertSame(7, $rates[1]['rate']);
+        $this->assertEqualsWithDelta(305.77, $rates[1]['gross'], 0.001);
+        // Bruttosumme der Sätze = Rechnungssumme.
+        $this->assertEqualsWithDelta(760.48, $rates[0]['gross'] + $rates[1]['gross'], 0.001);
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [

@@ -111,16 +111,21 @@ class MatchingEngine
         //     dessen eigener Betrag ~ Umsatzbetrag ist (= die Gesamtsumme).
         $sources = [];
 
-        $txText = $this->normalizeText((string) $transaction->purpose . ' ' . (string) $transaction->bank_reference);
+        $txRaw = (string) $transaction->purpose . ' ' . (string) $transaction->bank_reference;
+        $txText = $this->normalizeText($txRaw);
         if (mb_strlen($txText) >= 8) {
-            $sources[] = ['advice' => null, 'text' => $txText];
+            $sources[] = ['advice' => null, 'text' => $txText, 'raw' => $txRaw];
         }
 
         $advices = $receipts->filter(fn (Receipt $r) => filled($r->ocr_text))
             ->sortByDesc(fn (Receipt $r) => abs((float) $r->gross_amount - $target) <= $tolerance ? 1 : 0)
             ->values();
         foreach ($advices as $advice) {
-            $sources[] = ['advice' => $advice, 'text' => $this->normalizeText((string) $advice->ocr_text)];
+            $sources[] = [
+                'advice' => $advice,
+                'text' => $this->normalizeText((string) $advice->ocr_text),
+                'raw' => (string) $advice->ocr_text,
+            ];
         }
 
         foreach ($sources as $src) {
@@ -139,13 +144,60 @@ class MatchingEngine
                 continue;
             }
 
-            $sum = round((float) $matched->sum(fn (Receipt $r) => (float) $r->gross_amount), 2);
-            if (abs($sum - $target) <= $tolerance) {
-                return ['advice' => $src['advice'], 'invoices' => $matched, 'sum' => $sum];
+            // Maßgeblich ist die Betragsspalte des Avis: für jede Rechnung den
+            // Betrag DIREKT aus der Avis-Zeile lesen (mit Vorzeichen – Aral-Avise
+            // verrechnen Soll-Belege gegen die Kraftstoff-Gutschrift). Nur wenn
+            // in der Zeile kein Betrag steht, auf den Belegbetrag zurückfallen.
+            $amounts = [];
+            foreach ($matched as $r) {
+                $line = $this->adviceLineAmount($src['raw'], (string) $r->invoice_number);
+                $amounts[$r->id] = $line ?? round((float) $r->gross_amount, 2);
+            }
+
+            // Die Zeilenbeträge müssen sich zum Umsatzbetrag saldieren. Vorzeichen
+            // kann je nach Avis kippen (Gutschrift +/–), daher auch |Summe| prüfen.
+            $sum = round(array_sum($amounts), 2);
+            if (abs($sum - $target) <= $tolerance || abs(abs($sum) - $target) <= $tolerance) {
+                return [
+                    'advice' => $src['advice'],
+                    'invoices' => $matched,
+                    'sum' => round(abs($sum), 2),
+                    'amounts' => $amounts,
+                ];
             }
         }
 
         return null;
+    }
+
+    /**
+     * Liest den Betrag einer Avis-Zeile: sucht die Rechnungs-/Belegnummer im
+     * Rohtext und nimmt den nächsten Geldbetrag dahinter (mit Vorzeichen).
+     * Datumsangaben (Punkt-getrennt, ohne Nachkommastellen) werden ignoriert,
+     * weil nur Beträge ein Dezimalkomma ",dd" haben. Gibt null zurück, wenn in
+     * der Zeile kein Betrag gefunden wird.
+     */
+    public function adviceLineAmount(string $text, string $invoiceNumber): ?float
+    {
+        $inv = trim($invoiceNumber);
+        if (mb_strlen($inv) < 4) {
+            return null;
+        }
+
+        // Nach der Belegnummer den ersten Geldbetrag (deutsches Format) greifen.
+        // Tausendertrenner nur Punkt – KEIN Leerzeichen, sonst verklebt ein
+        // vorangehendes Datumsjahr mit dem Betrag ("2026 286,33" -> 26.286,33).
+        $pattern = '/' . preg_quote($inv, '/') . '\D.{0,60}?(-?\d{1,3}(?:\.\d{3})*,\d{2})/su';
+        if (! preg_match($pattern, $text, $m)) {
+            return null;
+        }
+
+        $raw = $m[1];
+        $neg = str_starts_with($raw, '-');
+        $digits = preg_replace('/[^\d,]/', '', $raw);          // Tausenderpunkte/Leerzeichen weg
+        $val = (float) str_replace(',', '.', (string) $digits); // Komma -> Dezimalpunkt
+
+        return round($neg ? -$val : $val, 2);
     }
 
     /** Text auf Buchstaben/Ziffern reduzieren und kleinschreiben (für Nummern-Vergleich). */

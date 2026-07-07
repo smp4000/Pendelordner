@@ -327,6 +327,11 @@
                                     <x-filament::input type="text" wire:model="newTemplateName" placeholder="Als Vorlage speichern…" />
                                 </x-filament::input.wrapper>
                                 <x-filament::button wire:click="saveSplitAsTemplate" icon="heroicon-o-bookmark" color="gray" size="sm">Speichern</x-filament::button>
+                                <span style="opacity:.4;">|</span>
+                                {{-- USt-Aufteilung direkt aus dem Beleg (gemischte 19/7 %-Rechnungen, z. B. SB-Union) --}}
+                                <x-filament::button wire:click="fillSplitFromReceiptTax" icon="heroicon-o-calculator" color="info" size="sm">
+                                    USt-Aufteilung aus Beleg
+                                </x-filament::button>
                             </div>
 
                             <div style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">

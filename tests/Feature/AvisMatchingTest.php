@@ -93,6 +93,63 @@ class AvisMatchingTest extends TestCase
         $this->assertEqualsCanonicalizing([$r1->id, $r2->id, $r3->id], $result['invoices']->pluck('id')->all());
     }
 
+    public function test_aral_avis_mit_gutschrift_saldiert_auf_null(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Geschäftskonto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Aral-Sammelavis: drei Soll-Belege gegen eine große Kraftstoff-Gutschrift.
+        // Netto-Lastschrift 1.846,67 € (= -397,73 -10.177,57 -336,01 +12.757,98).
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-10', 'counterparty' => 'ARAL Aktiengesellschaft',
+            'amount' => -1846.67, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $advice = Receipt::create([
+            'type' => 'incoming_invoice', 'gross_amount' => 1846.67,
+            'file_path' => '2026/06/aral-avis.pdf', 'mime_type' => 'application/pdf',
+            'ocr_text' => "AVIS - Schreiben Zahlungsbeleg 207582772 "
+                . "Belegnummer Ihr Beleg Belegart Datum Betrag "
+                . "680430279 1016852724 *Supercardabrechnung 08.06.2026 -397,73 EUR "
+                . "651217468 0862956023 *Kreditkartenabrechnung 08.06.2026 -10.177,57 EUR "
+                . "640224491 6312064147 *Stationskarten-Stundung 08.06.2026 -336,01 EUR "
+                . "91160042 0991823114 *OK/DK-Tankstellen-Abrechnung 08.06.2026 12.757,98 EUR "
+                . "Gesamtsumme 1.846,67 EUR",
+        ]);
+
+        // Einzelbelege – der Betrag der Gutschrift ist bewusst FALSCH gespeichert
+        // (OCR griff die Gesamtsumme), muss also aus der Avis-Zeile korrigiert werden.
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '1016852724', 'gross_amount' => -397.73]);
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '0862956023', 'gross_amount' => -10177.57]);
+        $r3 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '6312064147', 'gross_amount' => -336.01]);
+        $r4 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '0991823114', 'gross_amount' => 1846.67]);
+
+        $result = (new MatchingEngine())->suggestFromAdvice($tx);
+        $this->assertNotNull($result);
+        $this->assertSame($advice->id, $result['advice']->id);
+        // Beträge stammen aus den Avis-Zeilen, nicht aus gross_amount.
+        $this->assertEqualsWithDelta(-397.73, $result['amounts'][$r1->id], 0.001);
+        $this->assertEqualsWithDelta(12757.98, $result['amounts'][$r4->id], 0.001);
+
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('attachAdviceInvoices');
+
+        $fresh = $tx->fresh();
+        $this->assertSame(4, $fresh->receipts()->count());
+        $this->assertEqualsWithDelta(0.0, (float) $fresh->difference, 0.01);
+        // Die Gutschriftzeile trägt ihren vollen Betrag – nicht den Netto-Umsatz.
+        $this->assertEqualsWithDelta(
+            12757.98,
+            (float) $fresh->receipts()->where('receipts.id', $r4->id)->first()->pivot->amount,
+            0.01
+        );
+    }
+
     public function test_diagnose_befehl_laeuft(): void
     {
         $this->seed(DatabaseSeeder::class);
