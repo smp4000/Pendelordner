@@ -24,6 +24,20 @@ return [
         // smalot scheitert; erst danach Tesseract-Bild-OCR.
         'pdf_text_mindestlaenge' => 80,
         'pdftotext_pfad' => env('PDFTOTEXT_PATH', 'pdftotext'),
+
+        // Cloud-OCR als Fallback, wenn weder smalot noch pdftotext noch lokales
+        // Tesseract Text liefern (z. B. reine Bild-/Scan-PDFs). Standard: OCR.space.
+        // Hinweis: Dabei geht die Datei zur Texterkennung an den externen Dienst.
+        'cloud' => [
+            'enabled' => (bool) env('OCR_CLOUD_ENABLED', false),
+            'endpoint' => env('OCR_CLOUD_ENDPOINT', 'https://api.ocr.space/parse/image'),
+            'api_key' => env('OCR_CLOUD_API_KEY'),
+            'language' => env('OCR_CLOUD_LANG', 'ger'),
+            'engine' => (int) env('OCR_CLOUD_ENGINE', 2),
+            'timeout' => (int) env('OCR_CLOUD_TIMEOUT', 60),
+            // Freie Kontingente begrenzen die Dateigröße (OCR.space Free: 1 MB).
+            'max_bytes' => (int) env('OCR_CLOUD_MAX_BYTES', 1024000),
+        ],
     ],
 
     /*

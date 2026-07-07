@@ -110,11 +110,70 @@ class OcrService
                 return $poppler;
             }
 
-            // 3. Echter Scan/Bild-PDF -> Tesseract-OCR versuchen.
-            return $this->ocrImage($absolutePath) ?: ($poppler !== '' ? $poppler : $text);
+            // 3. Cloud-OCR (falls aktiviert) – für reine Bild-/Scan-PDFs.
+            $cloud = $this->cloudOcr($absolutePath, $mimeType);
+            if (mb_strlen(trim($cloud)) >= $minLength) {
+                return $cloud;
+            }
+
+            // 4. Lokales Tesseract (falls installiert).
+            return $this->ocrImage($absolutePath) ?: ($poppler !== '' ? $poppler : ($cloud !== '' ? $cloud : $text));
         }
 
-        return $this->ocrImage($absolutePath) ?? '';
+        // Bilddateien: erst lokales Tesseract, dann Cloud-OCR.
+        return $this->ocrImage($absolutePath) ?: $this->cloudOcr($absolutePath, $mimeType);
+    }
+
+    /**
+     * Cloud-OCR als Fallback (Standard: OCR.space). Sendet die Datei an den
+     * konfigurierten Dienst und gibt den erkannten Text zurück. No-op, wenn
+     * deaktiviert, kein API-Key gesetzt oder die Datei zu groß ist.
+     */
+    public function cloudOcr(string $absolutePath, string $mime = ''): string
+    {
+        $cfg = config('pendelordner.ocr.cloud', []);
+
+        if (empty($cfg['enabled']) || empty($cfg['api_key']) || ! is_file($absolutePath)) {
+            return '';
+        }
+        $maxBytes = (int) ($cfg['max_bytes'] ?? 0);
+        if ($maxBytes > 0 && filesize($absolutePath) > $maxBytes) {
+            return '';
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout((int) ($cfg['timeout'] ?? 60))
+                ->attach('file', (string) file_get_contents($absolutePath), basename($absolutePath))
+                ->post((string) ($cfg['endpoint'] ?? 'https://api.ocr.space/parse/image'), [
+                    'apikey' => (string) $cfg['api_key'],
+                    'language' => (string) ($cfg['language'] ?? 'ger'),
+                    'isOverlayRequired' => 'false',
+                    'scale' => 'true',
+                    'OCREngine' => (string) ($cfg['engine'] ?? 2),
+                    'filetype' => str_contains(strtolower($mime), 'pdf') ? 'PDF' : 'Auto',
+                ]);
+
+            if (! $response->ok()) {
+                return '';
+            }
+            $data = $response->json();
+            if (($data['IsErroredOnProcessing'] ?? false) === true) {
+                report(new \RuntimeException('Cloud-OCR-Fehler: ' . json_encode($data['ErrorMessage'] ?? [])));
+
+                return '';
+            }
+
+            $text = '';
+            foreach (($data['ParsedResults'] ?? []) as $result) {
+                $text .= ($result['ParsedText'] ?? '') . "\n";
+            }
+
+            return trim($text);
+        } catch (Throwable $e) {
+            report($e);
+
+            return '';
+        }
     }
 
     /** Extrahiert PDF-Text via pdftotext (Poppler), falls verfügbar. */
