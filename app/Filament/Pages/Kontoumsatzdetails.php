@@ -45,6 +45,14 @@ class Kontoumsatzdetails extends Page
 
     public ?int $selectedTransactionId = null;
 
+    /**
+     * Optionale Auswahl-Menge: nur diese Umsatz-IDs werden durchblättert (z. B.
+     * aus dem Dashboard-Widget "Offene Aufteilungen" mehrfach ausgewählt).
+     *
+     * @var list<int>
+     */
+    public array $navIds = [];
+
     public ?int $selectedReceiptId = null;
 
     // Filterkontext aus der Umsatzliste (beschränkt die Navigation).
@@ -157,9 +165,14 @@ class Kontoumsatzdetails extends Page
         $this->filterReviewed = request()->has('reviewed') ? (string) request('reviewed') : null;
         $this->filterWithoutReceipt = request()->has('without_receipt') ? (string) request('without_receipt') : null;
 
+        // Auswahl-Menge (z. B. mehrere aus "Offene Aufteilungen"): ?ids=1,2,3
+        $this->navIds = request('ids')
+            ? array_values(array_filter(array_map('intval', explode(',', (string) request('ids')))))
+            : [];
+
         $this->selectedTransactionId = request('tx')
             ? (int) request('tx')
-            : $this->navigationQuery()->value('id');
+            : ($this->navIds[0] ?? $this->navigationQuery()->value('id'));
 
         $this->fillAssign();
     }
@@ -877,6 +890,13 @@ class Kontoumsatzdetails extends Page
     /** Basisquery der Navigation – gefiltert (aus der Liste) oder Standard (offene Ausgaben). */
     private function navigationQuery()
     {
+        // Auswahl-Menge hat Vorrang: nur die ausgewählten Umsätze durchblättern.
+        if (! empty($this->navIds)) {
+            return BankTransaction::query()
+                ->whereIn('id', $this->navIds)
+                ->orderBy('booking_date')->orderBy('id');
+        }
+
         if ($this->hasFilterContext()) {
             return BankTransaction::query()
                 ->when($this->filterAccountId, fn ($q) => $q->where('bank_account_id', $this->filterAccountId))
@@ -935,6 +955,12 @@ class Kontoumsatzdetails extends Page
      */
     private function counterIds(): array
     {
+        // Bei einer Auswahl-Menge zählen alle ausgewählten Umsätze (unabhängig
+        // vom Prüf-Status – sie sollen ja bewusst nacheinander bearbeitet werden).
+        if (! empty($this->navIds)) {
+            return $this->openTransactions->pluck('id')->values()->all();
+        }
+
         $list = $this->openTransactions;
         if ($this->filterReviewed !== '1') {
             $list = $list->where('reviewed', false);

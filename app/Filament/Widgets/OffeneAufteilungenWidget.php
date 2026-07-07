@@ -5,10 +5,12 @@ namespace App\Filament\Widgets;
 use App\Filament\Pages\Kontoumsatzdetails;
 use App\Models\BankTransaction;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Dashboard-Widget: Umsätze, die als geprüft/bezahlt im Bericht sind, deren
@@ -84,6 +86,22 @@ class OffeneAufteilungenWidget extends TableWidget
                     ->action(function (BankTransaction $record): void {
                         $record->update(['split_open' => false]);
                         Notification::make()->title('Aus „Offene Aufteilungen" entfernt')->success()->send();
+                    }),
+            ])
+            ->toolbarActions([
+                // Mehrere auswählen und der Reihe nach bearbeiten: springt in die
+                // Kontoumsatzdetails und blättert nur durch die ausgewählten Umsätze.
+                BulkAction::make('mehrere_bearbeiten')
+                    ->label('Ausgewählte bearbeiten')
+                    ->icon('heroicon-o-scissors')
+                    ->color('primary')
+                    ->action(function (Collection $records) {
+                        $ids = $records->pluck('id')->filter()->values()->all();
+                        if (empty($ids)) {
+                            return null;
+                        }
+
+                        return redirect(Kontoumsatzdetails::getUrl() . '?ids=' . implode(',', $ids) . '&tx=' . $ids[0]);
                     }),
             ]);
     }
