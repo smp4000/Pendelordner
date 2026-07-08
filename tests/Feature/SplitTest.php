@@ -321,6 +321,41 @@ class SplitTest extends TestCase
         $this->assertStringContainsString('Aufteilung', $html);
     }
 
+    public function test_bericht_summiert_gleiche_sachkonten(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'GS', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '2645'], ['name' => 'Pfand Agentur']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-05', 'counterparty' => 'Lekkerland',
+            'amount' => -116.39, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Zweimal dasselbe Sachkonto + Satz (aus zwei verschiedenen Rechnungen).
+        $tx->accountAssignments()->create(['chart_of_accounts' => 'edtas', 'ledger_account_id' => $la->id, 'tax_rate' => 19, 'amount' => 46.84, 'booking_date' => $tx->booking_date]);
+        $tx->accountAssignments()->create(['chart_of_accounts' => 'edtas', 'ledger_account_id' => $la->id, 'tax_rate' => 19, 'amount' => 69.55, 'booking_date' => $tx->booking_date]);
+        $this->assertSame(2, $tx->accountAssignments()->count());
+
+        $tx = BankTransaction::with(['receipts', 'category', 'costCenter', 'ledgerAccount', 'supplier', 'bankAccount', 'accountAssignments.ledgerAccount'])->find($tx->id);
+        $html = view('pdf.steuerberater', [
+            'business' => Business::first(), 'account' => $account,
+            'periodLabel' => 'Juni 2026', 'generatedAt' => '01.07.2026',
+            'transactions' => collect([$tx]),
+            'stats' => ['count' => 1, 'income' => 0, 'expense' => -116.39, 'receipts' => 0, 'withoutReceipt' => 1, 'unreviewed' => 1, 'appendedFiles' => 0, 'steuerFiles' => 0],
+            'receiptNumbers' => [], 'steuerNumbers' => [], 'steuerDocs' => collect(), 'reportNotes' => collect(),
+            'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
+        ])->render();
+
+        // Nur EINE Zeile für 2645 – mit der Summe 46,84 + 69,55 = 116,39.
+        $this->assertSame(1, substr_count($html, '2645'));
+        $this->assertStringContainsString('116,39', $html);
+    }
+
     public function test_bericht_blendet_kategorie_und_konto_bei_split_aus(): void
     {
         $this->seed(DatabaseSeeder::class);

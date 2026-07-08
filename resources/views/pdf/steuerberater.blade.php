@@ -180,7 +180,20 @@
                     <td></td>
                     <td colspan="5">
                         <table class="splits">
-                            @foreach ($t->accountAssignments as $a)
+                            @php
+                                // Gleiches Sachkonto + gleicher USt-Satz zu EINER Zeile
+                                // zusammenfassen: Positionen aus verschiedenen Rechnungen
+                                // (z. B. 2645 zweimal) werden im Bericht addiert.
+                                $groupedSplits = $t->accountAssignments
+                                    ->groupBy(fn ($a) => $a->ledger_account_id . '|' . ($a->tax_rate !== null ? (float) $a->tax_rate : 'x'))
+                                    ->map(fn ($rows) => (object) [
+                                        'ledgerAccount' => $rows->first()->ledgerAccount,
+                                        'tax_rate' => $rows->first()->tax_rate,
+                                        'amount' => $rows->sum(fn ($r) => (float) $r->amount),
+                                    ])
+                                    ->values();
+                            @endphp
+                            @foreach ($groupedSplits as $a)
                                 @php
                                     // Gruppen-Anhang aus dem Kontonamen entfernen (z. B. " A,Karten, …").
                                     $splitName = $a->ledgerAccount
