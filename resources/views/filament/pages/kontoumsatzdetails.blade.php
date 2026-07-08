@@ -19,7 +19,7 @@
             {{-- LINKS: Navigation + Details + Tabs. Eigenes Scroll-Fenster auf
                  Bildschirmhöhe: der (lange) Aufteilungs-Editor scrollt hier
                  intern, unabhängig vom PDF rechts – so sieht man beide zugleich. --}}
-            <div class="beleg-scroll" style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow-y:auto;padding-right:.3rem;">
+            <div class="beleg-scroll left-pane" style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow-y:auto;padding-right:.3rem;">
 
                 {{-- Kontokopf + Navigation --}}
                 <x-filament::section style="padding:.6rem .8rem;">
@@ -694,6 +694,11 @@
         }
         .beleg-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         .beleg-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
+        /* Linke Spalte ist ein Flex-Scroll-Fenster: die Abschnitte dürfen NICHT
+           schrumpfen, sonst wird die (lange) Belegliste zusammengedrückt und
+           abgeschnitten statt scrollbar. flex-shrink:0 => sie laufen über und
+           die Spalte scrollt. */
+        .left-pane > * { flex-shrink: 0; }
     </style>
 
     {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
