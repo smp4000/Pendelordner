@@ -194,7 +194,7 @@ class MatchingEngine
             return null;
         }
 
-        return $this->germanAmountToFloat($m[1]);
+        return $this->moneyToFloat($m[1]);
     }
 
     /**
@@ -208,21 +208,29 @@ class MatchingEngine
      */
     public function parseAdviceTable(string $text): array
     {
-        // Genau EIN Geldbetrag pro Zeile (die Betragsspalte); Datum hat kein
-        // Dezimalkomma und stört daher nicht. "EUR" ist optional.
-        $amount = '-?\d{1,3}(?:\.\d{3})*,\d{2}';
-        $re = '/^\s*(\d{5,})\s+(\d{4,})\b.*?(' . $amount . ')(?:\s*EUR)?/mu';
+        // Geldbetrag in deutschem ODER englischem Format (Tausender- und
+        // Dezimaltrenner können Punkt oder Komma sein).
+        $amount = '-?(?:\d{1,3}(?:[.,]\d{3})+|\d{1,4})[.,]\d{2}';
+        // Der Betrag steht am ZEILENENDE (Spalte Bruttobetrag, ggf. "EUR"
+        // dahinter). Das $-Anker überspringt Zwischenspalten wie das Datum oder
+        // eine "0.00"-Spalte davor – sonst würde der erste Betrag (0.00 / Datum)
+        // fälschlich genommen.
+        $re = '/^[^\S\r\n]*(\d{5,})\s+(\d{4,})\b.*?(' . $amount . ')(?:\s*EUR)?[^\S\r\n]*$/mu';
 
         $map = [];
         if (preg_match_all($re, $text, $rows, PREG_SET_ORDER)) {
             foreach ($rows as $row) {
-                $value = $this->germanAmountToFloat($row[3]);
+                $value = $this->moneyToFloat($row[3]);
                 // "Ihr Beleg" (Spalte 2) ist die Rechnungsnummer der Belege; die
                 // Belegnummer (Spalte 1) zusätzlich, falls ein Beleg diese trägt.
+                // Jeweils auch OHNE führende Nullen ablegen (Avis: "0227869229",
+                // Beleg: "227869229").
                 foreach ([$row[2], $row[1]] as $no) {
                     $key = $this->normalizeText($no);
-                    if (mb_strlen($key) >= 4 && ! array_key_exists($key, $map)) {
-                        $map[$key] = $value;
+                    foreach (array_unique([$key, ltrim($key, '0')]) as $k) {
+                        if (mb_strlen($k) >= 4 && ! array_key_exists($k, $map)) {
+                            $map[$k] = $value;
+                        }
                     }
                 }
             }
@@ -241,19 +249,42 @@ class MatchingEngine
     public function adviceAmountFor(string $text, string $invoiceNumber, array $table = []): ?float
     {
         $key = $this->normalizeText($invoiceNumber);
-        if (mb_strlen($key) >= 4 && array_key_exists($key, $table)) {
-            return $table[$key];
+        // Führende-Null-tolerant nachschlagen (Beleg "227869229" vs. Avis "0227869229").
+        foreach (array_unique([$key, ltrim($key, '0')]) as $k) {
+            if (mb_strlen($k) >= 4 && array_key_exists($k, $table)) {
+                return $table[$k];
+            }
         }
 
         return $this->adviceLineAmount($text, $invoiceNumber);
     }
 
-    /** Deutschen Geldbetrag ("-10.793,68") in float wandeln (mit Vorzeichen). */
-    private function germanAmountToFloat(string $raw): float
+    /**
+     * Wandelt einen Geldbetrag in float – erkennt deutsches UND englisches
+     * Format. Maßgeblich ist das ZULETZT stehende Trennzeichen = Dezimaltrenner:
+     *   "6.403,09" (deutsch)  -> 6403.09
+     *   "6,403.09" (englisch) -> 6403.09   (manche Aral-Avise nutzen dieses Format)
+     *   "216.22"              -> 216.22
+     * Alle übrigen Trenner sind Tausenderpunkte/-kommata und werden entfernt.
+     */
+    private function moneyToFloat(string $raw): float
     {
-        $neg = str_starts_with(trim($raw), '-');
-        $digits = preg_replace('/[^\d,]/', '', $raw);          // Tausenderpunkte/Leerzeichen weg
-        $val = (float) str_replace(',', '.', (string) $digits); // Komma -> Dezimalpunkt
+        $neg = str_contains($raw, '-');
+        $s = (string) preg_replace('/[^\d.,]/', '', $raw); // nur Ziffern + . ,
+        if ($s === '') {
+            return 0.0;
+        }
+
+        $posComma = strrpos($s, ',');
+        $posDot = strrpos($s, '.');
+        if ($posComma === false && $posDot === false) {
+            $val = (float) $s;
+        } else {
+            $decPos = max($posComma === false ? -1 : $posComma, $posDot === false ? -1 : $posDot);
+            $frac = substr($s, $decPos + 1);
+            $int = (string) preg_replace('/[.,]/', '', substr($s, 0, $decPos));
+            $val = (float) (($int === '' ? '0' : $int) . '.' . $frac);
+        }
 
         return round($neg ? -$val : $val, 2);
     }

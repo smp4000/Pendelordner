@@ -474,6 +474,42 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(-7037.53, $engine->adviceAmountFor($text, '0862975879', $table), 0.001);
     }
 
+    public function test_avis_tabelle_englisches_format_und_fuehrende_null(): void
+    {
+        // Aral-Shop-Avis in ENGLISCHEM Zahlenformat (Punkt=Dezimal, Komma=Tausender),
+        // mit "0.00"-Zwischenspalte vor dem Bruttobetrag und führender Null bei
+        // "Ihr Beleg" (Avis: 0227869229, Beleg: 227869229).
+        $text = "Beleg          Ihr Beleg      Datum                Bruttobetrag\n"
+            . "840003926      0227869229     08.05.2026     0.00           6,403.09 EUR\n"
+            . "               Shop-Abrechnung 2227618735  08.05.26 LL SE\n"
+            . "840020326      0227870588     07.05.2026     0.00           196.57 EUR\n"
+            . "840021106      0227868195     08.05.2026     0.00           4.17 EUR\n"
+            . "Gesamt-Summe:                                22.06.2026     6,603.83 EUR\n";
+
+        $engine = new \App\Services\Matching\MatchingEngine();
+        $table = $engine->parseAdviceTable($text);
+
+        // Englisches Format korrekt – NICHT die 0.00-Zwischenspalte.
+        $this->assertEqualsWithDelta(6403.09, $table['0227869229'], 0.001);
+        $this->assertEqualsWithDelta(196.57, $table['0227870588'], 0.001);
+        $this->assertEqualsWithDelta(4.17, $table['0227868195'], 0.001);
+
+        // Beleg OHNE führende Null findet den Betrag trotzdem.
+        $this->assertEqualsWithDelta(6403.09, $engine->adviceAmountFor($text, '227869229', $table), 0.001);
+        $this->assertEqualsWithDelta(196.57, $engine->adviceAmountFor($text, '227870588', $table), 0.001);
+    }
+
+    public function test_geldbetrag_deutsch_und_englisch(): void
+    {
+        $engine = new \App\Services\Matching\MatchingEngine();
+        // Betrag steckt in einer Avis-Zeile; deutsches Format.
+        $de = "770000000 0227869229 *Kredit 12.06.2026 6.403,09 EUR";
+        $this->assertEqualsWithDelta(6403.09, $engine->parseAdviceTable($de)['0227869229'], 0.001);
+        // Englisches Format.
+        $en = "770000000 0227869229 *Kredit 12.06.2026 6,403.09 EUR";
+        $this->assertEqualsWithDelta(6403.09, $engine->parseAdviceTable($en)['0227869229'], 0.001);
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [
