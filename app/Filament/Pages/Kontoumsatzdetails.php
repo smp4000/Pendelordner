@@ -1264,7 +1264,9 @@ class Kontoumsatzdetails extends Page
     {
         $transaction = $this->selectedTransaction;
 
-        return $transaction ? (new MatchingEngine())->suggestReceipts($transaction, 20) : collect();
+        // Höheres Limit: große Sammelzahlungen/Avise können deutlich mehr als
+        // 20 passende Belege haben – alle sollen als Vorschlag erscheinen.
+        return $transaction ? (new MatchingEngine())->suggestReceipts($transaction, 200) : collect();
     }
 
     /**

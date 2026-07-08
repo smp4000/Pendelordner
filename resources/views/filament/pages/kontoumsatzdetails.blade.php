@@ -575,6 +575,11 @@
                                 <p style="margin:.5rem 0;font-weight:600;">Belege hier ablegen oder</p>
                                 <label for="belegUpload" style="display:inline-block;padding:.45rem .9rem;background:#10b981;color:#fff;border-radius:.4rem;cursor:pointer;">Dateien auswählen</label>
                                 <p style="margin-top:.5rem;font-size:.75rem;opacity:.6;">Mehrere möglich · PDF, JPG, PNG, TIFF · max. 20 MB je Datei</p>
+                                <p style="margin-top:.15rem;font-size:.72rem;opacity:.55;">
+                                    Der Browser-Upload nimmt je Vorgang höchstens so viele Dateien an, wie
+                                    <code>max_file_uploads</code> (PHP, Standard 20) erlaubt. Für sehr viele
+                                    Belege den <strong>Ordner-Import</strong> nutzen (<code>belege:ordner-import</code>).
+                                </p>
 
                                 <div wire:loading wire:target="uploadFiles" style="margin-top:.5rem;font-size:.8rem;opacity:.7;">Lädt hoch…</div>
 
