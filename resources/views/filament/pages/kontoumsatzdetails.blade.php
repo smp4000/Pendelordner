@@ -635,7 +635,7 @@
 
                             @if ($receipt->is_pdf)
                                 {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
-                                <div style="height:calc(100vh - 5.5rem);overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                <div class="beleg-scroll" style="height:calc(100vh - 5.5rem);overflow-y:scroll;overflow-x:auto;scrollbar-gutter:stable;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
@@ -650,7 +650,7 @@
                                     </template>
                                 </div>
                             @else
-                                <div style="height:calc(100vh - 5.5rem);overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                <div class="beleg-scroll" style="height:calc(100vh - 5.5rem);overflow-y:scroll;overflow-x:auto;scrollbar-gutter:stable;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
@@ -679,6 +679,18 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"></script>
     @endassets
+
+    {{-- Immer sichtbarer Scrollbalken für die Belegvorschau (statt Overlay,
+         das unter Windows/Chrome erst beim Scrollen auftaucht). --}}
+    <style>
+        .beleg-scroll { scrollbar-width: thin; scrollbar-color: #9ca3af transparent; }
+        .beleg-scroll::-webkit-scrollbar { width: 14px; height: 14px; }
+        .beleg-scroll::-webkit-scrollbar-thumb {
+            background: #9ca3af; border-radius: 8px; border: 3px solid #fff;
+        }
+        .beleg-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .beleg-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
+    </style>
 
     {{-- Alpine-Komponente für die Inline-PDF-Vorschau registrieren --}}
     @script
