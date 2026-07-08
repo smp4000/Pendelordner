@@ -626,7 +626,7 @@
                                     {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
                                          bei Livewire-Updates (z. B. Kategorie/Konto ändern) erhalten
                                          bleiben und nicht weggemorpht werden. --}}
-                                    <div wire:ignore x-ref="pages" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px;"></div>
+                                    <div wire:ignore x-ref="pages" style="padding:10px;text-align:center;"></div>
                                     <template x-if="error">
                                         <div style="color:#374151;padding:1rem;text-align:center;">
                                             Inline-Vorschau nicht möglich.
@@ -728,7 +728,13 @@
                             const canvas = document.createElement('canvas');
                             canvas.width = viewport.width;
                             canvas.height = viewport.height;
-                            canvas.style.maxWidth = '100%';
+                            // Jede Seite als Block mittig; bei 100 % auf Breite
+                            // einpassen, beim Hineinzoomen die natürliche (größere)
+                            // Breite zulassen, damit der Container horizontal UND
+                            // vertikal scrollbar wird (breite Kraftstoffabrechnung).
+                            canvas.style.display = 'block';
+                            canvas.style.margin = '10px auto';
+                            canvas.style.maxWidth = this.zoom <= 1 ? '100%' : 'none';
                             canvas.style.background = '#fff';
                             canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
                             if (run !== renderRun) { return; }
