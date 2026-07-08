@@ -603,10 +603,13 @@ class Kontoumsatzdetails extends Page
         }
 
         if ($result['removed']) {
+            $this->showSplit = false; // nichts mehr aufzuteilen -> Karte zuklappen
             Notification::make()->title('Aufteilung entfernt')->success()->send();
 
             return;
         }
+
+        $sauber = abs($result['diff']) < 0.005 && $result['ohneKonto'] === 0;
 
         $hints = [];
         $hints[] = abs($result['diff']) < 0.005
@@ -616,10 +619,17 @@ class Kontoumsatzdetails extends Page
             $hints[] = 'Achtung: ' . $result['ohneKonto'] . ' Position(en) OHNE Sachkonto – bitte je Zeile ein Konto wählen.';
         }
 
+        // Bei sauberer Aufteilung (Rest 0, alle Konten gesetzt) die Karte wieder
+        // zuklappen. Bei einer Warnung bleibt sie offen, damit der Fehler
+        // (Restbetrag / fehlendes Konto) sichtbar bleibt und korrigiert wird.
+        if ($sauber) {
+            $this->showSplit = false;
+        }
+
         Notification::make()
             ->title('Aufteilung gespeichert (' . $result['count'] . ' Positionen)')
             ->body(implode(' ', $hints))
-            ->{(abs($result['diff']) < 0.005 && $result['ohneKonto'] === 0) ? 'success' : 'warning'}()->send();
+            ->{$sauber ? 'success' : 'warning'}()->send();
     }
 
     /**

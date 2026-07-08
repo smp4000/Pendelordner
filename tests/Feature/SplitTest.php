@@ -76,6 +76,49 @@ class SplitTest extends TestCase
         $this->assertEqualsWithDelta(119.00, (float) $tx->accountAssignments()->first()->amount, 0.001);
     }
 
+    public function test_saubere_aufteilung_klappt_karte_zu_unfertige_bleibt_offen(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la1 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3040'], ['name' => 'Einkauf Sonstige Waren, USt voll']);
+        $la2 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3060'], ['name' => 'Einkauf Lebensmittel, USt erm.']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-03', 'amount' => -213.62,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        // Saubere Aufteilung: Rest 0, beide Konten gesetzt -> Karte klappt zu.
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('splitMode', 'brutto')
+            ->set('splits', [
+                ['ledger_account_id' => $la1->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '150,67'],
+                ['ledger_account_id' => $la2->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '7', 'amount' => '62,95'],
+            ])
+            ->set('showSplit', true)
+            ->call('saveSplits');
+
+        $comp->assertSet('showSplit', false);
+
+        // Unfertige Aufteilung: eine Zeile ohne Konto -> Karte bleibt offen.
+        $comp2 = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('splitMode', 'brutto')
+            ->set('splits', [
+                ['ledger_account_id' => $la1->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '150,67'],
+                ['ledger_account_id' => null, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '7', 'amount' => '62,95'],
+            ])
+            ->set('showSplit', true)
+            ->call('saveSplits');
+
+        $comp2->assertSet('showSplit', true);
+    }
+
     /** Änderungen an einer Split-Zeile speichern automatisch, ohne den Button zu klicken. */
     public function test_split_wird_automatisch_gespeichert(): void
     {
