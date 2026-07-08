@@ -443,6 +443,37 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(760.48, $rates[0]['gross'] + $rates[1]['gross'], 0.001);
     }
 
+    public function test_avis_tabelle_parst_mehrere_zeilen_robust(): void
+    {
+        // Mehrseitiges Aral-Avis: breite Spalten (Layout), lange Belegart-Namen,
+        // positive (OK/DK-Gutschrift) und negative (Soll) Zeilen. Der enge
+        // Fenster-Ansatz scheiterte hier – der Tabellen-Parser muss alle treffen.
+        $text = <<<TXT
+        Belegnummer  Ihr Beleg    Belegart                          Datum        Betrag
+        91114498     0991841329   *OK/DK-Tankstellen-Abrechnung      13.06.2026   9.166,99 EUR
+        91119247     0991852674   *OK/DK-Tankstellen-Abrechnung      17.06.2026   9.848,58 EUR
+        640272025    6312068751   *Stationskarten-Stundung           11.06.2026   -715,44 EUR
+        651231736    0862975879   *Kreditkartenabrechnung            11.06.2026   -7.037,53 EUR
+        651335657    0862999969   *Kreditkartenabrechnung            12.06.2026   -5.881,30 EUR
+        TXT;
+
+        $engine = new \App\Services\Matching\MatchingEngine();
+        $table = $engine->parseAdviceTable($text);
+
+        // Nach "Ihr Beleg" (Rechnungsnummer der Belege) – mit korrektem Vorzeichen.
+        $this->assertEqualsWithDelta(9166.99, $table['0991841329'], 0.001);
+        $this->assertEqualsWithDelta(9848.58, $table['0991852674'], 0.001);
+        $this->assertEqualsWithDelta(-715.44, $table['6312068751'], 0.001);
+        $this->assertEqualsWithDelta(-7037.53, $table['0862975879'], 0.001);
+        $this->assertEqualsWithDelta(-5881.30, $table['0862999969'], 0.001);
+
+        // Auch über die Belegnummer (Spalte 1) auffindbar.
+        $this->assertEqualsWithDelta(9166.99, $table['91114498'], 0.001);
+
+        // adviceAmountFor nutzt die Tabelle bevorzugt.
+        $this->assertEqualsWithDelta(-7037.53, $engine->adviceAmountFor($text, '0862975879', $table), 0.001);
+    }
+
     public function test_mt940_parser(): void
     {
         $mt940 = implode("\n", [

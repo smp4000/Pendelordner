@@ -1376,16 +1376,22 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
+        // Ganze Avis-Tabelle zeilenweise parsen (robust bei vielen Seiten) und
+        // je Beleg den Betrag daraus (Fallback: Einzelsuche) übernehmen.
+        $table = $engine->parseAdviceTable($avisText);
         $updated = 0;
+        $notFound = 0;
         foreach ($receipts as $r) {
             $no = trim((string) $r->invoice_number);
             if (mb_strlen($no) < 4) {
                 continue;
             }
-            $amt = $engine->adviceLineAmount($avisText, $no);
+            $amt = $engine->adviceAmountFor($avisText, $no, $table);
             if ($amt !== null) {
                 $transaction->receipts()->updateExistingPivot($r->id, ['amount' => round($amt, 2)]);
                 $updated++;
+            } else {
+                $notFound++;
             }
         }
 
@@ -1394,12 +1400,17 @@ class Kontoumsatzdetails extends Page
         $this->refreshSelected();
 
         $diff = $this->selectedTransaction?->difference ?? 0;
+        $hint = abs($diff) < 0.01
+            ? 'Differenz jetzt 0 € – Aufteilung geht auf.'
+            : 'Restdifferenz: ' . number_format($diff, 2, ',', '.') . ' € (bitte prüfen).';
+        if ($notFound > 0) {
+            $hint .= ' ' . $notFound . ' Beleg(e) nicht im Avis gefunden – evtl. fehlen Seiten im erkannten Text.';
+        }
+
         Notification::make()
             ->title($updated . ' Beträge aus Avis übernommen')
-            ->body(abs($diff) < 0.01
-                ? 'Differenz jetzt 0 € – Aufteilung geht auf.'
-                : 'Restdifferenz: ' . number_format($diff, 2, ',', '.') . ' € (bitte prüfen).')
-            ->{abs($diff) < 0.01 ? 'success' : 'warning'}()->send();
+            ->body($hint)
+            ->{abs($diff) < 0.01 && $notFound === 0 ? 'success' : 'warning'}()->send();
     }
 
     /** Ergebnisse der manuellen Belegsuche. */

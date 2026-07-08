@@ -146,12 +146,14 @@ class MatchingEngine
 
             // Maßgeblich ist die Betragsspalte des Avis: für jede Rechnung den
             // Betrag DIREKT aus der Avis-Zeile lesen (mit Vorzeichen – Aral-Avise
-            // verrechnen Soll-Belege gegen die Kraftstoff-Gutschrift). Nur wenn
-            // in der Zeile kein Betrag steht, auf den Belegbetrag zurückfallen.
+            // verrechnen Soll-Belege gegen die Kraftstoff-Gutschrift). Zuerst über
+            // den zeilenbasierten Tabellen-Parser (robust auch bei vielen Seiten /
+            // langen Belegart-Namen), sonst je Nummer, sonst der Belegbetrag.
+            $table = $this->parseAdviceTable($src['raw']);
             $amounts = [];
             foreach ($matched as $r) {
-                $line = $this->adviceLineAmount($src['raw'], (string) $r->invoice_number);
-                $amounts[$r->id] = $line ?? round((float) $r->gross_amount, 2);
+                $amounts[$r->id] = $this->adviceAmountFor($src['raw'], (string) $r->invoice_number, $table)
+                    ?? round((float) $r->gross_amount, 2);
             }
 
             // Die Zeilenbeträge müssen sich zum Umsatzbetrag saldieren. Vorzeichen
@@ -192,8 +194,64 @@ class MatchingEngine
             return null;
         }
 
-        $raw = $m[1];
-        $neg = str_starts_with($raw, '-');
+        return $this->germanAmountToFloat($m[1]);
+    }
+
+    /**
+     * Parst die Betragsspalte einer Avis-/Sammelabrechnungstabelle zeilenweise.
+     * Erwartetes Zeilenformat (Aral-Avis): "<Belegnummer> <Ihr Beleg> *<Belegart>
+     * <Datum> <Betrag> [EUR]". Robust gegen breite Spalten und lange Belegart-
+     * Namen (im Gegensatz zum engen Fenster von adviceLineAmount) – deshalb auch
+     * bei mehrseitigen Avisen mit vielen Zeilen zuverlässig.
+     *
+     * @return array<string, float>  normalisierte Beleg-/Rechnungsnummer => Betrag (mit Vorzeichen)
+     */
+    public function parseAdviceTable(string $text): array
+    {
+        // Genau EIN Geldbetrag pro Zeile (die Betragsspalte); Datum hat kein
+        // Dezimalkomma und stört daher nicht. "EUR" ist optional.
+        $amount = '-?\d{1,3}(?:\.\d{3})*,\d{2}';
+        $re = '/^\s*(\d{5,})\s+(\d{4,})\b.*?(' . $amount . ')(?:\s*EUR)?/mu';
+
+        $map = [];
+        if (preg_match_all($re, $text, $rows, PREG_SET_ORDER)) {
+            foreach ($rows as $row) {
+                $value = $this->germanAmountToFloat($row[3]);
+                // "Ihr Beleg" (Spalte 2) ist die Rechnungsnummer der Belege; die
+                // Belegnummer (Spalte 1) zusätzlich, falls ein Beleg diese trägt.
+                foreach ([$row[2], $row[1]] as $no) {
+                    $key = $this->normalizeText($no);
+                    if (mb_strlen($key) >= 4 && ! array_key_exists($key, $map)) {
+                        $map[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Betrag einer Rechnung im Avis: bevorzugt aus der geparsten Tabelle
+     * (zeilenbasiert), sonst über die Einzel-Nummernsuche. Gibt null zurück,
+     * wenn nichts gefunden wird.
+     *
+     * @param  array<string, float>  $table
+     */
+    public function adviceAmountFor(string $text, string $invoiceNumber, array $table = []): ?float
+    {
+        $key = $this->normalizeText($invoiceNumber);
+        if (mb_strlen($key) >= 4 && array_key_exists($key, $table)) {
+            return $table[$key];
+        }
+
+        return $this->adviceLineAmount($text, $invoiceNumber);
+    }
+
+    /** Deutschen Geldbetrag ("-10.793,68") in float wandeln (mit Vorzeichen). */
+    private function germanAmountToFloat(string $raw): float
+    {
+        $neg = str_starts_with(trim($raw), '-');
         $digits = preg_replace('/[^\d,]/', '', $raw);          // Tausenderpunkte/Leerzeichen weg
         $val = (float) str_replace(',', '.', (string) $digits); // Komma -> Dezimalpunkt
 
