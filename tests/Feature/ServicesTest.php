@@ -474,6 +474,19 @@ class ServicesTest extends TestCase
         $this->assertEqualsWithDelta(-7037.53, $engine->adviceAmountFor($text, '0862975879', $table), 0.001);
     }
 
+    public function test_parser_gesamtsumme_englisches_format(): void
+    {
+        // Aral-Shop-Avis in englischem Zahlenformat: "1,005.03" (nicht 1,03),
+        // mit Datums- und "0.00"-Spalten davor. Gesamt-Summe muss erkannt werden.
+        $text = "Beleg          Ihr Beleg      Datum        Bruttobetrag\n"
+            . "840003416      0227870140     17.05.2026   0.00              530.76 EUR\n"
+            . "               Shop-Abrechnung 3322564785  17.05.26 LL SE\n"
+            . "840021318      0227868387     16.05.2026   0.00              474.27 EUR\n"
+            . "Gesamt-Summe:                 02.07.2026   1,005.03 EUR\n";
+
+        $this->assertEqualsWithDelta(1005.03, (new ReceiptParser())->extract($text)['gross_amount'], 0.001);
+    }
+
     public function test_avis_tabelle_englisches_format_und_fuehrende_null(): void
     {
         // Aral-Shop-Avis in ENGLISCHEM Zahlenformat (Punkt=Dezimal, Komma=Tausender),

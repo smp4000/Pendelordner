@@ -255,33 +255,43 @@ class ReceiptParser
 
     private function grossAmount(string $text): ?float
     {
+        // Geldbetrag in deutschem ODER englischem Format (Tausender-/Dezimal-
+        // trenner Punkt, Komma oder Leerzeichen). Der Lookahead (?![.,]?\d)
+        // verhindert, dass ein Datum ("17.05.2026") als Betrag "17.05" gelesen
+        // wird (nach den zwei Nachkommastellen darf keine weitere Ziffer folgen).
+        $num = '\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2}(?![.,]?\d)';
+
         // Höchste Priorität: ein direkt mit "=" ausgewiesener fälliger Betrag,
         // z. B. "fälligen Betrag (Euro) = 3.103,57" (Lotto-/Sammelabrechnungen).
-        // Das "=" liegt unmittelbar vor dem Betrag und ist damit eindeutig.
-        if (preg_match('/betrag[^0-9\-]{0,15}=\s*(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
+        if (preg_match('/betrag[^0-9\-]{0,15}=\s*(-?' . $num . ')/iu', $text, $m)) {
+            return $this->parseAmount($m[1]);
+        }
+
+        // Gesamt-/Rechnungssummen-Zeile, die mit "<Betrag> EUR" endet: der Betrag
+        // unmittelbar vor EUR ist der Zahlbetrag. Schlägt Zwischenspalten wie
+        // Datum oder "0.00" in Aral-Shop-Avisen (deutsch und englisch).
+        if (preg_match('/(?:gesamt[\s\-]*summe|gesamtbetrag|rechnungs(?:summe|betrag)|endbetrag)\b[^\r\n]*?(-?' . $num . ')\s*EUR/iu', $text, $m)) {
             return $this->parseAmount($m[1]);
         }
 
         // Summen-/Steuertabellen-Zeile, die mit "<Betrag> EUR" endet und mehrere
         // Beträge enthält (z. B. Lekkerland: "2.010,00 … 1.946,57 EUR"). Der
         // letzte Betrag vor "EUR" ist der Zahlbetrag.
-        $amountRe = '\d{1,3}(?:[.\s]\d{3})*,\d{2}';
         foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
             // Steuer-Ausweiszeilen ("MwSt 19,00 % von: 1.188,40 EUR  225,80EUR")
             // sind nie der Zahlbetrag – überspringen.
             if (preg_match('/mwst|mehrwertsteuer|umsatzsteuer|\bust\b/iu', $line)) {
                 continue;
             }
-            if (preg_match('/(' . $amountRe . ')-?\s*EUR\s*$/u', $line, $lm)
-                && preg_match_all('/' . $amountRe . '/u', $line) >= 3) {
+            if (preg_match('/(-?' . $num . ')-?\s*EUR\s*$/u', $line, $lm)
+                && preg_match_all('/' . $num . '/u', $line) >= 3) {
                 return $this->parseAmount($lm[1]);
             }
         }
 
         // Betrag unmittelbar VOR einem Zahlungs-Schlüsselwort (Fußzeilen-Layout,
-        // z. B. Hall Tabakwaren: "6.452,24Zahlungsvereinbarung: SEPA-…"). Das
-        // ist der tatsächliche Zahlbetrag – er schlägt Katalog-/KVP-Summen.
-        if (preg_match('/(-?' . $amountRe . ')\s*(?:zahlungsvereinbarung|zahlbetrag|zahlbar\b)/iu', $text, $m)) {
+        // z. B. Hall Tabakwaren: "6.452,24Zahlungsvereinbarung: SEPA-…").
+        if (preg_match('/(-?' . $num . ')\s*(?:zahlungsvereinbarung|zahlbetrag|zahlbar\b)/iu', $text, $m)) {
             return $this->parseAmount($m[1]);
         }
 
@@ -302,13 +312,13 @@ class ReceiptParser
         ];
 
         foreach ($keywords as $keyword) {
-            if (preg_match('/' . $keyword . '[^0-9\-]{0,25}(\d{1,3}(?:[.\s]\d{3})*,\d{2})/iu', $text, $m)) {
+            if (preg_match('/' . $keyword . '[^0-9\-]{0,25}(-?' . $num . ')/iu', $text, $m)) {
                 return $this->parseAmount($m[1]);
             }
         }
 
         // Fallback: größter Betrag im Text
-        if (preg_match_all('/(\d{1,3}(?:[.\s]\d{3})*,\d{2})/', $text, $all)) {
+        if (preg_match_all('/(-?' . $num . ')/', $text, $all)) {
             $amounts = array_map(fn ($v) => $this->parseAmount($v), $all[1]);
 
             return $amounts ? max($amounts) : null;
@@ -377,11 +387,33 @@ class ReceiptParser
         return null;
     }
 
+    /**
+     * Wandelt einen Geldbetrag in float – deutsches ODER englisches Format.
+     * Maßgeblich ist das ZULETZT stehende Trennzeichen (= Dezimaltrenner):
+     *   "1.005,03" (deutsch)  -> 1005.03
+     *   "1,005.03" (englisch) -> 1005.03
+     *   "530.76" / "530,76"   -> 530.76
+     * Alle übrigen Trenner sind Tausender und werden entfernt.
+     */
     private function parseAmount(string $value): float
     {
-        $value = str_replace([' ', '.'], '', $value);
-        $value = str_replace(',', '.', $value);
+        $neg = str_contains($value, '-');
+        $s = (string) preg_replace('/[^\d.,]/', '', $value);
+        if ($s === '') {
+            return 0.0;
+        }
 
-        return (float) $value;
+        $posComma = strrpos($s, ',');
+        $posDot = strrpos($s, '.');
+        if ($posComma === false && $posDot === false) {
+            $val = (float) $s;
+        } else {
+            $decPos = max($posComma === false ? -1 : $posComma, $posDot === false ? -1 : $posDot);
+            $frac = substr($s, $decPos + 1);
+            $int = (string) preg_replace('/[.,]/', '', substr($s, 0, $decPos));
+            $val = (float) (($int === '' ? '0' : $int) . '.' . $frac);
+        }
+
+        return $neg ? -$val : $val;
     }
 }
