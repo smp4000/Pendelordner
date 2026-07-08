@@ -437,6 +437,45 @@ class SplitTest extends TestCase
         $this->assertSame('359,41', $splits[1]['amount']);
     }
 
+    public function test_ust_aufteilung_belegt_konten_je_satz_vor(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Konto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $la19 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3040'], ['name' => 'Einkauf Sonstige Waren, USt voll']);
+        $la7 = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3060'], ['name' => 'Einkauf Lebensmittel, USt erm.']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'booking_date' => '2026-06-01',
+            'amount' => -760.48, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+        $r = Receipt::create(['type' => 'incoming_invoice', 'gross_amount' => 760.48,
+            'ocr_text' => '19%USt.: 382,11 72,60 454,71 7%USt.: 285,77 20,00 305,77']);
+        $tx->receipts()->attach($r->id, ['amount' => 760.48, 'sort_order' => 0]);
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            // Wie eine geladene Vorlage: Konten je Satz gesetzt, Beträge leer.
+            ->set('splits', [
+                ['ledger_account_id' => $la19->id, 'ledger_label' => '3040 – Einkauf Sonstige Waren, USt voll', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => ''],
+                ['ledger_account_id' => $la7->id, 'ledger_label' => '3060 – Einkauf Lebensmittel, USt erm.', 'ledger_search' => '', 'tax_rate' => '7', 'amount' => ''],
+            ])
+            ->call('fillSplitFromReceiptTax');
+
+        $splits = $comp->get('splits');
+        $this->assertCount(2, $splits);
+        // 19 %: Konto vorbelegt UND Betrag aus Beleg.
+        $this->assertSame('19', $splits[0]['tax_rate']);
+        $this->assertSame($la19->id, $splits[0]['ledger_account_id']);
+        $this->assertSame('454,71', $splits[0]['amount']);
+        // 7 %: ebenso.
+        $this->assertSame('7', $splits[1]['tax_rate']);
+        $this->assertSame($la7->id, $splits[1]['ledger_account_id']);
+        $this->assertSame('305,77', $splits[1]['amount']);
+    }
+
     public function test_zugeordnete_belege_lassen_sich_sortieren(): void
     {
         $this->seed(DatabaseSeeder::class);

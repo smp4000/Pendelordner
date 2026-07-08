@@ -372,6 +372,12 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
+        // Konto je Steuersatz vorbelegen: zuerst aus einer bereits geladenen
+        // Aufteilung (z. B. gewählte Vorlage), dann aus einer zum Empfänger
+        // passenden Vorlage. So stehen die Konten (z. B. 3040 @ 19 %, 3060 @ 7 %)
+        // nach der USt-Aufteilung gleich mit da.
+        $accountByRate = $this->splitAccountsByRate();
+
         $parser = new \App\Services\Ocr\ReceiptParser();
         $byRate = [];        // Steuersatz => aufsummierter Bruttobetrag
         $usedReceipts = 0;
@@ -409,10 +415,15 @@ class Kontoumsatzdetails extends Page
         krsort($byRate); // 19 % vor 7 %
 
         $this->splits = [];
+        $mitKonto = 0;
         foreach ($byRate as $rate => $gross) {
+            $acc = $accountByRate[$rate] ?? null;
+            if ($acc) {
+                $mitKonto++;
+            }
             $this->splits[] = [
-                'ledger_account_id' => null,
-                'ledger_label' => '',
+                'ledger_account_id' => $acc['id'] ?? null,
+                'ledger_label' => $acc['label'] ?? '',
                 'ledger_search' => '',
                 'tax_rate' => (string) $rate,
                 'amount' => number_format($gross, 2, ',', ''),
@@ -421,9 +432,53 @@ class Kontoumsatzdetails extends Page
         $this->splitMode = 'brutto';
         $this->showSplit = true;
 
+        $alleKonten = $mitKonto === count($byRate);
         Notification::make()->title(count($byRate) . ' Steuersätze aus ' . $usedReceipts . ' Beleg(en) übernommen')
-            ->body('Bruttobeträge je Satz aufsummiert – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
+            ->body($alleKonten
+                ? 'Bruttobeträge und Sachkonten vorbelegt – nur noch prüfen und speichern.'
+                : 'Bruttobeträge je Satz aufsummiert – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
             ->success()->send();
+    }
+
+    /**
+     * Sachkonto je Steuersatz für die Vorbelegung: zuerst aus der aktuell
+     * geladenen Aufteilung (bereits gewählte Konten), dann aus einer zum
+     * Empfänger passenden Vorlage (match_counterparty). Ergebnis:
+     * [19 => ['id' => …, 'label' => '3040 – …'], 7 => …].
+     *
+     * @return array<int, array{id: int, label: string}>
+     */
+    private function splitAccountsByRate(): array
+    {
+        $map = [];
+
+        // 1. Aus der aktuell geladenen Aufteilung (z. B. gerade gewählte Vorlage).
+        foreach ($this->splits as $row) {
+            if (($row['tax_rate'] ?? '') === '' || empty($row['ledger_account_id'])) {
+                continue;
+            }
+            $rate = (int) round($this->parseAmount($row['tax_rate']));
+            if (! isset($map[$rate])) {
+                $map[$rate] = ['id' => (int) $row['ledger_account_id'], 'label' => (string) ($row['ledger_label'] ?? '')];
+            }
+        }
+
+        // 2. Ergänzend aus einer zum Empfänger passenden Vorlage.
+        if ($template = $this->matchingTemplateForTransaction()) {
+            foreach ($template->rows as $r) {
+                $rate = (int) round((float) ($r['tax_rate'] ?? 0));
+                if (isset($map[$rate])) {
+                    continue;
+                }
+                $la = LedgerAccount::whereIn('chart', ['edtas', 'kfz', 'gastro'])
+                    ->where('number', (string) ($r['ledger_number'] ?? ''))->first();
+                if ($la) {
+                    $map[$rate] = ['id' => $la->id, 'label' => $la->number . ' – ' . $la->name];
+                }
+            }
+        }
+
+        return $map;
     }
 
     /** Neue, leere Position – Betrag mit dem Restbetrag vorbelegen. */
