@@ -181,14 +181,16 @@
                     <td colspan="5">
                         <table class="splits">
                             @php
-                                // Gleiches Sachkonto + gleicher USt-Satz zu EINER Zeile
-                                // zusammenfassen: Positionen aus verschiedenen Rechnungen
-                                // (z. B. 2645 zweimal) werden im Bericht addiert.
+                                // Gleiches Sachkonto + gleicher USt-Satz + gleiche Rechnungsnummer
+                                // zu EINER Zeile zusammenfassen. Positionen OHNE Rechnungsnummer
+                                // (aggregierte Aufteilung) werden je Konto/Satz addiert; Positionen
+                                // MIT Rechnungsnummer bleiben je Rechnung getrennt sichtbar.
                                 $groupedSplits = $t->accountAssignments
-                                    ->groupBy(fn ($a) => $a->ledger_account_id . '|' . ($a->tax_rate !== null ? (float) $a->tax_rate : 'x'))
+                                    ->groupBy(fn ($a) => $a->ledger_account_id . '|' . ($a->tax_rate !== null ? (float) $a->tax_rate : 'x') . '|' . trim((string) $a->booking_text))
                                     ->map(fn ($rows) => (object) [
                                         'ledgerAccount' => $rows->first()->ledgerAccount,
                                         'tax_rate' => $rows->first()->tax_rate,
+                                        'booking_text' => trim((string) $rows->first()->booking_text),
                                         'amount' => $rows->sum(fn ($r) => (float) $r->amount),
                                     ])
                                     ->values();
@@ -202,7 +204,7 @@
                                 @endphp
                                 <tr>
                                     <td class="split-label">{{ $loop->first ? 'Aufteilung:' : '' }}</td>
-                                    <td>{{ $a->ledgerAccount ? $a->ledgerAccount->number . ' – ' . \Illuminate\Support\Str::limit($splitName, 70) : $splitName }}</td>
+                                    <td>{{ $a->ledgerAccount ? $a->ledgerAccount->number . ' – ' . \Illuminate\Support\Str::limit($splitName, 70) : $splitName }}@if ($a->booking_text !== '') <span class="receipts">· Rg. {{ $a->booking_text }}</span>@endif</td>
                                     <td style="width:42px;" class="num">{{ $a->tax_rate !== null ? rtrim(rtrim(number_format((float)$a->tax_rate,2,',','.'),'0'),',').' %' : '' }}</td>
                                     <td style="width:78px;" class="num">{{ $money($a->amount) }}</td>
                                 </tr>

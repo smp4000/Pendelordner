@@ -476,6 +476,51 @@ class SplitTest extends TestCase
         $this->assertSame('305,77', $splits[1]['amount']);
     }
 
+    public function test_ust_aufteilung_je_beleg_erzeugt_positionen_mit_rechnungsnummer(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'Konto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3040'], ['name' => 'Einkauf Sonstige Waren, USt voll']);
+        LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3060'], ['name' => 'Einkauf Lebensmittel, USt erm.']);
+
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'booking_date' => '2026-06-01',
+            'amount' => -1064.02, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'RG-100', 'gross_amount' => 760.48,
+            'ocr_text' => '19%USt.: 382,11 72,60 454,71 7%USt.: 285,77 20,00 305,77']);
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'RG-200', 'gross_amount' => 303.54,
+            'ocr_text' => '19%USt.: 210,00 39,90 249,90 7%USt.: 50,13 3,51 53,64']);
+        $tx->receipts()->attach($r1->id, ['amount' => 760.48, 'sort_order' => 0]);
+        $tx->receipts()->attach($r2->id, ['amount' => 303.54, 'sort_order' => 1]);
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('fillSplitPerReceipt');
+
+        $splits = $comp->get('splits');
+        // Je Beleg zwei Zeilen (19 % + 7 %) = 4 Positionen.
+        $this->assertCount(4, $splits);
+        // Erste zwei tragen die Rechnungsnummer von r1, mit den EINZEL-Beträgen.
+        $this->assertSame('RG-100', $splits[0]['booking_text']);
+        $this->assertSame('454,71', $splits[0]['amount']);
+        $this->assertSame('RG-100', $splits[1]['booking_text']);
+        $this->assertSame('305,77', $splits[1]['amount']);
+        // Nächste zwei von r2.
+        $this->assertSame('RG-200', $splits[2]['booking_text']);
+        $this->assertSame('249,90', $splits[2]['amount']);
+        $this->assertSame('RG-200', $splits[3]['booking_text']);
+
+        // Speichern: Buchungstext landet in den Positionen.
+        $comp->call('saveSplits');
+        $this->assertSame(4, $tx->accountAssignments()->count());
+        $this->assertSame(2, $tx->accountAssignments()->where('booking_text', 'RG-100')->count());
+    }
+
     public function test_zugeordnete_belege_lassen_sich_sortieren(): void
     {
         $this->seed(DatabaseSeeder::class);

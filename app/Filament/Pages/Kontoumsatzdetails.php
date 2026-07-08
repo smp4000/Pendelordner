@@ -276,6 +276,7 @@ class Kontoumsatzdetails extends Page
                 'ledger_search' => '',
                 'tax_rate' => $a->tax_rate !== null ? rtrim(rtrim(number_format((float) $a->tax_rate, 2, ',', ''), '0'), ',') : '19',
                 'amount' => $a->amount !== null ? number_format((float) $a->amount, 2, ',', '') : '',
+                'booking_text' => (string) ($a->booking_text ?? ''),
             ])->values()->all()
             : [];
         // Gespeicherte Beträge sind brutto: bei vorhandener Aufteilung Brutto-
@@ -312,6 +313,7 @@ class Kontoumsatzdetails extends Page
                 'ledger_search' => '',
                 'tax_rate' => (string) ($r['tax_rate'] ?? '19'),
                 'amount' => '',
+                'booking_text' => '',
             ];
         }
 
@@ -428,6 +430,7 @@ class Kontoumsatzdetails extends Page
                 'ledger_search' => '',
                 'tax_rate' => (string) $rate,
                 'amount' => number_format($gross, 2, ',', ''),
+                'booking_text' => '',
             ];
         }
         $this->splitMode = 'brutto';
@@ -438,6 +441,79 @@ class Kontoumsatzdetails extends Page
             ->body($alleKonten
                 ? 'Bruttobeträge und Sachkonten vorbelegt – nur noch prüfen und speichern.'
                 : 'Bruttobeträge je Satz aufsummiert – jetzt nur noch das Sachkonto (Warengruppe) wählen.')
+            ->success()->send();
+    }
+
+    /**
+     * USt-Aufteilung JE BELEG: erzeugt pro zugeordneter Rechnung eigene
+     * Positionen (je Steuersatz eine Zeile), jeweils mit der Rechnungsnummer als
+     * Buchungstext. So hat jede Rechnung ihre eigene Aufteilung und die Summe
+     * aller Positionen ergibt den Umsatz. Sachkonten werden je Steuersatz
+     * vorbelegt (aus Vorlage/aktueller Aufteilung).
+     */
+    public function fillSplitPerReceipt(): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $accountByRate = $this->splitAccountsByRate();
+        $parser = new \App\Services\Ocr\ReceiptParser();
+
+        $rows = [];
+        $usedReceipts = 0;
+        foreach ($transaction->receipts as $r) {
+            $label = trim((string) $r->invoice_number) ?: ('Beleg #' . $r->id);
+
+            // Bruttobeträge je Steuersatz für DIESEN Beleg.
+            $perRate = [];
+            $rates = filled($r->ocr_text) ? $parser->taxBreakdown((string) $r->ocr_text) : [];
+            if (! empty($rates)) {
+                foreach ($rates as $row) {
+                    $perRate[$row['rate']] = round(($perRate[$row['rate']] ?? 0) + $row['gross'], 2);
+                }
+            } else {
+                $gross = (float) $r->gross_amount;
+                $rate = $r->tax_rate !== null ? (int) round((float) $r->tax_rate) : 19;
+                if ($gross != 0.0) {
+                    $perRate[$rate] = round($gross, 2);
+                }
+            }
+
+            if (empty($perRate)) {
+                continue;
+            }
+
+            krsort($perRate); // 19 % vor 7 %
+            foreach ($perRate as $rate => $gross) {
+                $acc = $accountByRate[$rate] ?? null;
+                $rows[] = [
+                    'ledger_account_id' => $acc['id'] ?? null,
+                    'ledger_label' => $acc['label'] ?? '',
+                    'ledger_search' => '',
+                    'tax_rate' => (string) $rate,
+                    'amount' => number_format($gross, 2, ',', ''),
+                    'booking_text' => $label,
+                ];
+            }
+            $usedReceipts++;
+        }
+
+        if (empty($rows)) {
+            Notification::make()->title('Keine Beträge in den Belegen gefunden')
+                ->body('Kein zugeordneter Beleg hat einen erkennbaren Betrag/Steuer-Summenblock.')
+                ->warning()->send();
+
+            return;
+        }
+
+        $this->splits = $rows;
+        $this->splitMode = 'brutto';
+        $this->showSplit = true;
+
+        Notification::make()->title($usedReceipts . ' Rechnungen einzeln aufgeteilt (' . count($rows) . ' Positionen)')
+            ->body('Je Rechnung eigene Positionen mit Rechnungsnummer – nur noch Sachkonten prüfen und speichern.')
             ->success()->send();
     }
 
@@ -492,6 +568,7 @@ class Kontoumsatzdetails extends Page
             'ledger_search' => '',
             'tax_rate' => '19',
             'amount' => $rest > 0.005 ? number_format($rest, 2, ',', '') : '',
+            'booking_text' => '',
         ];
     }
 
@@ -653,6 +730,7 @@ class Kontoumsatzdetails extends Page
                 'ledger_account_id' => ($row['ledger_account_id'] ?? null) ?: null,
                 'tax_rate' => ($row['tax_rate'] ?? '') !== '' ? $this->parseAmount($row['tax_rate']) : null,
                 'amount' => $this->splitGross($row),
+                'booking_text' => trim((string) ($row['booking_text'] ?? '')) ?: null,
                 'booking_date' => $t->booking_date,
             ]);
         }

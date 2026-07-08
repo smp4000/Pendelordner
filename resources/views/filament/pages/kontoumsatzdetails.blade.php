@@ -334,6 +334,10 @@
                                 <x-filament::button wire:click="fillSplitFromReceiptTax" icon="heroicon-o-calculator" color="info" size="sm">
                                     USt-Aufteilung aus Beleg
                                 </x-filament::button>
+                                {{-- Je Beleg eigene Positionen (mit Rechnungsnummer) statt aggregiert --}}
+                                <x-filament::button wire:click="fillSplitPerReceipt" icon="heroicon-o-document-duplicate" color="info" size="sm">
+                                    USt-Aufteilung je Beleg
+                                </x-filament::button>
                             </div>
 
                             <div style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;font-size:.72rem;opacity:.65;margin-bottom:.2rem;padding:0 .1rem;">
@@ -347,6 +351,11 @@
                                 <div wire:key="split-{{ $i }}" style="display:grid;grid-template-columns:2fr .8fr 1fr auto;gap:.4rem;align-items:start;margin-bottom:.4rem;">
                                     {{-- Sachkonto durchsuchbar --}}
                                     <div>
+                                        @if (! empty($row['booking_text']))
+                                            <div style="font-size:.7rem;color:#2563eb;margin-bottom:.1rem;" title="Rechnungsnummer dieser Position (erscheint im Bericht)">
+                                                📄 Rechnung {{ $row['booking_text'] }}
+                                            </div>
+                                        @endif
                                         @if (! empty($row['ledger_account_id']))
                                             <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;padding:.3rem 0;">
                                                 <span style="padding:.15rem .5rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;">{{ $row['ledger_label'] }}</span>
