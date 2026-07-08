@@ -1292,6 +1292,87 @@ class Kontoumsatzdetails extends Page
             ->success()->send();
     }
 
+    /**
+     * Korrigiert die Beträge BEREITS angehefteter Belege anhand des Avis –
+     * für Sammelzahlungen, die vor dem Avis-Betragsfix zugeordnet wurden (oder
+     * manuell mit falschen Beträgen). Ermittelt den Avis-Text (der angeheftete
+     * Beleg bzw. Verwendungszweck, der die meisten Rechnungsnummern enthält)
+     * und setzt je Beleg den Betrag aus seiner Avis-Zeile (mit Vorzeichen).
+     */
+    public function syncAmountsFromAdvice(): void
+    {
+        $transaction = $this->selectedTransaction;
+        if (! $transaction) {
+            return;
+        }
+
+        $receipts = $transaction->receipts;
+        if ($receipts->count() < 2) {
+            Notification::make()->title('Zu wenige Belege für einen Avis-Abgleich')->warning()->send();
+
+            return;
+        }
+
+        $engine = new MatchingEngine();
+
+        // Rechnungsnummern der angehefteten Belege (>= 4 Zeichen).
+        $numbers = $receipts->map(fn (Receipt $r) => trim((string) $r->invoice_number))
+            ->filter(fn ($n) => mb_strlen($n) >= 4)->values();
+
+        // Avis-Text = der Text (Beleg-OCR oder Umsatz-Verwendungszweck), der die
+        // meisten dieser Nummern nennt (das ist das Avis-/Sammelabrechnungsblatt).
+        $candidates = [];
+        foreach ($receipts as $r) {
+            if (filled($r->ocr_text)) {
+                $candidates[] = (string) $r->ocr_text;
+            }
+        }
+        $candidates[] = (string) $transaction->purpose . ' ' . (string) $transaction->bank_reference;
+
+        $avisText = null;
+        $best = 1;
+        foreach ($candidates as $text) {
+            $flat = preg_replace('/\s+/', '', $text);
+            $hits = $numbers->filter(fn ($n) => str_contains($flat, preg_replace('/\s+/', '', $n)))->count();
+            if ($hits > $best) {
+                $best = $hits;
+                $avisText = $text;
+            }
+        }
+
+        if ($avisText === null) {
+            Notification::make()->title('Kein Avis-Text gefunden')
+                ->body('Es ließ sich kein Beleg/Verwendungszweck mit den Rechnungsnummern erkennen.')->warning()->send();
+
+            return;
+        }
+
+        $updated = 0;
+        foreach ($receipts as $r) {
+            $no = trim((string) $r->invoice_number);
+            if (mb_strlen($no) < 4) {
+                continue;
+            }
+            $amt = $engine->adviceLineAmount($avisText, $no);
+            if ($amt !== null) {
+                $transaction->receipts()->updateExistingPivot($r->id, ['amount' => round($amt, 2)]);
+                $updated++;
+            }
+        }
+
+        $transaction->recalculateStatus();
+        $this->fillAssign();
+        $this->refreshSelected();
+
+        $diff = $this->selectedTransaction?->difference ?? 0;
+        Notification::make()
+            ->title($updated . ' Beträge aus Avis übernommen')
+            ->body(abs($diff) < 0.01
+                ? 'Differenz jetzt 0 € – Aufteilung geht auf.'
+                : 'Restdifferenz: ' . number_format($diff, 2, ',', '.') . ' € (bitte prüfen).')
+            ->{abs($diff) < 0.01 ? 'success' : 'warning'}()->send();
+    }
+
     /** Ergebnisse der manuellen Belegsuche. */
     public function getSearchResultsProperty(): Collection
     {

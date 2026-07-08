@@ -150,6 +150,57 @@ class AvisMatchingTest extends TestCase
         );
     }
 
+    public function test_bereits_angeheftete_betraege_aus_avis_korrigieren(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-12', 'counterparty' => 'ARAL', 'amount' => -2309.86,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $advice = Receipt::create([
+            'type' => 'incoming_invoice', 'gross_amount' => 2309.86,
+            'ocr_text' => "AVIS - Schreiben Zahlungsbeleg 207593549 "
+                . "Belegnummer Ihr Beleg Belegart Datum Betrag "
+                . "91097639 0991828488 *OK/DK-Tankstellen-Abrechnung 10.06.2026 13.914,98 EUR "
+                . "640270784 6312066992 *Stationskarten-Stundung 10.06.2026 -201,50 EUR "
+                . "651284097 0862967335 *Kreditkartenabrechnung 10.06.2026 -10.793,68 EUR "
+                . "651312084 1016890308 *POLA Abrechnung 10.06.2026 -0,49 EUR "
+                . "680378717 1016886573 *Supercardabrechnung 10.06.2026 -609,45 EUR "
+                . "Gesamtsumme 2.309,86 EUR",
+        ]);
+        $r1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '0991828488', 'gross_amount' => 13914.98]);
+        $r2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '6312066992', 'gross_amount' => 201.50]);
+        $r3 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '0862967335', 'gross_amount' => 10793.68]);
+        $r4 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '1016890308', 'gross_amount' => 0.49]);
+        $r5 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => '1016886573', 'gross_amount' => 609.45]);
+
+        // FALSCH angeheftet (wie vor dem Fix): zwei Belege tragen den Netto-Umsatz.
+        $tx->receipts()->attach($advice->id, ['amount' => 0, 'sort_order' => 0]);
+        $tx->receipts()->attach($r1->id, ['amount' => 2309.86, 'sort_order' => 1]);
+        $tx->receipts()->attach($r2->id, ['amount' => 201.50, 'sort_order' => 2]);
+        $tx->receipts()->attach($r3->id, ['amount' => 2309.86, 'sort_order' => 3]);
+        $tx->receipts()->attach($r4->id, ['amount' => 0.49, 'sort_order' => 4]);
+        $tx->receipts()->attach($r5->id, ['amount' => 609.45, 'sort_order' => 5]);
+
+        $this->assertNotEqualsWithDelta(0.0, (float) $tx->fresh()->difference, 0.01);
+
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->call('syncAmountsFromAdvice');
+
+        $fresh = $tx->fresh();
+        // Gutschrift trägt +13.914,98, Kreditkarte -10.793,68 -> saldiert auf 0.
+        $this->assertEqualsWithDelta(13914.98, (float) $fresh->receipts()->where('receipts.id', $r1->id)->first()->pivot->amount, 0.01);
+        $this->assertEqualsWithDelta(-10793.68, (float) $fresh->receipts()->where('receipts.id', $r3->id)->first()->pivot->amount, 0.01);
+        $this->assertEqualsWithDelta(0.0, (float) $fresh->difference, 0.01);
+    }
+
     public function test_diagnose_befehl_laeuft(): void
     {
         $this->seed(DatabaseSeeder::class);

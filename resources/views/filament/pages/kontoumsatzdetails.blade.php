@@ -449,6 +449,19 @@
                             @if ($tx->receipts->isEmpty())
                                 <p style="padding:.75rem;font-size:.85rem;opacity:.6;">Noch kein Beleg zugeordnet.</p>
                             @else
+                                {{-- Summe der Belege passt nicht zum Umsatz: Beträge aus dem Avis
+                                     (mit Vorzeichen) übernehmen – korrigiert Sammelzahlungen. --}}
+                                @if (abs($tx->difference) > 0.01 && $tx->receipts->count() >= 2)
+                                    <div style="margin-bottom:.5rem;padding:.55rem .7rem;border:1px solid rgba(217,119,6,.45);border-radius:.5rem;background:rgba(217,119,6,.08);display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                                        <span style="font-size:.82rem;">
+                                            ⚠️ Belegsummen passen nicht zum Umsatz (Differenz
+                                            <strong>{{ number_format($tx->difference, 2, ',', '.') }} €</strong>).
+                                        </span>
+                                        <x-filament::button wire:click="syncAmountsFromAdvice" icon="heroicon-o-arrow-path" color="warning" size="sm">
+                                            Beträge aus Avis übernehmen
+                                        </x-filament::button>
+                                    </div>
+                                @endif
                                 <div wire:key="assigned-list-{{ $tx->id }}" x-data="receiptSorter()" x-init="init()" x-ref="list">
                                     @foreach ($tx->receipts as $r)
                                         <div wire:key="assigned-{{ $r->id }}" data-id="{{ $r->id }}" wire:click="selectReceipt({{ $r->id }})"
@@ -583,8 +596,10 @@
                 </x-filament::section>
             </div>
 
-            {{-- RECHTS: Belegvorschau --}}
-            <x-filament::section style="padding:0;overflow:hidden;">
+            {{-- RECHTS: Belegvorschau – klebt am oberen Rand und bleibt auf eine
+                 Bildschirmhöhe begrenzt, damit ein langes (mehrseitiges) PDF die
+                 Seite nicht verlängert und die Eingabemaske links stehen bleibt. --}}
+            <x-filament::section style="padding:0;overflow:hidden;position:sticky;top:1rem;align-self:start;">
                 @if ($receipt && $receipt->preview_url)
                     @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
                     <div wire:key="preview-{{ $receipt->id }}"
@@ -620,7 +635,7 @@
 
                             @if ($receipt->is_pdf)
                                 {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster --}}
-                                <div style="height:80vh;overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                <div style="height:calc(100vh - 5.5rem);overflow:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
@@ -635,7 +650,7 @@
                                     </template>
                                 </div>
                             @else
-                                <div style="height:80vh;overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                <div style="height:calc(100vh - 5.5rem);overflow:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
