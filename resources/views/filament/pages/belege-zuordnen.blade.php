@@ -134,8 +134,33 @@
                 <x-slot name="heading">Mögliche Dubletten ({{ $dups->count() }})</x-slot>
                 <x-slot name="description">Gleiche Rechnungsnummer wie ein vorhandener Beleg (andere Datei). Diese Belege sind isoliert – sie erscheinen in keiner Zuordnung, bis du entscheidest.</x-slot>
 
+                {{-- Mehrfachauswahl: mehrere Dubletten auf einmal löschen/behalten. --}}
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem;padding:.5rem .7rem;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;background:rgba(120,120,120,.04);">
+                    <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
+                        <input type="checkbox"
+                            @checked(count($selectedDuplicates) === $dups->count() && $dups->count() > 0)
+                            wire:click="toggleAllDuplicates($event.target.checked)">
+                        Alle auswählen
+                    </label>
+                    <span style="font-size:.82rem;opacity:.7;">{{ count($selectedDuplicates) }} ausgewählt</span>
+                    <span style="flex:1;"></span>
+                    <x-filament::button wire:click="deleteSelectedDuplicates"
+                        wire:confirm="Alle ausgewählten Dubletten endgültig löschen?"
+                        size="sm" color="danger" icon="heroicon-o-trash"
+                        x-bind:disabled="{{ count($selectedDuplicates) === 0 ? 'true' : 'false' }}">
+                        Ausgewählte löschen ({{ count($selectedDuplicates) }})
+                    </x-filament::button>
+                    <x-filament::button wire:click="keepSelectedDuplicates" size="sm" color="gray"
+                        x-bind:disabled="{{ count($selectedDuplicates) === 0 ? 'true' : 'false' }}">
+                        Ausgewählte behalten
+                    </x-filament::button>
+                </div>
+
                 @foreach ($dups as $d)
-                    <div style="display:grid;grid-template-columns:1.4fr 1.4fr auto;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid rgba(120,120,120,.12);background:rgba(254,243,199,.25);border-left:3px solid #f59e0b;">
+                    <div style="display:grid;grid-template-columns:auto 1.4fr 1.4fr auto;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid rgba(120,120,120,.12);background:rgba(254,243,199,.25);border-left:3px solid #f59e0b;">
+                        {{-- Auswahl für Mehrfach-Aktion --}}
+                        <input type="checkbox" value="{{ $d->id }}" wire:model.live="selectedDuplicates"
+                            title="Für Mehrfachauswahl markieren" style="width:1.1rem;height:1.1rem;cursor:pointer;">
                         {{-- Neuer (isolierter) Beleg --}}
                         <div>
                             <div style="font-size:.72rem;font-weight:700;color:#b45309;margin-bottom:.15rem;">NEU (isoliert)</div>

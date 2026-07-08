@@ -119,6 +119,60 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
         Notification::make()->title('Beleg freigegeben (keine Dublette)')->success()->send();
     }
 
+    /** Für die Mehrfachauswahl markierte Dublette-Belege (IDs). */
+    public array $selectedDuplicates = [];
+
+    /** Alle angezeigten Dubletten aus-/abwählen. */
+    public function toggleAllDuplicates(bool $checked): void
+    {
+        $this->selectedDuplicates = $checked
+            ? $this->duplicateSuspects->pluck('id')->map(fn ($id) => (string) $id)->all()
+            : [];
+    }
+
+    /** Mehrere ausgewählte Dubletten auf einmal löschen (inkl. Dateien). */
+    public function deleteSelectedDuplicates(): void
+    {
+        $ids = array_map('intval', array_filter($this->selectedDuplicates));
+        if (empty($ids)) {
+            Notification::make()->title('Keine Dubletten ausgewählt')->warning()->send();
+
+            return;
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk(config('pendelordner.belege_disk', 'belege'));
+        $count = 0;
+        foreach (Receipt::whereNotNull('duplicate_of_id')->whereKey($ids)->get() as $receipt) {
+            try {
+                if ($receipt->file_path) {
+                    $disk->delete($receipt->file_path);
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
+            $receipt->forceDelete();
+            $count++;
+        }
+
+        $this->selectedDuplicates = [];
+        Notification::make()->title($count . ' Dublette(n) gelöscht')->success()->send();
+    }
+
+    /** Mehrere ausgewählte Belege als "keine Dublette" freigeben. */
+    public function keepSelectedDuplicates(): void
+    {
+        $ids = array_map('intval', array_filter($this->selectedDuplicates));
+        if (empty($ids)) {
+            Notification::make()->title('Keine Belege ausgewählt')->warning()->send();
+
+            return;
+        }
+
+        $count = Receipt::whereNotNull('duplicate_of_id')->whereKey($ids)->update(['duplicate_of_id' => null]);
+        $this->selectedDuplicates = [];
+        Notification::make()->title($count . ' Beleg(e) freigegeben')->success()->send();
+    }
+
     /** Mehrere Belege hochladen, OCR ausführen. */
     public function uploadReceipts(): void
     {

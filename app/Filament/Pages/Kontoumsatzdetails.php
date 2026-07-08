@@ -128,8 +128,8 @@ class Kontoumsatzdetails extends Page
     // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
 
-    /** Eingabe der Split-Beträge als 'brutto' oder 'netto'. */
-    public string $splitMode = 'brutto';
+    /** Eingabe der Split-Beträge als 'brutto' oder 'netto'. Standard: Netto + USt. */
+    public string $splitMode = 'netto';
 
     /**
      * Split-Positionen des aktuellen Umsatzes – Aufteilung des Betrags auf
@@ -278,8 +278,9 @@ class Kontoumsatzdetails extends Page
                 'amount' => $a->amount !== null ? number_format((float) $a->amount, 2, ',', '') : '',
             ])->values()->all()
             : [];
-        // Gespeicherte Beträge sind brutto (sie summieren sich zum Umsatzbetrag).
-        $this->splitMode = 'brutto';
+        // Gespeicherte Beträge sind brutto: bei vorhandener Aufteilung Brutto-
+        // Modus, sonst Netto + USt als Standard für die manuelle Eingabe.
+        $this->splitMode = ! empty($this->splits) ? 'brutto' : 'netto';
         $this->showSplit = ! empty($this->splits);
     }
 

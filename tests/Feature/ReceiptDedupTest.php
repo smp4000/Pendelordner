@@ -125,4 +125,47 @@ class ReceiptDedupTest extends TestCase
 
         $this->assertNull($suspect->fresh()->duplicate_of_id);
     }
+
+    public function test_mehrere_dubletten_auf_einmal_loeschen(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $original = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-9', 'gross_amount' => 10]);
+        $d1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-9', 'gross_amount' => 10, 'duplicate_of_id' => $original->id]);
+        $d2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-9', 'gross_amount' => 10, 'duplicate_of_id' => $original->id]);
+        $d3 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-9', 'gross_amount' => 10, 'duplicate_of_id' => $original->id]);
+
+        // Zwei von drei auswählen und gesammelt löschen.
+        Livewire::test(BelegeZuordnen::class)
+            ->set('selectedDuplicates', [(string) $d1->id, (string) $d2->id])
+            ->call('deleteSelectedDuplicates');
+
+        $this->assertNull(Receipt::find($d1->id));
+        $this->assertNull(Receipt::find($d2->id));
+        $this->assertNotNull(Receipt::find($d3->id));   // nicht ausgewählt -> bleibt
+        $this->assertNotNull(Receipt::find($original->id)); // Original bleibt immer
+    }
+
+    public function test_alle_dubletten_auswaehlen_und_freigeben(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $original = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-7', 'gross_amount' => 5]);
+        $d1 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-7', 'gross_amount' => 5, 'duplicate_of_id' => $original->id]);
+        $d2 = Receipt::create(['type' => 'incoming_invoice', 'invoice_number' => 'R-7', 'gross_amount' => 5, 'duplicate_of_id' => $original->id]);
+
+        $comp = Livewire::test(BelegeZuordnen::class)
+            ->call('toggleAllDuplicates', true);
+        $this->assertCount(2, $comp->get('selectedDuplicates'));
+
+        $comp->call('keepSelectedDuplicates');
+        $this->assertNull($d1->fresh()->duplicate_of_id);
+        $this->assertNull($d2->fresh()->duplicate_of_id);
+    }
 }
