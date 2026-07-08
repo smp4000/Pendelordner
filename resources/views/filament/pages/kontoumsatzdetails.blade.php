@@ -16,9 +16,10 @@
     @else
         <div style="display:grid;grid-template-columns:2fr 3fr;gap:1rem;align-items:start;">
 
-            {{-- LINKS: Navigation + Details + Tabs – wird angeheftet (sticky), damit
-                 die Eingabemaske beim Scrollen durch ein langes PDF stehen bleibt. --}}
-            <div style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;align-self:start;">
+            {{-- LINKS: Navigation + Details + Tabs. Eigenes Scroll-Fenster auf
+                 Bildschirmhöhe: der (lange) Aufteilungs-Editor scrollt hier
+                 intern, unabhängig vom PDF rechts – so sieht man beide zugleich. --}}
+            <div class="beleg-scroll" style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow-y:auto;padding-right:.3rem;">
 
                 {{-- Kontokopf + Navigation --}}
                 <x-filament::section style="padding:.6rem .8rem;">
@@ -600,14 +601,15 @@
             {{-- RECHTS: Belegvorschau – klebt am oberen Rand und bleibt auf eine
                  Bildschirmhöhe begrenzt, damit ein langes (mehrseitiges) PDF die
                  Seite nicht verlängert und die Eingabemaske links stehen bleibt. --}}
-            <div style="align-self:start;overflow:hidden;background:var(--fi-color-white,#fff);border:1px solid rgba(120,120,120,.2);border-radius:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+            <div class="beleg-scroll" style="position:sticky;top:1rem;align-self:start;max-height:calc(100vh - 2rem);overflow:auto;background:var(--fi-color-white,#fff);border:1px solid rgba(120,120,120,.2);border-radius:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1);">
                 @if ($receipt && $receipt->preview_url)
                     @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
                     <div wire:key="preview-{{ $receipt->id }}"
                         x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="load()">
 
-                        {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab (bleibt fix oben) --}}
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);flex-shrink:0;">
+                        {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab (bleibt beim
+                             Scrollen des PDF oben angeheftet). --}}
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);position:sticky;top:0;background:var(--fi-color-white,#fff);z-index:3;">
                             <span style="font-weight:600;">Belegvorschau</span>
                             <span style="display:flex;align-items:center;gap:.3rem;">
                                 <button type="button" @click="zoomOut()" title="Verkleinern" style="{{ $btn }}">−</button>
