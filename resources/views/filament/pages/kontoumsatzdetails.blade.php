@@ -16,8 +16,9 @@
     @else
         <div style="display:grid;grid-template-columns:2fr 3fr;gap:1rem;align-items:start;">
 
-            {{-- LINKS: Navigation + Details + Tabs --}}
-            <div style="display:flex;flex-direction:column;gap:1rem;">
+            {{-- LINKS: Navigation + Details + Tabs – wird angeheftet (sticky), damit
+                 die Eingabemaske beim Scrollen durch ein langes PDF stehen bleibt. --}}
+            <div style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:1rem;align-self:start;">
 
                 {{-- Kontokopf + Navigation --}}
                 <x-filament::section style="padding:.6rem .8rem;">
@@ -599,12 +600,11 @@
             {{-- RECHTS: Belegvorschau – klebt am oberen Rand und bleibt auf eine
                  Bildschirmhöhe begrenzt, damit ein langes (mehrseitiges) PDF die
                  Seite nicht verlängert und die Eingabemaske links stehen bleibt. --}}
-            <div style="position:sticky;top:1rem;align-self:start;height:calc(100vh - 2rem);display:flex;flex-direction:column;overflow:hidden;background:var(--fi-color-white,#fff);border:1px solid rgba(120,120,120,.2);border-radius:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+            <div style="align-self:start;overflow:hidden;background:var(--fi-color-white,#fff);border:1px solid rgba(120,120,120,.2);border-radius:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.1);">
                 @if ($receipt && $receipt->preview_url)
                     @php $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;'; @endphp
                     <div wire:key="preview-{{ $receipt->id }}"
-                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="load()"
-                        style="display:flex;flex-direction:column;flex:1;min-height:0;">
+                        x-data="receiptViewer(@js($receipt->preview_url), {{ $receipt->is_pdf ? 'true' : 'false' }})" x-init="load()">
 
                         {{-- Kopfleiste: Titel + Zoom/Drucken/Neuer Tab (bleibt fix oben) --}}
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);flex-shrink:0;">
@@ -621,7 +621,7 @@
                             </span>
                         </div>
 
-                        <div style="padding:.5rem;position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
+                        <div style="padding:.5rem;position:relative;">
                             {{-- Status-Stempel über der Vorschau: bezahlt / gebucht (wie im Bericht). --}}
                             @if ($tx->fully_paid || $tx->reviewed)
                                 <div style="position:absolute;top:1rem;right:1.25rem;z-index:20;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;pointer-events:none;">
@@ -635,9 +635,9 @@
                             @endif
 
                             @if ($receipt->is_pdf)
-                                {{-- Inline-PDF-Rendering (PDF.js) – öffnet kein neues Fenster.
-                                     flex:1 + min-height:0 => füllt den Rest der Vorschau und scrollt. --}}
-                                <div class="beleg-scroll" style="flex:1;min-height:0;overflow-y:scroll;overflow-x:auto;scrollbar-gutter:stable;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                {{-- Inline-PDF-Rendering (PDF.js) – volle Länge (alle Seiten
+                                     untereinander). overflow-x für breite Belege beim Zoomen. --}}
+                                <div class="beleg-scroll" style="overflow-x:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     {{-- wire:ignore: die per PDF.js erzeugten Canvas-Elemente sollen
@@ -652,7 +652,7 @@
                                     </template>
                                 </div>
                             @else
-                                <div class="beleg-scroll" style="flex:1;min-height:0;overflow-y:scroll;overflow-x:auto;scrollbar-gutter:stable;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                <div class="beleg-scroll" style="overflow-x:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
                                     :style="lens ? 'cursor:none;' : ''"
                                     @mousemove="magnify($event)" @mouseleave="lensVisible=false">
                                     <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
@@ -666,8 +666,8 @@
                         </div>
                     </div>
                 @else
-                    <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);flex-shrink:0;">Belegvorschau</div>
-                    <div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
+                    <div style="padding:.5rem .75rem;font-weight:600;border-bottom:1px solid rgba(120,120,120,.2);">Belegvorschau</div>
+                    <div style="min-height:40vh;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.5;font-size:.9rem;">
                         Kein Beleg zur Vorschau ausgewählt
                     </div>
                 @endif
