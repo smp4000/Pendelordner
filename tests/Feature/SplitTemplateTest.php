@@ -54,6 +54,47 @@ class SplitTemplateTest extends TestCase
         $this->assertSame('19', $splits[4]['tax_rate']);
     }
 
+    public function test_vorlage_laedt_automatisch_beim_aufteilen_nach_empfaenger(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(SplitTemplateSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '1616'], ['name' => 'Verrechnungskonto Avise']);
+        LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '4500'], ['name' => 'Werbekosten']);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Umsatz von ARAL -> Vorlage "Aral/OIL-Avis" muss automatisch laden.
+        $aral = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-12', 'counterparty' => 'ARAL Aktiengesellschaft',
+            'amount' => -2309.86, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $aral->id)
+            ->call('toggleSplit');
+
+        $this->assertCount(5, $comp->get('splits'));
+        $this->assertSame('0', $comp->get('splits')[0]['tax_rate']);
+
+        // Anderer Empfänger -> keine Vorlage, nur eine leere Zeile.
+        $other = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-12', 'counterparty' => 'Stadtwerke Fulda',
+            'amount' => -50.00, 'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $comp2 = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $other->id)
+            ->call('toggleSplit');
+
+        $this->assertCount(1, $comp2->get('splits'));
+        $this->assertNull($comp2->get('splits')[0]['ledger_account_id']);
+    }
+
     public function test_aktuelle_aufteilung_als_vorlage_speichern(): void
     {
         $this->seed(DatabaseSeeder::class);

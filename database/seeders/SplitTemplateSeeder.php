@@ -15,13 +15,17 @@ class SplitTemplateSeeder extends Seeder
     {
         SplitTemplate::updateOrCreate(
             ['name' => 'Aral/OIL-Avis'],
-            ['rows' => [
-                ['ledger_number' => '1616', 'tax_rate' => '0', 'label' => 'Kreditkartenabrechnung'],
-                ['ledger_number' => '1324', 'tax_rate' => '0', 'label' => 'Supercardabrechnung'],
-                ['ledger_number' => '1540', 'tax_rate' => '0', 'label' => 'Stationskarten-Stundung'],
-                ['ledger_number' => '1616', 'tax_rate' => '0', 'label' => 'OK/DK-Tankstellen-Abrechnung'],
-                ['ledger_number' => '4500', 'tax_rate' => '19', 'label' => 'POLA Werbung'],
-            ]]
+            [
+                // Empfänger-Auslöser: lädt sich bei Umsätzen von "ARAL" automatisch.
+                'match_counterparty' => 'ARAL',
+                'rows' => [
+                    ['ledger_number' => '1616', 'tax_rate' => '0', 'label' => 'Kreditkartenabrechnung'],
+                    ['ledger_number' => '1324', 'tax_rate' => '0', 'label' => 'Supercardabrechnung'],
+                    ['ledger_number' => '1540', 'tax_rate' => '0', 'label' => 'Stationskarten-Stundung'],
+                    ['ledger_number' => '1616', 'tax_rate' => '0', 'label' => 'OK/DK-Tankstellen-Abrechnung'],
+                    ['ledger_number' => '4500', 'tax_rate' => '19', 'label' => 'POLA Werbung'],
+                ],
+            ]
         );
     }
 }

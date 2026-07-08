@@ -232,8 +232,37 @@ class Kontoumsatzdetails extends Page
         $this->showSplit = ! $this->showSplit;
 
         if ($this->showSplit && empty($this->splits)) {
-            $this->addSplit();
+            // Passt eine Vorlage zum Empfänger (z. B. "ARAL" -> Aral/OIL-Avis),
+            // wird sie automatisch geladen – sonst eine leere Zeile.
+            $template = $this->matchingTemplateForTransaction();
+            if ($template) {
+                $this->applyTemplate($template->id);
+            } else {
+                $this->addSplit();
+            }
         }
+    }
+
+    /**
+     * Vorlage, deren Empfänger-Auslöser (match_counterparty) im Empfänger des
+     * aktuellen Umsatzes vorkommt – für das automatische Laden beim Aufteilen.
+     */
+    private function matchingTemplateForTransaction(): ?\App\Models\SplitTemplate
+    {
+        $counterparty = mb_strtolower((string) ($this->selectedTransaction?->counterparty ?? ''));
+        if ($counterparty === '') {
+            return null;
+        }
+
+        return \App\Models\SplitTemplate::query()
+            ->whereNotNull('match_counterparty')
+            ->where('match_counterparty', '!=', '')
+            ->orderByDesc('id')
+            ->get()
+            ->first(fn (\App\Models\SplitTemplate $t) => str_contains(
+                $counterparty,
+                mb_strtolower(trim((string) $t->match_counterparty))
+            ));
     }
 
     /** Vorhandene Aufteilungs-Positionen des Umsatzes in den Editor laden. */
