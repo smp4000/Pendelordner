@@ -39,7 +39,21 @@
                 </div>
                 <div style="flex:1;min-width:260px;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">PDF-Dateien</label>
-                    <input type="file" wire:model="docUploads" multiple accept="application/pdf,image/*" style="{{ $inpTxt }}">
+                    {{-- Drag-&-Drop-Ablage (Dateien hierher ziehen oder klicken) --}}
+                    <div x-data="{ dragging:false }"
+                        x-on:dragover.prevent="dragging=true"
+                        x-on:dragleave.prevent="dragging=false"
+                        x-on:drop.prevent="dragging=false; $refs.docInput.files=$event.dataTransfer.files; $refs.docInput.dispatchEvent(new Event('change',{bubbles:true}))"
+                        x-on:click="$refs.docInput.click()"
+                        :style="dragging ? 'background:rgba(16,185,129,.12);border-color:#10b981;' : ''"
+                        style="border:2px dashed rgba(16,185,129,.6);border-radius:.5rem;padding:.85rem 1rem;text-align:center;cursor:pointer;">
+                        <span style="color:#059669;font-weight:600;font-size:.85rem;">📎 PDF hierher ziehen</span>
+                        <span style="opacity:.6;font-size:.85rem;"> oder klicken</span>
+                        @if (! empty($docUploads))
+                            <div style="margin-top:.35rem;font-size:.8rem;opacity:.75;">{{ count($docUploads) }} Datei(en) gewählt</div>
+                        @endif
+                        <input type="file" x-ref="docInput" wire:model="docUploads" multiple accept="application/pdf,image/*" style="display:none">
+                    </div>
                 </div>
                 <div>
                     <x-filament::button wire:click="uploadDocuments" wire:loading.attr="disabled" wire:target="docUploads,uploadDocuments" icon="heroicon-o-arrow-up-tray">Hochladen &amp; zuordnen</x-filament::button>
