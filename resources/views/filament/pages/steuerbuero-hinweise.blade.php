@@ -25,8 +25,8 @@
 
         {{-- PDF-Dateien für den Steuerberater --}}
         <x-filament::section>
-            <x-slot name="heading">PDF-Dateien (z. B. Monatsrechnung)</x-slot>
-            <x-slot name="description">Dateien zum oben gewählten Konto &amp; Monat hochladen und einer Kategorie zuordnen. Sie werden im Bericht <strong>vor</strong> den Kontoauszug-Belegen einsortiert und je Monat ab 1 nummeriert.</x-slot>
+            <x-slot name="heading">PDF-Dateien (z. B. Monatsrechnung, Kontoauszug)</x-slot>
+            <x-slot name="description"><strong>Einfach viele Dateien auf einmal hochladen</strong> und unten je Zeile Konto, Monat, Kategorie und „Druck" zuordnen. Konto/Monat oben sind nur die Vorgaben für neue Dateien. Im Bericht werden sie <strong>vor</strong> den Kontoauszug-Belegen einsortiert und je Monat ab 1 nummeriert.</x-slot>
 
             @php $inpTxt = 'width:100%;padding:.4rem .6rem;border:1px solid rgba(120,120,120,.3);border-radius:.5rem;background:transparent;'; @endphp
             {{-- Große Drop-Fläche: Dateien hierher ziehen oder klicken --}}
@@ -52,10 +52,21 @@
             <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin-top:.9rem;">
                 <div style="min-width:180px;flex:1;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Kategorie (Standard)</label>
-                    <input list="doc-cats" type="text" wire:model="docCategory" placeholder="z. B. Monatsrechnung" style="{{ $inpTxt }}">
-                    <datalist id="doc-cats">
-                        @foreach ($this->categorySuggestions as $c)<option value="{{ $c }}"></option>@endforeach
-                    </datalist>
+                    <div style="display:flex;gap:.4rem;">
+                        <select wire:model="docCategory" style="{{ $inpTxt }};flex:1;">
+                            @foreach ($this->categoryOptions as $c)
+                                <option value="{{ $c }}">{{ $c }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="$toggle('showNewCategory')" title="Neue Kategorie anlegen"
+                            style="width:2.5rem;flex-shrink:0;border:1px solid #059669;color:#059669;background:transparent;border-radius:.5rem;font-size:1.25rem;font-weight:700;cursor:pointer;line-height:1;">+</button>
+                    </div>
+                    @if ($showNewCategory)
+                        <div style="display:flex;gap:.4rem;margin-top:.4rem;">
+                            <input type="text" wire:model="newCategoryText" wire:keydown.enter="addCategory" placeholder="Neue Kategorie …" style="{{ $inpTxt }};flex:1;">
+                            <x-filament::button wire:click="addCategory" size="sm" icon="heroicon-o-plus">OK</x-filament::button>
+                        </div>
+                    @endif
                 </div>
                 <div style="min-width:220px;flex:1;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz (Standard, optional)</label>
@@ -85,6 +96,7 @@
 
             @php $docs = $this->documents; $noteTexts = $this->noteTexts; @endphp
             <div style="margin-top:1.25rem;">
+                <div style="font-weight:600;margin-bottom:.5rem;">Zuletzt hochgeladen <span style="opacity:.55;font-weight:400;font-size:.85rem;">(neueste zuerst · hier jede Datei zuordnen)</span></div>
                 @if ($docs->isNotEmpty())
                     @php $sel = 'padding:.2rem .4rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;font-size:.78rem;background:transparent;'; @endphp
                     <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
@@ -119,9 +131,14 @@
                                                     <option value="{{ $yv }}" @selected((int) $doc->period->year === $yv)>{{ $ylabel }}</option>
                                                 @endforeach
                                             </select>
-                                            <input type="text" value="{{ $doc->category }}" title="Kategorie"
-                                                wire:change="setDocCategory({{ $doc->id }}, $event.target.value)"
-                                                list="doc-cats" placeholder="Kategorie" style="{{ $sel }};min-width:130px;">
+                                            <select wire:change="setDocCategory({{ $doc->id }}, $event.target.value)" title="Kategorie" style="{{ $sel }};min-width:130px;">
+                                                @foreach ($this->categoryOptions as $c)
+                                                    <option value="{{ $c }}" @selected($doc->category === $c)>{{ $c }}</option>
+                                                @endforeach
+                                                @if ($doc->category && ! in_array($doc->category, $this->categoryOptions, true))
+                                                    <option value="{{ $doc->category }}" selected>{{ $doc->category }}</option>
+                                                @endif
+                                            </select>
                                         </div>
                                         <select wire:change="saveDocNote({{ $doc->id }}, $event.target.value)" style="width:100%;margin-top:.3rem;padding:.25rem .45rem;border:1px solid rgba(245,158,11,.5);border-radius:.4rem;background:rgba(254,243,199,.35);font-size:.8rem;">
                                             <option value="">– kein Hinweis –</option>
@@ -143,9 +160,9 @@
                             @endforeach
                         </tbody>
                     </table>
-                    <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Diese Dateien (Konto &amp; Monat wie oben gewählt) erhalten im Bericht die Nummern 1–{{ $docs->count() }}; die Kontoauszug-Belege beginnen danach. Änderst du Konto/Monat einer Datei, wandert sie in die passende Ansicht.</p>
+                    <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Je Datei Konto, Monat, Kategorie und „Druck" einstellen. Im Bericht werden die Dateien je Konto &amp; Monat ab 1 nummeriert (vor den Kontoauszug-Belegen).</p>
                 @else
-                    <div style="font-size:.85rem;opacity:.6;">Noch keine Dateien für diesen Monat hochgeladen.</div>
+                    <div style="font-size:.85rem;opacity:.6;">Noch keine Dateien hochgeladen.</div>
                 @endif
             </div>
         </x-filament::section>

@@ -215,29 +215,52 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             ->success()->send();
     }
 
-    /** Hochgeladene Dokumente des gewählten Konto/Monats. */
+    /**
+     * Zuletzt hochgeladene Dokumente (über alle Konten/Monate), neueste zuerst.
+     * So kann man viele Dateien auf einmal hochladen und danach jede Zeile
+     * einzeln zuordnen (Konto, Monat, Kategorie, Druck), ohne vorher pro Datei
+     * Konto/Monat umzustellen.
+     */
     public function getDocumentsProperty(): Collection
     {
-        $accId = $this->data['bank_account_id'] ?? null;
-        $month = $this->selectedMonth($this->data ?? []);
-        if (! $accId || ! $month) {
-            return collect();
-        }
-
-        return SteuerDocument::where('bank_account_id', $accId)
-            ->whereYear('period', $month->year)
-            ->whereMonth('period', $month->month)
-            ->orderBy('sort_order')->orderBy('id')
+        return SteuerDocument::with('bankAccount')
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->limit(60)
             ->get();
     }
 
-    /** Bereits verwendete Kategorien als Vorschläge (frei erweiterbar). */
-    public function getCategorySuggestionsProperty(): array
+    /** Auswählbare Kategorien: feste Vorgaben + selbst angelegte + bereits verwendete. */
+    public function getCategoryOptionsProperty(): array
     {
-        $used = SteuerDocument::query()->select('category')->distinct()
-            ->orderBy('category')->pluck('category')->filter()->all();
+        $defaults = ['Monatsrechnung', 'Kontoauszug', 'Kundenrechnung', 'Hinweis Bank', 'Sonstiges'];
+        $custom = \App\Models\SteuerCategory::orderBy('sort_order')->orderBy('name')->pluck('name')->all();
+        $used = SteuerDocument::query()->select('category')->distinct()->pluck('category')->filter()->all();
 
-        return array_values(array_unique(array_merge(['Monatsrechnung'], $used)));
+        return array_values(array_unique(array_filter(array_merge($defaults, $custom, $used))));
+    }
+
+    public bool $showNewCategory = false;
+
+    public string $newCategoryText = '';
+
+    /** Neue Kategorie anlegen und als Standard für den nächsten Upload wählen. */
+    public function addCategory(): void
+    {
+        $name = trim($this->newCategoryText);
+        if ($name === '') {
+            return;
+        }
+
+        \App\Models\SteuerCategory::firstOrCreate(
+            ['name' => $name],
+            ['sort_order' => (int) \App\Models\SteuerCategory::max('sort_order') + 1],
+        );
+
+        $this->docCategory = $name;
+        $this->newCategoryText = '';
+        $this->showNewCategory = false;
+
+        Notification::make()->title('Kategorie „' . $name . '" hinzugefügt')->success()->send();
     }
 
     /** PDF-Dateien hochladen und Konto/Monat + Kategorie zuordnen. */

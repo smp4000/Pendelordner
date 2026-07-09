@@ -109,6 +109,26 @@ class SteuerDocumentTest extends TestCase
         $this->assertSame('Kontoauszug', $doc->category);
     }
 
+    public function test_kategorie_kann_angelegt_und_ausgewaehlt_werden(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(SteuerbueroHinweise::class)
+            ->set('newCategoryText', 'Kundenrechnung')
+            ->call('addCategory')
+            ->assertSet('docCategory', 'Kundenrechnung')
+            ->assertSet('showNewCategory', false);
+
+        $this->assertDatabaseHas('steuer_categories', ['name' => 'Kundenrechnung']);
+
+        // Erscheint in den Auswahl-Optionen (neben den Vorgaben).
+        $options = Livewire::test(SteuerbueroHinweise::class)->instance()->categoryOptions;
+        $this->assertContains('Kundenrechnung', $options);
+        $this->assertContains('Monatsrechnung', $options);
+    }
+
     public function test_hinweis_text_wird_hinzugefuegt(): void
     {
         $this->seed(DatabaseSeeder::class);
