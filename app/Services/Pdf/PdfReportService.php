@@ -245,9 +245,11 @@ class PdfReportService
                 continue;
             }
             $key = $doc->period?->format('Y-m') ?? '0000-00';
-            $label = $this->sanitizeFileName(
-                ($doc->category ?: 'Dokument') . '_' . pathinfo((string) $doc->file_path, PATHINFO_FILENAME)
-            );
+            // Original-Dateiname verwenden (nicht den zufälligen Speichernamen);
+            // die Kategorie als Präfix voranstellen.
+            $original = pathinfo((string) ($doc->file_name ?: $doc->file_path), PATHINFO_FILENAME);
+            $cat = trim((string) $doc->category);
+            $label = $this->sanitizeFileName(($cat !== '' ? $cat . '_' : '') . $original);
             $name = $key . '/' . $label . '.' . $this->fileExtension($doc->file_path);
             if (isset($usedNames[$name])) {
                 $name = $key . '/' . $label . '_' . $doc->id . '.' . $this->fileExtension($doc->file_path);

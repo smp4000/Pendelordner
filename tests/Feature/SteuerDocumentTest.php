@@ -70,7 +70,8 @@ class SteuerDocumentTest extends TestCase
         SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-07-01',
             'category' => 'Monatsrechnung', 'file_path' => '2026/07/gedruckt.pdf', 'include_in_report' => true]);
         SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-07-01',
-            'category' => 'Hinweis Bank', 'file_path' => '2026/07/nur-speichern.pdf', 'include_in_report' => false]);
+            'category' => 'Hinweis Bank', 'file_path' => '2026/07/nur-speichern.pdf',
+            'file_name' => 'Mitteilung Bank.pdf', 'include_in_report' => false]);
 
         $service = new \App\Services\Pdf\PdfReportService();
         $from = \Illuminate\Support\Carbon::parse('2026-07-01');
@@ -81,6 +82,9 @@ class SteuerDocumentTest extends TestCase
         // Nur die Datei OHNE Druck-Haken ist dabei (die gedruckte ist schon im Bericht).
         $this->assertCount(1, $files);
         $this->assertStringContainsString('nur-speichern', $files[0]['absolute']);
+        // Dateiname nutzt den ORIGINALnamen (nicht den zufälligen Speichernamen).
+        $this->assertStringContainsString('Mitteilung Bank', $files[0]['name']);
+        $this->assertStringNotContainsString('nur-speichern', $files[0]['name']);
     }
 
     public function test_dokument_kann_je_zeile_konto_monat_kategorie_aendern(): void
