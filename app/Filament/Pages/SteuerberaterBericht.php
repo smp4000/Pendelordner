@@ -177,6 +177,12 @@ class SteuerberaterBericht extends Page implements HasActions, HasForms
                     foreach ($service->unprintedReceiptFiles($from, $to, $business, $account) as $file) {
                         $entries[$folder . '/Belege_nicht_im_Bericht/' . $file['name']] = $file['absolute'];
                     }
+
+                    // Ebenso die hochgeladenen Steuerbüro-PDFs ohne Druck-Haken –
+                    // sie sollen trotzdem in der ZIP-Sicherung sein.
+                    foreach ($service->unprintedSteuerDocumentFiles($from, $to, $account) as $file) {
+                        $entries[$folder . '/Steuerbuero_nicht_im_Bericht/' . $file['name']] = $file['absolute'];
+                    }
                 }
 
                 if (empty($entries)) {

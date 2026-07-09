@@ -210,6 +210,50 @@ class PdfReportService
         return $out;
     }
 
+    /**
+     * Steuerbüro-PDFs, die NICHT im Bericht ausgedruckt werden
+     * (include_in_report = false). Sollen trotzdem in der ZIP-Sicherung landen,
+     * damit keine hochgeladene Datei verloren geht. Gruppiert je Monat, Name mit
+     * Kategorie und Original-Dateiname.
+     *
+     * @return list<array{name: string, absolute: string}>
+     */
+    public function unprintedSteuerDocumentFiles(Carbon $from, Carbon $to, ?BankAccount $account = null): array
+    {
+        if (! $account) {
+            return [];
+        }
+
+        $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
+
+        $docs = \App\Models\SteuerDocument::where('bank_account_id', $account->id)
+            ->where('include_in_report', false)
+            ->whereBetween('period', [$from->copy()->startOfMonth()->toDateString(), $to->copy()->endOfMonth()->toDateString()])
+            ->orderBy('period')->orderBy('sort_order')->orderBy('id')
+            ->get();
+
+        $out = [];
+        $usedNames = [];
+        foreach ($docs as $doc) {
+            if (! $doc->file_path || ! $disk->exists($doc->file_path)) {
+                continue;
+            }
+            $key = $doc->period?->format('Y-m') ?? '0000-00';
+            $label = $this->sanitizeFileName(
+                ($doc->category ?: 'Dokument') . '_' . pathinfo((string) $doc->file_path, PATHINFO_FILENAME)
+            );
+            $name = $key . '/' . $label . '.' . $this->fileExtension($doc->file_path);
+            if (isset($usedNames[$name])) {
+                $name = $key . '/' . $label . '_' . $doc->id . '.' . $this->fileExtension($doc->file_path);
+            }
+            $usedNames[$name] = true;
+
+            $out[] = ['name' => $name, 'absolute' => $disk->path($doc->file_path)];
+        }
+
+        return $out;
+    }
+
     private function sanitizeFileName(string $name): string
     {
         $name = preg_replace('/[^\p{L}\p{N}\-_ ]+/u', '', $name) ?? '';
