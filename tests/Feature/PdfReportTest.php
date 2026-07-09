@@ -199,9 +199,10 @@ class PdfReportTest extends TestCase
         $from = Carbon::parse('2026-01-01');
         $to = Carbon::parse('2026-01-31');
 
-        // Einzel-Belege: Jahr-Monat-Nummer, Steuerbüro-Datei zuerst.
+        // Einzel-Belege: Jahr-Monat-Nummer + eingegebene Kategorie/Bezeichnung,
+        // Steuerbüro-Datei zuerst (Beleg ohne Rechnungsnr./Lieferant -> ohne Zusatz).
         $files = $service->attachmentFiles($from, $to, null, $account);
-        $this->assertSame(['2026-01-01.pdf', '2026-01-02.pdf'], array_column($files, 'name'));
+        $this->assertSame(['2026-01-01_Monatsrechnung.pdf', '2026-01-02.pdf'], array_column($files, 'name'));
         foreach ($files as $f) {
             $this->assertFileExists($f['absolute']);
         }

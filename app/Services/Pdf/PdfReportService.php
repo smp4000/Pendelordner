@@ -134,16 +134,22 @@ class PdfReportService
         $out = [];
         foreach ($d['months'] as $key => $bucket) {
             foreach ($bucket['docs'] ?? [] as $doc) {
+                // Kategorie ans Dateiname anhängen, z. B. "2026-06-01_Kontoauszug".
+                $raw = trim((string) $doc->category);
+                $label = $raw !== '' ? '_' . $this->sanitizeFileName($raw) : '';
                 $out[] = [
                     'name' => $key . '-' . str_pad((string) $d['steuerNumbers'][$doc->id], 2, '0', STR_PAD_LEFT)
-                        . '.' . $this->fileExtension($doc->file_path),
+                        . $label . '.' . $this->fileExtension($doc->file_path),
                     'absolute' => $d['disk']->path($doc->file_path),
                 ];
             }
             foreach ($bucket['receipts'] ?? [] as $receipt) {
+                // Beim Beleg die Rechnungsnummer bzw. den Lieferanten anhängen.
+                $raw = trim((string) ($receipt->invoice_number ?: ($receipt->supplier?->name ?? '')));
+                $label = $raw !== '' ? '_' . $this->sanitizeFileName($raw) : '';
                 $out[] = [
                     'name' => $key . '-' . str_pad((string) $d['receiptNumbers'][$receipt->id], 2, '0', STR_PAD_LEFT)
-                        . '.' . $this->fileExtension($receipt->file_path),
+                        . $label . '.' . $this->fileExtension($receipt->file_path),
                     'absolute' => $d['disk']->path($receipt->file_path),
                 ];
             }
