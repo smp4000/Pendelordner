@@ -83,6 +83,32 @@ class SteuerDocumentTest extends TestCase
         $this->assertStringContainsString('nur-speichern', $files[0]['absolute']);
     }
 
+    public function test_dokument_kann_je_zeile_konto_monat_kategorie_aendern(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $a1 = BankAccount::create(['label' => 'Konto A', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $a2 = BankAccount::create(['label' => 'Konto B', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        Storage::disk('belege')->put('2026/06/x.pdf', 'X');
+        $doc = SteuerDocument::create(['bank_account_id' => $a1->id, 'period' => '2026-06-01',
+            'category' => 'Monatsrechnung', 'file_path' => '2026/06/x.pdf', 'include_in_report' => true]);
+
+        Livewire::test(SteuerbueroHinweise::class)
+            ->call('setDocAccount', $doc->id, $a2->id)
+            ->call('setDocMonth', $doc->id, 8)
+            ->call('setDocYear', $doc->id, 2025)
+            ->call('setDocCategory', $doc->id, 'Kontoauszug');
+
+        $doc->refresh();
+        $this->assertSame($a2->id, $doc->bank_account_id);
+        $this->assertSame(8, $doc->period->month);
+        $this->assertSame(2025, $doc->period->year);
+        $this->assertSame('Kontoauszug', $doc->category);
+    }
+
     public function test_hinweis_text_wird_hinzugefuegt(): void
     {
         $this->seed(DatabaseSeeder::class);

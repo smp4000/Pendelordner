@@ -341,6 +341,44 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         SteuerDocument::where('id', $id)->update(['include_in_report' => $value]);
     }
 
+    /** Kategorie eines Dokuments je Zeile ändern. */
+    public function setDocCategory(int $id, string $category): void
+    {
+        SteuerDocument::where('id', $id)->update(['category' => trim($category) ?: 'Monatsrechnung']);
+    }
+
+    /** Bankkonto eines Dokuments je Zeile ändern. */
+    public function setDocAccount(int $id, int $accountId): void
+    {
+        if (BankAccount::whereKey($accountId)->exists()) {
+            SteuerDocument::where('id', $id)->update(['bank_account_id' => $accountId]);
+        }
+    }
+
+    /** Monat eines Dokuments je Zeile ändern (Jahr bleibt). */
+    public function setDocMonth(int $id, int $month): void
+    {
+        $doc = SteuerDocument::find($id);
+        if ($doc && $month >= 1 && $month <= 12) {
+            $doc->update(['period' => Carbon::create($doc->period->year, $month, 1)->startOfMonth()]);
+        }
+    }
+
+    /** Jahr eines Dokuments je Zeile ändern (Monat bleibt). */
+    public function setDocYear(int $id, int $year): void
+    {
+        $doc = SteuerDocument::find($id);
+        if ($doc && $year >= 2000) {
+            $doc->update(['period' => Carbon::create($year, $doc->period->month, 1)->startOfMonth()]);
+        }
+    }
+
+    /** Konten für die Zuordnungs-Auswahl je Zeile. */
+    public function getAccountOptionsProperty(): array
+    {
+        return BankAccount::orderBy('label')->pluck('label', 'id')->all();
+    }
+
     /** Ein Dokument löschen (inkl. Datei). */
     public function deleteDocument(int $id): void
     {
@@ -405,14 +443,14 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     }
 
     /** @return array<int, string> Monatsnamen 1..12 */
-    private function monthNames(): array
+    public function monthNames(): array
     {
         return [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni',
             7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
     }
 
     /** @return array<int, string> Jahre vom aktuellen bis 6 Jahre zurück */
-    private function yearOptions(): array
+    public function yearOptions(): array
     {
         $current = Carbon::now()->year;
         $options = [];
