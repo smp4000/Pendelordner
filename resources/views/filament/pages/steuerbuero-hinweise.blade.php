@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <style>[x-cloak]{display:none!important}</style>
     <div class="mx-auto w-full max-w-4xl space-y-6">
 
         {{-- Header-Banner --}}
@@ -119,8 +120,17 @@
             <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">20 Dateien fürs gleiche Konto/Monat? Einfach oben Konto, Monat und Kategorie setzen und alle auf einmal hochladen. Einzelne Ausreißer kannst du unten je Zeile korrigieren.</p>
 
             @php $docs = $this->documents; $noteTexts = $this->noteTexts; @endphp
-            <div style="margin-top:1.25rem;">
-                <div style="font-weight:600;margin-bottom:.5rem;">Hochgeladene Dateien <span style="opacity:.55;font-weight:400;font-size:.85rem;">(Reihenfolge = Bericht · ⠿ zum Ziehen · Auswahl für Bulk-Aktionen)</span></div>
+            <div style="margin-top:1.25rem;" x-data="{ showDetails: false }">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem;">
+                    <div style="font-weight:600;">Hochgeladene Dateien <span style="opacity:.55;font-weight:400;font-size:.85rem;">(Reihenfolge = Bericht · ⠿ zum Ziehen)</span></div>
+                    @if ($docs->isNotEmpty())
+                        <button type="button" @click="showDetails = !showDetails"
+                            style="border:1px solid rgba(120,120,120,.35);border-radius:.4rem;padding:.25rem .6rem;font-size:.8rem;background:transparent;cursor:pointer;white-space:nowrap;">
+                            <span x-show="!showDetails">▸ Zuordnung je Zeile anzeigen</span>
+                            <span x-show="showDetails" x-cloak>▾ Zuordnung ausblenden</span>
+                        </button>
+                    @endif
+                </div>
                 @if ($docs->isNotEmpty())
                     @php $sel = 'padding:.2rem .4rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;font-size:.78rem;background:transparent;'; @endphp
                     {{-- Bulk-Leiste --}}
@@ -158,8 +168,13 @@
                                     <td style="padding:.5rem .4rem;font-weight:700;vertical-align:top;">{{ $i + 1 }}</td>
                                     <td style="padding:.5rem .5rem;">
                                         <a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;font-weight:500;">{{ $doc->file_name ?: 'Datei' }}</a>
-                                        {{-- Je Datei zuordnen: Konto · Monat · Jahr · Kategorie --}}
-                                        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem;">
+                                        {{-- Kompakt: Zuordnung als Text (wenn Details ausgeblendet) --}}
+                                        <div x-show="!showDetails" style="font-size:.78rem;opacity:.7;margin-top:.15rem;">
+                                            {{ $doc->bankAccount?->label }} · {{ $this->monthNames()[(int) $doc->period->month] ?? '' }} {{ $doc->period->year }} · {{ $doc->category }}@if ($doc->note) · 📝 {{ \Illuminate\Support\Str::limit($doc->note, 45) }}@endif
+                                        </div>
+                                        {{-- Detail: Dropdowns zum Ändern (Konto · Monat · Jahr · Kategorie · Notiz) --}}
+                                        <div x-show="showDetails" x-cloak style="margin-top:.35rem;">
+                                        <div style="display:flex;flex-wrap:wrap;gap:.35rem;">
                                             <select wire:change="setDocAccount({{ $doc->id }}, $event.target.value)" title="Konto" style="{{ $sel }}">
                                                 @foreach ($this->accountOptions as $aid => $albl)
                                                     <option value="{{ $aid }}" @selected($doc->bank_account_id == $aid)>{{ $albl }}</option>
@@ -193,6 +208,7 @@
                                                 <option value="{{ $doc->note }}" selected>{{ $doc->note }}</option>
                                             @endif
                                         </select>
+                                        </div>{{-- Ende Detail-Container --}}
                                     </td>
                                     <td style="padding:.5rem .5rem;text-align:center;vertical-align:top;">
                                         <input type="checkbox" @checked($doc->include_in_report) wire:change="setDocPrint({{ $doc->id }}, $event.target.checked)" title="Im Bericht drucken" style="width:1.05rem;height:1.05rem;">
