@@ -113,6 +113,31 @@ class SteuerDocumentTest extends TestCase
         $this->assertSame('Kontoauszug', $doc->category);
     }
 
+    public function test_dublette_per_name_und_groesse_kontoweit(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Bereits vorhanden im JUNI: gleicher Name + Größe, aber anderer Hash.
+        SteuerDocument::create([
+            'bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug',
+            'file_path' => '2026/06/alt.pdf', 'file_name' => 'kontoauszug.pdf',
+            'file_size' => 120 * 1024, 'file_hash' => 'anderer-hash',
+        ]);
+
+        // Upload derselben Datei (Name + Größe) für JULI -> als Dublette übersprungen.
+        Livewire::test(SteuerbueroHinweise::class)
+            ->set('docAccount', $account->id)->set('docYear', 2026)->set('docMonth', 7)
+            ->set('docUploads', [UploadedFile::fake()->create('kontoauszug.pdf', 120, 'application/pdf')])
+            ->call('uploadDocuments');
+
+        $this->assertSame(1, SteuerDocument::count()); // nicht importiert
+    }
+
     public function test_bulk_loeschen_und_reihenfolge_sortieren(): void
     {
         Storage::fake('belege');

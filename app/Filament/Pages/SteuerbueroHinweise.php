@@ -364,9 +364,19 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         foreach ($this->docUploads as $file) {
             try {
                 $hash = hash('sha256', $file->get());
+                $origName = $file->getClientOriginalName();
+                $size = (int) $file->getSize();
+
+                // Dublette (kontoweit, über alle Monate): gleicher Inhalt (Hash)
+                // ODER gleicher Original-Dateiname + gleiche Größe.
                 $dupe = SteuerDocument::where('bank_account_id', $accId)
-                    ->whereYear('period', $month->year)->whereMonth('period', $month->month)
-                    ->where('file_hash', $hash)->exists();
+                    ->where(function ($q) use ($hash, $origName, $size) {
+                        $q->where('file_hash', $hash)
+                            ->orWhere(function ($q) use ($origName, $size) {
+                                $q->where('file_name', $origName)->where('file_size', $size);
+                            });
+                    })
+                    ->exists();
                 if ($dupe) {
                     $skipped++;
 
@@ -380,9 +390,9 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
                     'note' => trim($this->docNote) ?: null,
                     'include_in_report' => $this->docPrint,
                     'file_path' => $path,
-                    'file_name' => $file->getClientOriginalName(),
+                    'file_name' => $origName,
                     'mime_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
+                    'file_size' => $size,
                     'file_hash' => $hash,
                     'sort_order' => ++$sort,
                 ]);
