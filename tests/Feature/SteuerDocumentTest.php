@@ -82,8 +82,8 @@ class SteuerDocumentTest extends TestCase
         // Nur die Datei OHNE Druck-Haken ist dabei (die gedruckte ist schon im Bericht).
         $this->assertCount(1, $files);
         $this->assertStringContainsString('nur-speichern', $files[0]['absolute']);
-        // Dateiname nutzt den ORIGINALnamen (nicht den zufälligen Speichernamen).
-        $this->assertStringContainsString('Mitteilung Bank', $files[0]['name']);
+        // Unterordner = Kategorie, darin die Datei mit ORIGINALnamen.
+        $this->assertSame('Hinweis Bank/Mitteilung Bank.pdf', $files[0]['name']);
         $this->assertStringNotContainsString('nur-speichern', $files[0]['name']);
     }
 

@@ -244,15 +244,16 @@ class PdfReportService
             if (! $doc->file_path || ! $disk->exists($doc->file_path)) {
                 continue;
             }
-            $key = $doc->period?->format('Y-m') ?? '0000-00';
-            // Original-Dateiname verwenden (nicht den zufälligen Speichernamen);
-            // die Kategorie als Präfix voranstellen.
-            $original = pathinfo((string) ($doc->file_name ?: $doc->file_path), PATHINFO_FILENAME);
-            $cat = trim((string) $doc->category);
-            $label = $this->sanitizeFileName(($cat !== '' ? $cat . '_' : '') . $original);
-            $name = $key . '/' . $label . '.' . $this->fileExtension($doc->file_path);
+            // Unterordner = Kategorie (z. B. "Kundenrechnung"), darin die Datei
+            // mit ihrem ORIGINALnamen (nicht dem zufälligen Speichernamen).
+            $catFolder = $this->sanitizeFileName(trim((string) $doc->category) ?: 'Sonstige');
+            $original = str_replace(['/', '\\'], '_', (string) ($doc->file_name ?: pathinfo((string) $doc->file_path, PATHINFO_BASENAME)));
+
+            $name = $catFolder . '/' . $original;
             if (isset($usedNames[$name])) {
-                $name = $key . '/' . $label . '_' . $doc->id . '.' . $this->fileExtension($doc->file_path);
+                // Namenskollision im selben Kategorie-Ordner: ID anhängen.
+                $ext = $this->fileExtension($doc->file_path);
+                $name = $catFolder . '/' . pathinfo($original, PATHINFO_FILENAME) . '_' . $doc->id . '.' . $ext;
             }
             $usedNames[$name] = true;
 
