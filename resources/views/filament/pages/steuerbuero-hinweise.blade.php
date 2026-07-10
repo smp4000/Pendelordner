@@ -117,7 +117,7 @@
                     <x-filament::button wire:click="addNoteText" icon="heroicon-o-plus">Hinzufügen</x-filament::button>
                 </div>
             @endif
-            <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">20 Dateien fürs gleiche Konto/Monat? Einfach oben Konto, Monat und Kategorie setzen und alle auf einmal hochladen. Einzelne Ausreißer kannst du unten je Zeile korrigieren.</p>
+            <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Viele Dateien (bis zu 500) fürs gleiche Konto/Monat? Einfach oben Konto, Monat und Kategorie setzen und alle auf einmal hochladen. Einzelne Ausreißer kannst du unten je Zeile korrigieren.</p>
 
             @php $docs = $this->documents; $noteTexts = $this->noteTexts; @endphp
             <div style="margin-top:1.25rem;" x-data="{ showDetails: false }">
