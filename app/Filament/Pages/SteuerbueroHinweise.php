@@ -66,6 +66,17 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
 
     public string $newNoteText = '';
 
+    // Zuordnungs-Kriterien für neue Uploads (eigenständig, unabhängig von der
+    // Karten-Auswahl oben). Alle hochgeladenen Dateien bekommen diese Werte.
+    public ?int $docAccount = null;
+
+    public int $docMonth = 1;
+
+    public int $docYear = 2026;
+
+    /** @var array<int, int|string> Auswahl für Bulk-Aktionen in der Liste. */
+    public array $selectedDocs = [];
+
     public function mount(): void
     {
         $this->form->fill([
@@ -74,6 +85,10 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             'month' => (string) Carbon::now()->month,
             'cards' => [],
         ]);
+
+        $this->docAccount = BankAccount::orderBy('label')->value('id');
+        $this->docMonth = (int) Carbon::now()->month;
+        $this->docYear = (int) Carbon::now()->year;
 
         $this->loadCards();
     }
@@ -224,9 +239,67 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     public function getDocumentsProperty(): Collection
     {
         return SteuerDocument::with('bankAccount')
-            ->orderByDesc('created_at')->orderByDesc('id')
-            ->limit(60)
+            ->orderBy('sort_order')->orderBy('id')
+            ->limit(200)
             ->get();
+    }
+
+    /** Neue Reihenfolge der Dokumente (Drag & Drop) speichern. */
+    public function reorderDocuments(array $orderedIds): void
+    {
+        $pos = 0;
+        foreach ($orderedIds as $id) {
+            SteuerDocument::where('id', (int) $id)->update(['sort_order' => $pos++]);
+        }
+    }
+
+    /** Alle angezeigten Dokumente aus-/abwählen. */
+    public function toggleAllDocs(bool $checked): void
+    {
+        $this->selectedDocs = $checked
+            ? $this->documents->pluck('id')->map(fn ($id) => (string) $id)->all()
+            : [];
+    }
+
+    /** Mehrere ausgewählte Dokumente auf einmal löschen (inkl. Dateien). */
+    public function deleteSelectedDocs(): void
+    {
+        $ids = array_map('intval', array_filter($this->selectedDocs));
+        if (empty($ids)) {
+            Notification::make()->title('Keine Dokumente ausgewählt')->warning()->send();
+
+            return;
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk(config('pendelordner.belege_disk', 'belege'));
+        $count = 0;
+        foreach (SteuerDocument::whereKey($ids)->get() as $doc) {
+            try {
+                if ($doc->file_path) {
+                    $disk->delete($doc->file_path);
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
+            $doc->delete();
+            $count++;
+        }
+
+        $this->selectedDocs = [];
+        Notification::make()->title($count . ' Dokument(e) gelöscht')->success()->send();
+    }
+
+    /** Druck-Haken für alle ausgewählten Dokumente setzen. */
+    public function setSelectedPrint(bool $value): void
+    {
+        $ids = array_map('intval', array_filter($this->selectedDocs));
+        if (empty($ids)) {
+            Notification::make()->title('Keine Dokumente ausgewählt')->warning()->send();
+
+            return;
+        }
+        $count = SteuerDocument::whereKey($ids)->update(['include_in_report' => $value]);
+        Notification::make()->title($count . ' Dokument(e): Druck ' . ($value ? 'an' : 'aus'))->success()->send();
     }
 
     /** Auswählbare Kategorien: feste Vorgaben + selbst angelegte + bereits verwendete. */
@@ -263,11 +336,13 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         Notification::make()->title('Kategorie „' . $name . '" hinzugefügt')->success()->send();
     }
 
-    /** PDF-Dateien hochladen und Konto/Monat + Kategorie zuordnen. */
+    /** PDF-Dateien hochladen – alle bekommen die eingestellten Kriterien. */
     public function uploadDocuments(): void
     {
-        $accId = $this->data['bank_account_id'] ?? null;
-        $month = $this->selectedMonth($this->data ?? []);
+        $accId = $this->docAccount;
+        $month = ($this->docMonth >= 1 && $this->docMonth <= 12 && $this->docYear >= 2000)
+            ? Carbon::create($this->docYear, $this->docMonth, 1)->startOfMonth()
+            : null;
         if (! $accId || ! $month) {
             Notification::make()->title('Bitte Konto, Monat und Jahr wählen')->warning()->send();
 
@@ -283,9 +358,8 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         $diskName = config('pendelordner.belege_disk', 'belege');
         $count = 0;
         $skipped = 0;
-        $sort = (int) SteuerDocument::where('bank_account_id', $accId)
-            ->whereYear('period', $month->year)->whereMonth('period', $month->month)
-            ->max('sort_order');
+        // Globale Reihenfolge (per Ziehen sortierbar): neue Dateien ans Ende.
+        $sort = (int) SteuerDocument::max('sort_order');
 
         foreach ($this->docUploads as $file) {
             try {

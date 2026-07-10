@@ -47,11 +47,35 @@
             </div>
             <div wire:loading wire:target="docUploads" style="font-size:.8rem;opacity:.7;margin-top:.4rem;text-align:center;">Datei wird hochgeladen …</div>
 
-            {{-- Standardwerte für neue Dateien + Hochladen. Feineinstellung (Konto,
-                 Monat, Druck) je Datei unten in der Tabelle. --}}
-            <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin-top:.9rem;">
-                <div style="min-width:180px;flex:1;">
-                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Kategorie (Standard)</label>
+            {{-- Zuordnung für die hochzuladenden Dateien: ALLE bekommen diese Werte. --}}
+            <div style="margin-top:.9rem;font-size:.82rem;font-weight:700;opacity:.75;">Diese Dateien zuordnen zu:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin-top:.4rem;">
+                <div style="min-width:200px;flex:1;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Bankkonto</label>
+                    <select wire:model="docAccount" style="{{ $inpTxt }}">
+                        @foreach ($this->accountOptions as $aid => $albl)
+                            <option value="{{ $aid }}">{{ $albl }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div style="min-width:120px;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Monat</label>
+                    <select wire:model="docMonth" style="{{ $inpTxt }}">
+                        @foreach ($this->monthNames() as $mn => $mlabel)
+                            <option value="{{ $mn }}">{{ $mlabel }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div style="min-width:90px;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Jahr</label>
+                    <select wire:model="docYear" style="{{ $inpTxt }}">
+                        @foreach ($this->yearOptions() as $yv => $ylabel)
+                            <option value="{{ $yv }}">{{ $ylabel }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div style="min-width:170px;flex:1;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Kategorie</label>
                     <div style="display:flex;gap:.4rem;">
                         <select wire:model="docCategory" style="{{ $inpTxt }};flex:1;">
                             @foreach ($this->categoryOptions as $c)
@@ -68,8 +92,8 @@
                         </div>
                     @endif
                 </div>
-                <div style="min-width:220px;flex:1;">
-                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz (Standard, optional)</label>
+                <div style="min-width:200px;flex:1;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz (optional)</label>
                     <div style="display:flex;gap:.5rem;align-items:center;">
                         <select wire:model="docNote" style="{{ $inpTxt }};flex:1;">
                             <option value="">– kein Hinweis –</option>
@@ -92,26 +116,46 @@
                     <x-filament::button wire:click="addNoteText" icon="heroicon-o-plus">Hinzufügen</x-filament::button>
                 </div>
             @endif
-            <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Tipp: <strong>Konto, Monat und „Druck" kannst du unten je Datei einzeln ändern</strong> – einfach viele Dateien hochladen und dann pro Zeile zuordnen.</p>
+            <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">20 Dateien fürs gleiche Konto/Monat? Einfach oben Konto, Monat und Kategorie setzen und alle auf einmal hochladen. Einzelne Ausreißer kannst du unten je Zeile korrigieren.</p>
 
             @php $docs = $this->documents; $noteTexts = $this->noteTexts; @endphp
             <div style="margin-top:1.25rem;">
-                <div style="font-weight:600;margin-bottom:.5rem;">Zuletzt hochgeladen <span style="opacity:.55;font-weight:400;font-size:.85rem;">(neueste zuerst · hier jede Datei zuordnen)</span></div>
+                <div style="font-weight:600;margin-bottom:.5rem;">Hochgeladene Dateien <span style="opacity:.55;font-weight:400;font-size:.85rem;">(Reihenfolge = Bericht · ⠿ zum Ziehen · Auswahl für Bulk-Aktionen)</span></div>
                 @if ($docs->isNotEmpty())
                     @php $sel = 'padding:.2rem .4rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;font-size:.78rem;background:transparent;'; @endphp
+                    {{-- Bulk-Leiste --}}
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem;padding:.5rem .7rem;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;background:rgba(120,120,120,.04);">
+                        <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;">
+                            <input type="checkbox" @checked(count($selectedDocs) === $docs->count() && $docs->count() > 0)
+                                wire:click="toggleAllDocs($event.target.checked)"> Alle auswählen
+                        </label>
+                        <span style="font-size:.82rem;opacity:.7;">{{ count($selectedDocs) }} ausgewählt</span>
+                        <span style="flex:1;"></span>
+                        <x-filament::button wire:click="setSelectedPrint(true)" size="sm" color="gray" x-bind:disabled="{{ count($selectedDocs) === 0 ? 'true':'false' }}">Druck an</x-filament::button>
+                        <x-filament::button wire:click="setSelectedPrint(false)" size="sm" color="gray" x-bind:disabled="{{ count($selectedDocs) === 0 ? 'true':'false' }}">Druck aus</x-filament::button>
+                        <x-filament::button wire:click="deleteSelectedDocs" wire:confirm="Alle ausgewählten Dokumente löschen?" size="sm" color="danger" icon="heroicon-o-trash" x-bind:disabled="{{ count($selectedDocs) === 0 ? 'true':'false' }}">Löschen ({{ count($selectedDocs) }})</x-filament::button>
+                    </div>
                     <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
                         <thead>
                             <tr style="border-bottom:2px solid rgba(120,120,120,.25);text-align:left;">
-                                <th style="padding:.4rem .5rem;width:40px;">Nr.</th>
+                                <th style="padding:.4rem .3rem;width:26px;"></th>
+                                <th style="padding:.4rem .3rem;width:26px;"></th>
+                                <th style="padding:.4rem .4rem;width:36px;">Nr.</th>
                                 <th style="padding:.4rem .5rem;">Datei &amp; Zuordnung</th>
                                 <th style="padding:.4rem .5rem;width:60px;text-align:center;">Druck</th>
                                 <th style="padding:.4rem .5rem;width:60px;"></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="docSorter()" x-init="init()" x-ref="rows">
                             @foreach ($docs as $i => $doc)
-                                <tr style="border-bottom:1px solid rgba(120,120,120,.12);">
-                                    <td style="padding:.5rem .5rem;font-weight:700;vertical-align:top;">{{ $i + 1 }}</td>
+                                <tr wire:key="doc-{{ $doc->id }}" data-id="{{ $doc->id }}" style="border-bottom:1px solid rgba(120,120,120,.12);">
+                                    <td style="padding:.5rem .3rem;vertical-align:top;text-align:center;">
+                                        <span class="doc-grip" title="Ziehen zum Sortieren" style="cursor:grab;opacity:.45;font-size:1.1rem;line-height:1;user-select:none;">⠿</span>
+                                    </td>
+                                    <td style="padding:.5rem .3rem;vertical-align:top;text-align:center;">
+                                        <input type="checkbox" value="{{ $doc->id }}" wire:model.live="selectedDocs" style="width:1.05rem;height:1.05rem;cursor:pointer;">
+                                    </td>
+                                    <td style="padding:.5rem .4rem;font-weight:700;vertical-align:top;">{{ $i + 1 }}</td>
                                     <td style="padding:.5rem .5rem;">
                                         <a href="{{ $doc->preview_url }}" target="_blank" style="color:#059669;text-decoration:underline;font-weight:500;">{{ $doc->file_name ?: 'Datei' }}</a>
                                         {{-- Je Datei zuordnen: Konto · Monat · Jahr · Kategorie --}}
@@ -160,7 +204,7 @@
                             @endforeach
                         </tbody>
                     </table>
-                    <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Je Datei Konto, Monat, Kategorie und „Druck" einstellen. Im Bericht werden die Dateien je Konto &amp; Monat ab 1 nummeriert (vor den Kontoauszug-Belegen).</p>
+                    <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Reihenfolge per ⠿ ziehen (bestimmt die Nummerierung im Bericht je Konto &amp; Monat). Ausreißer je Zeile über die Dropdowns korrigieren.</p>
                 @else
                     <div style="font-size:.85rem;opacity:.6;">Noch keine Dateien hochgeladen.</div>
                 @endif
@@ -168,4 +212,26 @@
         </x-filament::section>
 
     </div>
+
+    @assets
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"></script>
+    @endassets
+
+    @script
+        <script>
+            Alpine.data('docSorter', () => ({
+                init() {
+                    if (! window.Sortable || ! this.$refs.rows) { return; }
+                    window.Sortable.create(this.$refs.rows, {
+                        handle: '.doc-grip',
+                        animation: 150,
+                        onEnd: () => {
+                            const ids = [...this.$refs.rows.querySelectorAll('tr[data-id]')].map((r) => r.dataset.id);
+                            this.$wire.reorderDocuments(ids);
+                        },
+                    });
+                },
+            }));
+        </script>
+    @endscript
 </x-filament-panels::page>

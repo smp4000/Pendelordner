@@ -29,9 +29,9 @@ class SteuerDocumentTest extends TestCase
         $account = BankAccount::create(['label' => 'Konto', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
 
         Livewire::test(SteuerbueroHinweise::class)
-            ->set('data.bank_account_id', $account->id)
-            ->set('data.year', '2026')
-            ->set('data.month', '6')
+            ->set('docAccount', $account->id)
+            ->set('docYear', 2026)
+            ->set('docMonth', 6)
             ->set('docCategory', 'Monatsrechnung')
             ->set('docNote', 'Bitte auf Konto 1900 buchen')
             ->set('docUploads', [UploadedFile::fake()->create('rechnung.pdf', 100, 'application/pdf')])
@@ -48,9 +48,9 @@ class SteuerDocumentTest extends TestCase
 
         // Dieselbe Datei erneut -> Dublette wird übersprungen.
         Livewire::test(SteuerbueroHinweise::class)
-            ->set('data.bank_account_id', $account->id)
-            ->set('data.year', '2026')
-            ->set('data.month', '6')
+            ->set('docAccount', $account->id)
+            ->set('docYear', 2026)
+            ->set('docMonth', 6)
             ->set('docUploads', [UploadedFile::fake()->create('rechnung.pdf', 100, 'application/pdf')])
             ->call('uploadDocuments');
 
@@ -111,6 +111,34 @@ class SteuerDocumentTest extends TestCase
         $this->assertSame(8, $doc->period->month);
         $this->assertSame(2025, $doc->period->year);
         $this->assertSame('Kontoauszug', $doc->category);
+    }
+
+    public function test_bulk_loeschen_und_reihenfolge_sortieren(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $d1 = SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug', 'file_path' => '2026/06/1.pdf', 'sort_order' => 0]);
+        $d2 = SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug', 'file_path' => '2026/06/2.pdf', 'sort_order' => 1]);
+        $d3 = SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug', 'file_path' => '2026/06/3.pdf', 'sort_order' => 2]);
+
+        // Reihenfolge per Drag & Drop: d3, d1, d2.
+        Livewire::test(SteuerbueroHinweise::class)
+            ->call('reorderDocuments', [$d3->id, $d1->id, $d2->id]);
+        $this->assertSame(0, $d3->fresh()->sort_order);
+        $this->assertSame(1, $d1->fresh()->sort_order);
+        $this->assertSame(2, $d2->fresh()->sort_order);
+
+        // Zwei auswählen und gesammelt löschen.
+        Livewire::test(SteuerbueroHinweise::class)
+            ->set('selectedDocs', [(string) $d1->id, (string) $d2->id])
+            ->call('deleteSelectedDocs');
+        $this->assertNull(SteuerDocument::find($d1->id));
+        $this->assertNull(SteuerDocument::find($d2->id));
+        $this->assertNotNull(SteuerDocument::find($d3->id));
     }
 
     public function test_kategorie_kann_angelegt_und_ausgewaehlt_werden(): void
