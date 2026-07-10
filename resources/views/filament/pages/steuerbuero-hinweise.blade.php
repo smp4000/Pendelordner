@@ -30,30 +30,32 @@
             <x-slot name="description"><strong>Einfach viele Dateien auf einmal hochladen</strong> und unten je Zeile Konto, Monat, Kategorie und „Druck" zuordnen. Konto/Monat oben sind nur die Vorgaben für neue Dateien. Im Bericht werden sie <strong>vor</strong> den Kontoauszug-Belegen einsortiert und je Monat ab 1 nummeriert.</x-slot>
 
             @php $inpTxt = 'width:100%;padding:.4rem .6rem;border:1px solid rgba(120,120,120,.3);border-radius:.5rem;background:transparent;'; @endphp
-            {{-- Große Drop-Fläche: Dateien hierher ziehen oder klicken --}}
-            <div x-data="{ dragging:false }"
-                x-on:dragover.prevent="dragging=true"
-                x-on:dragleave.prevent="dragging=false"
-                x-on:drop.prevent="dragging=false; $refs.docInput.files=$event.dataTransfer.files; $refs.docInput.dispatchEvent(new Event('change',{bubbles:true}))"
-                x-on:click="$refs.docInput.click()"
-                :style="dragging ? 'background:rgba(16,185,129,.10);border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.15);' : ''"
-                style="border:2px dashed rgba(16,185,129,.55);border-radius:.9rem;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:.15s;background:rgba(16,185,129,.03);">
-                <div style="font-size:1.9rem;line-height:1;">⬆️</div>
-                <div style="margin-top:.4rem;font-weight:600;color:#059669;">PDF-Dateien hierher ziehen</div>
-                <div style="font-size:.82rem;opacity:.6;margin-top:.15rem;">oder klicken zum Auswählen · mehrere möglich</div>
-                @if (! empty($docUploads))
-                    <div style="margin-top:.5rem;font-size:.82rem;font-weight:600;color:#059669;">{{ count($docUploads) }} Datei(en) bereit</div>
-                @endif
-                <input type="file" x-ref="docInput" wire:model="docUploads" multiple accept="application/pdf,image/*" style="display:none">
-            </div>
-            <div wire:loading wire:target="docUploads" style="font-size:.8rem;opacity:.7;margin-top:.4rem;text-align:center;">Datei wird hochgeladen …</div>
+            {{-- Häppchen-Upload: umgeht die Server-Grenze max_file_uploads (all-inkl
+                 = 20). Viele Dateien wählen, sie werden automatisch in Portionen
+                 à 15 hochgeladen. --}}
+            <div x-data="docUploader()">
+                {{-- Große Drop-Fläche: Dateien hierher ziehen oder klicken --}}
+                <div
+                    x-on:dragover.prevent="dragging=true"
+                    x-on:dragleave.prevent="dragging=false"
+                    x-on:drop.prevent="dragging=false; addFiles($event.dataTransfer.files)"
+                    x-on:click="$refs.docInput.click()"
+                    :style="dragging ? 'background:rgba(16,185,129,.10);border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.15);' : ''"
+                    style="border:2px dashed rgba(16,185,129,.55);border-radius:.9rem;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:.15s;background:rgba(16,185,129,.03);">
+                    <div style="font-size:1.9rem;line-height:1;">⬆️</div>
+                    <div style="margin-top:.4rem;font-weight:600;color:#059669;">PDF-Dateien hierher ziehen</div>
+                    <div style="font-size:.82rem;opacity:.6;margin-top:.15rem;">oder klicken zum Auswählen · viele möglich (bis 500)</div>
+                    <div x-show="files.length && !uploading" x-cloak style="margin-top:.5rem;font-size:.82rem;font-weight:600;color:#059669;"><span x-text="files.length"></span> Datei(en) bereit</div>
+                    <div x-show="uploading" x-cloak style="margin-top:.5rem;font-size:.82rem;font-weight:600;color:#059669;">Lädt hoch… <span x-text="done"></span> / <span x-text="total"></span></div>
+                    <input type="file" x-ref="docInput" multiple accept="application/pdf,image/*" @change="addFiles($event.target.files); $event.target.value='';" style="display:none">
+                </div>
 
             {{-- Zuordnung für die hochzuladenden Dateien: ALLE bekommen diese Werte. --}}
             <div style="margin-top:.9rem;font-size:.82rem;font-weight:700;opacity:.75;">Diese Dateien zuordnen zu:</div>
             <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin-top:.4rem;">
                 <div style="min-width:200px;flex:1;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Bankkonto</label>
-                    <select wire:model="docAccount" style="{{ $inpTxt }}">
+                    <select wire:model.live="docAccount" style="{{ $inpTxt }}">
                         @foreach ($this->accountOptions as $aid => $albl)
                             <option value="{{ $aid }}">{{ $albl }}</option>
                         @endforeach
@@ -61,7 +63,7 @@
                 </div>
                 <div style="min-width:120px;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Monat</label>
-                    <select wire:model="docMonth" style="{{ $inpTxt }}">
+                    <select wire:model.live="docMonth" style="{{ $inpTxt }}">
                         @foreach ($this->monthNames() as $mn => $mlabel)
                             <option value="{{ $mn }}">{{ $mlabel }}</option>
                         @endforeach
@@ -69,7 +71,7 @@
                 </div>
                 <div style="min-width:90px;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Jahr</label>
-                    <select wire:model="docYear" style="{{ $inpTxt }}">
+                    <select wire:model.live="docYear" style="{{ $inpTxt }}">
                         @foreach ($this->yearOptions() as $yv => $ylabel)
                             <option value="{{ $yv }}">{{ $ylabel }}</option>
                         @endforeach
@@ -78,7 +80,7 @@
                 <div style="min-width:170px;flex:1;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Kategorie</label>
                     <div style="display:flex;gap:.4rem;">
-                        <select wire:model="docCategory" style="{{ $inpTxt }};flex:1;">
+                        <select wire:model.live="docCategory" style="{{ $inpTxt }};flex:1;">
                             @foreach ($this->categoryOptions as $c)
                                 <option value="{{ $c }}">{{ $c }}</option>
                             @endforeach
@@ -96,7 +98,7 @@
                 <div style="min-width:200px;flex:1;">
                     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:.25rem;">Notiz (optional)</label>
                     <div style="display:flex;gap:.5rem;align-items:center;">
-                        <select wire:model="docNote" style="{{ $inpTxt }};flex:1;">
+                        <select wire:model.live="docNote" style="{{ $inpTxt }};flex:1;">
                             <option value="">– kein Hinweis –</option>
                             @foreach ($this->noteTexts as $nt)
                                 <option value="{{ $nt->text }}">{{ $nt->text }}</option>
@@ -107,10 +109,11 @@
                     </div>
                 </div>
                 <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:600;cursor:pointer;padding-bottom:.5rem;">
-                    <input type="checkbox" wire:model="docPrint" style="width:1.05rem;height:1.05rem;"> Drucken
+                    <input type="checkbox" wire:model.live="docPrint" style="width:1.05rem;height:1.05rem;"> Drucken
                 </label>
-                <x-filament::button wire:click="uploadDocuments" wire:loading.attr="disabled" wire:target="docUploads,uploadDocuments" icon="heroicon-o-arrow-up-tray">Hochladen &amp; zuordnen</x-filament::button>
+                <x-filament::button x-on:click="start()" x-bind:disabled="uploading || files.length === 0" icon="heroicon-o-arrow-up-tray">Hochladen &amp; zuordnen</x-filament::button>
             </div>
+            </div>{{-- Ende docUploader --}}
             @if ($showNewNote)
                 <div style="display:flex;gap:.5rem;margin-top:.5rem;">
                     <input type="text" wire:model="newNoteText" wire:keydown.enter="addNoteText" placeholder="Neuen Hinweis-Text eingeben …" style="{{ $inpTxt }};flex:1;">
@@ -259,6 +262,46 @@
 
     @script
         <script>
+            // Häppchen-Upload: lädt viele Dateien in Portionen à 15 hoch, damit die
+            // Server-Grenze max_file_uploads (all-inkl = 20) nie überschritten wird.
+            Alpine.data('docUploader', () => ({
+                dragging: false,
+                files: [],
+                uploading: false,
+                done: 0,
+                total: 0,
+                addFiles(fileList) {
+                    for (const f of fileList) { this.files.push(f); }
+                },
+                async start() {
+                    if (this.uploading || this.files.length === 0) { return; }
+                    this.uploading = true;
+                    const all = this.files.slice();
+                    this.files = [];
+                    this.total = all.length;
+                    this.done = 0;
+                    const CHUNK = 15;
+                    try {
+                        for (let i = 0; i < all.length; i += CHUNK) {
+                            const chunk = all.slice(i, i + CHUNK);
+                            await this.uploadChunk(chunk);
+                            this.done += chunk.length;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    this.uploading = false;
+                },
+                uploadChunk(chunk) {
+                    return new Promise((resolve, reject) => {
+                        this.$wire.uploadMultiple('docUploads', chunk,
+                            () => { this.$wire.uploadDocuments().then(resolve).catch(reject); },
+                            () => reject(new Error('upload fehlgeschlagen')),
+                        );
+                    });
+                },
+            }));
+
             Alpine.data('docSorter', () => ({
                 init() {
                     if (! window.Sortable || ! this.$refs.rows) { return; }

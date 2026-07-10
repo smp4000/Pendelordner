@@ -417,7 +417,9 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
             }
         }
 
-        $this->reset('docUploads', 'docNote');
+        // Nur die Dateien zurücksetzen – NICHT docNote/Kategorie, sonst fehlen sie
+        // beim Häppchen-Upload ab der zweiten Portion.
+        $this->reset('docUploads');
 
         // Filter der Liste auf die gerade hochgeladenen Kriterien setzen, damit
         // man die neuen Dateien sofort sieht.
