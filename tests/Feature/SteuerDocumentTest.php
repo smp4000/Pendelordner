@@ -138,6 +138,25 @@ class SteuerDocumentTest extends TestCase
         $this->assertSame(1, SteuerDocument::count()); // nicht importiert
     }
 
+    public function test_liste_filtert_nach_monat_und_konto(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $a = BankAccount::create(['label' => 'A', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        SteuerDocument::create(['bank_account_id' => $a->id, 'period' => '2026-06-01', 'category' => 'x', 'file_path' => '2026/06/j.pdf']);
+        SteuerDocument::create(['bank_account_id' => $a->id, 'period' => '2026-07-01', 'category' => 'x', 'file_path' => '2026/07/k.pdf']);
+
+        $comp = Livewire::test(SteuerbueroHinweise::class)
+            ->set('filterAccount', $a->id)->set('filterYear', 2026)->set('filterMonth', 6);
+        $this->assertCount(1, $comp->instance()->documents); // nur Juni
+
+        $comp->set('filterMonth', 0); // alle Monate
+        $this->assertCount(2, $comp->instance()->documents);
+    }
+
     public function test_bulk_loeschen_und_reihenfolge_sortieren(): void
     {
         Storage::fake('belege');

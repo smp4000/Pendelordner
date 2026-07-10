@@ -131,6 +131,30 @@
                         </button>
                     @endif
                 </div>
+
+                {{-- Filter: nur die Dateien des gewählten Konto/Monats anzeigen --}}
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.7rem;font-size:.85rem;">
+                    <span style="font-weight:600;opacity:.75;">Anzeigen:</span>
+                    <select wire:model.live="filterAccount" style="{{ $inpTxt }};width:auto;">
+                        <option value="">Alle Konten</option>
+                        @foreach ($this->accountOptions as $aid => $albl)
+                            <option value="{{ $aid }}">{{ $albl }}</option>
+                        @endforeach
+                    </select>
+                    <select wire:model.live="filterMonth" style="{{ $inpTxt }};width:auto;">
+                        <option value="0">Alle Monate</option>
+                        @foreach ($this->monthNames() as $mn => $mlabel)
+                            <option value="{{ $mn }}">{{ $mlabel }}</option>
+                        @endforeach
+                    </select>
+                    <select wire:model.live="filterYear" style="{{ $inpTxt }};width:auto;">
+                        @foreach ($this->yearOptions() as $yv => $ylabel)
+                            <option value="{{ $yv }}">{{ $ylabel }}</option>
+                        @endforeach
+                    </select>
+                    <span style="opacity:.6;">· {{ $docs->count() }} Datei(en)</span>
+                </div>
+
                 @if ($docs->isNotEmpty())
                     @php $sel = 'padding:.2rem .4rem;border:1px solid rgba(120,120,120,.3);border-radius:.35rem;font-size:.78rem;background:transparent;'; @endphp
                     {{-- Bulk-Leiste --}}
@@ -222,7 +246,7 @@
                     </table>
                     <p style="font-size:.78rem;opacity:.6;margin-top:.5rem;">Reihenfolge per ⠿ ziehen (bestimmt die Nummerierung im Bericht je Konto &amp; Monat). Ausreißer je Zeile über die Dropdowns korrigieren.</p>
                 @else
-                    <div style="font-size:.85rem;opacity:.6;">Noch keine Dateien hochgeladen.</div>
+                    <div style="font-size:.85rem;opacity:.6;">Keine Dateien für diese Auswahl. Filter oben ändern (z. B. „Alle Monate") oder Dateien hochladen.</div>
                 @endif
             </div>
         </x-filament::section>

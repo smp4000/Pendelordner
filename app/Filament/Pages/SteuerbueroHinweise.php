@@ -77,6 +77,14 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     /** @var array<int, int|string> Auswahl für Bulk-Aktionen in der Liste. */
     public array $selectedDocs = [];
 
+    // Filter für die Liste unten: nur die Dateien des gewählten Konto/Monats
+    // anzeigen (0 = alle).
+    public ?int $filterAccount = null;
+
+    public int $filterMonth = 0;
+
+    public int $filterYear = 2026;
+
     public function mount(): void
     {
         $this->form->fill([
@@ -89,6 +97,10 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         $this->docAccount = BankAccount::orderBy('label')->value('id');
         $this->docMonth = (int) Carbon::now()->month;
         $this->docYear = (int) Carbon::now()->year;
+
+        $this->filterAccount = $this->docAccount;
+        $this->filterMonth = $this->docMonth;
+        $this->filterYear = $this->docYear;
 
         $this->loadCards();
     }
@@ -239,8 +251,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     public function getDocumentsProperty(): Collection
     {
         return SteuerDocument::with('bankAccount')
+            ->when($this->filterAccount, fn ($q) => $q->where('bank_account_id', $this->filterAccount))
+            ->when($this->filterMonth >= 1 && $this->filterMonth <= 12, fn ($q) => $q->whereMonth('period', $this->filterMonth))
+            ->when($this->filterYear >= 2000, fn ($q) => $q->whereYear('period', $this->filterYear))
             ->orderBy('sort_order')->orderBy('id')
-            ->limit(200)
+            ->limit(500)
             ->get();
     }
 
@@ -403,6 +418,12 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         }
 
         $this->reset('docUploads', 'docNote');
+
+        // Filter der Liste auf die gerade hochgeladenen Kriterien setzen, damit
+        // man die neuen Dateien sofort sieht.
+        $this->filterAccount = $accId;
+        $this->filterMonth = $this->docMonth;
+        $this->filterYear = $this->docYear;
 
         Notification::make()
             ->title($count . ' Datei(en) hochgeladen')
