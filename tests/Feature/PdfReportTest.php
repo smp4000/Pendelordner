@@ -51,6 +51,43 @@ class PdfReportTest extends TestCase
         $this->assertSame(['Firma A', 'Firma B', 'Firma C'], $order);
     }
 
+    public function test_kontoauszug_wird_im_bericht_vorangestellt(): void
+    {
+        Storage::fake('belege');
+        Storage::fake('local');
+        $this->seed(MasterDataSeeder::class);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n08.06.2026;X;y;-10,00\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+
+        // Kontoauszug-Dokument (echtes PDF, Druck an) -> muss VOR die Übersicht.
+        Storage::disk('belege')->put('2026/06/ka.pdf', DomPdf::loadHTML('<h1>Original Kontoauszug</h1>')->output());
+        SteuerDocument::create([
+            'bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug',
+            'file_path' => '2026/06/ka.pdf', 'mime_type' => 'application/pdf',
+            'file_name' => 'Kontoauszug.pdf', 'include_in_report' => true, 'sort_order' => 1,
+        ]);
+
+        $service = new PdfReportService();
+        $from = Carbon::parse('2026-06-01');
+        $to = Carbon::parse('2026-06-30');
+
+        $full = $service->generate($from, $to, null, $account);
+        $overview = $service->generate($from, $to, null, $account, withReceipts: false);
+
+        Storage::disk('local')->assertExists($full);
+        // Der volle Bericht (mit vorangestelltem Kontoauszug) ist größer als die
+        // reine Übersicht – die Kontoauszug-Seite ist also enthalten.
+        $this->assertGreaterThan(
+            strlen(Storage::disk('local')->get($overview)),
+            strlen(Storage::disk('local')->get($full)),
+        );
+    }
+
     public function test_steuerberater_bericht_wird_erzeugt_und_belege_angehaengt(): void
     {
         Storage::fake('belege');

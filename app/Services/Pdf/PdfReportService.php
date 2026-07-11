@@ -324,13 +324,30 @@ class PdfReportService
             'reportNotes' => $reportNotes,
             'money' => $this->money,
         ])->setPaper('a4')->output();
-        $this->importPdfString($pdf, $frontMatter);
-
-        // 4. Anhänge je Monat: erst Steuerbüro-Dateien (Nr. 1…), dann Belege.
-        //    Bei der reinen Übersicht ($withReceipts=false) entfallen sie.
+        // Kontoauszüge (Kategorie „Kontoauszug", mit Druck) kommen VOR die
+        // Übersicht: der Steuerberater sieht zuerst den Originalauszug, danach
+        // die Umsatzliste mit den Belegen.
         if ($withReceipts) {
             foreach ($months as $bucket) {
                 foreach ($bucket['docs'] ?? [] as $doc) {
+                    if ($this->isKontoauszug($doc)) {
+                        $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
+                    }
+                }
+            }
+        }
+
+        $this->importPdfString($pdf, $frontMatter);
+
+        // 4. Anhänge je Monat: erst die übrigen Steuerbüro-Dateien (Nr. 1…), dann
+        //    Belege. Kontoauszüge sind schon vorne. Bei der reinen Übersicht
+        //    ($withReceipts=false) entfallen die Anhänge.
+        if ($withReceipts) {
+            foreach ($months as $bucket) {
+                foreach ($bucket['docs'] ?? [] as $doc) {
+                    if ($this->isKontoauszug($doc)) {
+                        continue; // bereits vor der Übersicht eingefügt
+                    }
                     $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
                 }
                 foreach ($bucket['receipts'] ?? [] as $receipt) {
@@ -423,6 +440,12 @@ class PdfReportService
             return;
         }
         $this->appendFileByPath($pdf, $disk->path($receipt->file_path), (string) $receipt->mime_type, $number, 'Beleg');
+    }
+
+    /** Ist das Dokument ein Kontoauszug (kommt im Bericht vor die Übersicht)? */
+    private function isKontoauszug(\App\Models\SteuerDocument $doc): bool
+    {
+        return str_contains(mb_strtolower((string) $doc->category), 'kontoauszug');
     }
 
     /** Hängt eine Steuerbüro-Datei an (gleiche Logik wie ein Beleg). */
