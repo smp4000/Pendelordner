@@ -325,8 +325,11 @@
                                     </x-filament::input.select>
                                 @endif
                                 <span style="opacity:.4;">|</span>
-                                <x-filament::input.wrapper style="max-width:12rem;">
+                                <x-filament::input.wrapper style="max-width:11rem;">
                                     <x-filament::input type="text" wire:model="newTemplateName" placeholder="Als Vorlage speichern…" />
+                                </x-filament::input.wrapper>
+                                <x-filament::input.wrapper style="max-width:11rem;">
+                                    <x-filament::input type="text" wire:model="newTemplateMatch" placeholder="Auslöse-Stichwort (z. B. SB Union)" />
                                 </x-filament::input.wrapper>
                                 <x-filament::button wire:click="saveSplitAsTemplate" icon="heroicon-o-bookmark" color="gray" size="sm">Speichern</x-filament::button>
                                 <span style="opacity:.4;">|</span>

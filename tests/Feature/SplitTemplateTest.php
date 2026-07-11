@@ -125,4 +125,50 @@ class SplitTemplateTest extends TestCase
         $this->assertSame('1616', $tpl->rows[0]['ledger_number']);
         $this->assertSame('19', $tpl->rows[1]['tax_rate']);
     }
+
+    public function test_vorlage_mit_ausloese_stichwort_speichern_und_automatisch_laden(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        $wareneinkauf = LedgerAccount::firstOrCreate(['chart' => 'edtas', 'number' => '3400'], ['name' => 'Wareneinkauf 19 %']);
+
+        // Vorlage mit Stichwort „SB Union" speichern.
+        $tx = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-01', 'counterparty' => 'SB Union Großmarkt GmbH', 'amount' => -420.90,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $tx->id)
+            ->set('splits', [
+                ['ledger_account_id' => $wareneinkauf->id, 'ledger_label' => '', 'ledger_search' => '', 'tax_rate' => '19', 'amount' => '420,90'],
+            ])
+            ->set('newTemplateName', 'SB Union Wareneinkauf')
+            ->set('newTemplateMatch', 'SB Union')
+            ->call('saveSplitAsTemplate');
+
+        $tpl = SplitTemplate::where('name', 'SB Union Wareneinkauf')->firstOrFail();
+        $this->assertSame('SB Union', $tpl->match_counterparty);
+
+        // Auto-Load: Stichwort steht hier im VERWENDUNGSZWECK, nicht im Empfänger.
+        $other = BankTransaction::create([
+            'bank_account_id' => $account->id, 'business_id' => $account->business_id,
+            'booking_date' => '2026-06-05', 'counterparty' => 'Sammel-Basislastschrift',
+            'purpose' => 'Firmenlastschrift SB Union RE1342330', 'amount' => -111.11,
+            'reviewed' => false, 'dedup_hash' => bin2hex(random_bytes(16)),
+        ]);
+
+        $comp = Livewire::test(Kontoumsatzdetails::class)
+            ->set('selectedTransactionId', $other->id)
+            ->call('toggleSplit');
+
+        $splits = $comp->get('splits');
+        $this->assertCount(1, $splits);
+        $this->assertSame($wareneinkauf->id, $splits[0]['ledger_account_id']);
+        $this->assertSame('19', $splits[0]['tax_rate']);
+    }
 }

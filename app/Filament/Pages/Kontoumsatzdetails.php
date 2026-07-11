@@ -125,6 +125,10 @@ class Kontoumsatzdetails extends Page
     /** Name für "aktuelle Aufteilung als Vorlage speichern". */
     public string $newTemplateName = '';
 
+    /** Auslöse-Stichwort: lädt die Vorlage automatisch, wenn es im Empfänger
+     *  oder Verwendungszweck vorkommt (z. B. "SB Union", "ARAL"). */
+    public string $newTemplateMatch = '';
+
     // --- Aufteilung auf Sachkonten (G&V) -------------------------------------
     public bool $showSplit = false;
 
@@ -249,8 +253,13 @@ class Kontoumsatzdetails extends Page
      */
     private function matchingTemplateForTransaction(): ?\App\Models\SplitTemplate
     {
-        $counterparty = mb_strtolower((string) ($this->selectedTransaction?->counterparty ?? ''));
-        if ($counterparty === '') {
+        $t = $this->selectedTransaction;
+        // Stichwort darf im Empfänger ODER im Verwendungszweck stehen
+        // (z. B. "SB Union" taucht mal als Empfänger, mal im Zweck auf).
+        $haystack = mb_strtolower(trim(
+            (string) ($t?->counterparty ?? '') . ' ' . (string) ($t?->clean_purpose ?? '')
+        ));
+        if ($haystack === '') {
             return null;
         }
 
@@ -259,9 +268,9 @@ class Kontoumsatzdetails extends Page
             ->where('match_counterparty', '!=', '')
             ->orderByDesc('id')
             ->get()
-            ->first(fn (\App\Models\SplitTemplate $t) => str_contains(
-                $counterparty,
-                mb_strtolower(trim((string) $t->match_counterparty))
+            ->first(fn (\App\Models\SplitTemplate $tpl) => str_contains(
+                $haystack,
+                mb_strtolower(trim((string) $tpl->match_counterparty))
             ));
     }
 
@@ -353,10 +362,24 @@ class Kontoumsatzdetails extends Page
             return;
         }
 
-        \App\Models\SplitTemplate::updateOrCreate(['name' => $name], ['rows' => $rows]);
-        $this->newTemplateName = '';
+        // Auslöse-Stichwort mitspeichern (leer -> kein Auto-Load). Ist keins
+        // angegeben, wird der Empfänger des aktuellen Umsatzes als Vorschlag
+        // genommen, damit die Vorlage bei gleichem Empfänger automatisch lädt.
+        $match = trim($this->newTemplateMatch);
+        if ($match === '') {
+            $match = trim((string) ($this->selectedTransaction?->counterparty ?? ''));
+        }
 
-        Notification::make()->title('Vorlage „' . $name . '" gespeichert (' . count($rows) . ' Konten)')->success()->send();
+        \App\Models\SplitTemplate::updateOrCreate(
+            ['name' => $name],
+            ['rows' => $rows, 'match_counterparty' => $match !== '' ? $match : null],
+        );
+        $this->newTemplateName = '';
+        $this->newTemplateMatch = '';
+
+        Notification::make()->title('Vorlage „' . $name . '" gespeichert (' . count($rows) . ' Konten)')
+            ->body($match !== '' ? 'Lädt automatisch bei „' . $match . '".' : null)
+            ->success()->send();
     }
 
     /**
