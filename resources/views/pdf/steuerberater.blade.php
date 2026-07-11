@@ -65,8 +65,10 @@
     </div>
 </div>
 
-{{-- Seite 2: Zusammenfassung --}}
-<div class="page-break">
+{{-- Seite 2: Zusammenfassung. Der Seitenumbruch danach ist nur nötig, wenn die
+     Umsatzliste im selben Dokument folgt (Modus „all"). Im Modus „intro" ist die
+     Zusammenfassung die letzte Seite – sonst entstünde eine leere Schlussseite. --}}
+<div class="{{ $section === 'all' ? 'page-break' : '' }}">
     <h3>Zusammenfassung – {{ $periodLabel }}</h3>
     <table class="summary">
         <tr><td class="label">Anzahl Umsätze</td><td class="value">{{ $stats['count'] }}</td></tr>
