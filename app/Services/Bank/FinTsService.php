@@ -251,9 +251,52 @@ class FinTsService
 
     private function selectTanMode(FinTs $fints, FintsConnection $connection): void
     {
+        // Ist ein Verfahren hinterlegt, dieses verwenden.
         if ($connection->tan_method) {
             $fints->selectTanMode((int) $connection->tan_method, $connection->tan_medium ?: null);
+
+            return;
         }
+
+        // Sonst automatisch wählen: viele Banken (z. B. VR/Atruvia) lehnen den
+        // Login ohne aktiv gewähltes Verfahren ab ("Es wurde kein TAN-Verfahren
+        // gewählt"). Wir fragen die angebotenen Verfahren über einen anonymen
+        // Dialog ab (ohne TAN) und nehmen bevorzugt die App-Freigabe (Decoupled,
+        // z. B. SecureGo plus), sonst das erste angebotene Verfahren.
+        $modes = $fints->getTanModes();
+        if (empty($modes)) {
+            throw new \RuntimeException(
+                'Die Bank bietet kein TAN-Verfahren an. Bitte im FinTS-Zugang das TAN-Verfahren manuell eintragen.'
+            );
+        }
+
+        $chosen = null;
+        foreach ($modes as $mode) {
+            if ($mode->isDecoupled()) {
+                $chosen = $mode;
+                break;
+            }
+        }
+        $chosen ??= reset($modes);
+
+        // Verlangt das Verfahren ein benanntes Medium und ist keins hinterlegt,
+        // das erste verfügbare Medium nehmen.
+        $medium = $connection->tan_medium ?: null;
+        if ($chosen->needsTanMedium() && ! $medium) {
+            $media = $fints->getTanMedia($chosen);
+            if (! empty($media)) {
+                $medium = reset($media)->getName();
+            }
+        }
+
+        $fints->selectTanMode($chosen->getId(), $medium ?: null);
+
+        // Wahl im Zugang merken, damit die Fortsetzung nach der App-Freigabe und
+        // künftige Abrufe dasselbe Verfahren nutzen (stabiler Zustand).
+        $connection->forceFill([
+            'tan_method' => (string) $chosen->getId(),
+            'tan_medium' => $medium ?: null,
+        ])->saveQuietly();
     }
 
     /**
