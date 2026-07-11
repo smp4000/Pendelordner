@@ -64,7 +64,12 @@ class PdfReportService
             ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
             ->when(! $account && $business, fn ($q) => $q->where('business_id', $business->id))
             ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
+            // Chronologisch wie im Kontoauszug: Buchungstag, dann Wertstellung
+            // (Valuta) aufsteigend – innerhalb eines Buchungstags ordnet die Bank
+            // nach dem Wertdatum (z. B. Buchung 15.06. mit Wert 13.06./14.06.
+            // zuerst). Fehlt das Wertdatum, gilt der Buchungstag.
             ->orderBy('booking_date')
+            ->orderByRaw('COALESCE(value_date, booking_date) asc')
             ->orderBy('id')
             ->get();
 

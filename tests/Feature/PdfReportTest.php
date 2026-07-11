@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ImportSource;
 use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Business;
 use App\Models\Receipt;
 use App\Models\SteuerDocument;
@@ -21,6 +22,34 @@ use Tests\TestCase;
 class PdfReportTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_bericht_sortiert_chronologisch_nach_buchung_und_wertdatum(): void
+    {
+        Storage::fake('belege');
+        Storage::fake('local');
+        $this->seed(MasterDataSeeder::class);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Gleicher Buchungstag, unterschiedliches Wertdatum – wie im Kontoauszug
+        // müssen die mit früherem Wertdatum zuerst kommen.
+        $rows = (new CsvBankParser())->parse(
+            "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
+            . "15.06.2026;15.06.2026;Firma C;x;-1,00\n"
+            . "15.06.2026;13.06.2026;Firma A;x;-2,00\n"
+            . "15.06.2026;14.06.2026;Firma B;x;-3,00\n"
+        );
+        (new BankImportService())->import($account, $rows, ImportSource::Csv);
+
+        // Dieselbe Sortier-Reihenfolge wie im Bericht (PdfReportService).
+        $order = BankTransaction::where('bank_account_id', $account->id)
+            ->orderBy('booking_date')
+            ->orderByRaw('COALESCE(value_date, booking_date) asc')
+            ->orderBy('id')
+            ->pluck('counterparty')->all();
+
+        $this->assertSame(['Firma A', 'Firma B', 'Firma C'], $order);
+    }
 
     public function test_steuerberater_bericht_wird_erzeugt_und_belege_angehaengt(): void
     {
