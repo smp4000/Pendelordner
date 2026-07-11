@@ -3,7 +3,14 @@
         $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' €';
     @endphp
 
-    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+    <style>[x-cloak]{display:none!important;}</style>
+
+    {{-- x-data: rechte Belegvorschau (iframe). Ist sie offen, wird der Inhalt
+         links per padding-right weggeschoben, damit die Vorschau ihn nicht
+         verdeckt. --}}
+    <div x-data="belegVorschau()"
+        :style="open ? 'padding-right:480px;' : ''"
+        style="display:flex;flex-direction:column;gap:1.25rem;transition:padding .2s ease;">
 
         {{-- Upload --}}
         <x-filament::section>
@@ -67,7 +74,11 @@
                             @if ($r->gross_amount) · {{ $money($r->gross_amount) }} @endif
                         </div>
                         @if ($r->preview_url)
-                            <a href="{{ $r->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
+                            <div style="display:flex;gap:.7rem;align-items:center;">
+                                <button type="button" @click="show(@js($r->preview_url), @js($r->invoice_number ?: ('Beleg #' . $r->id)))"
+                                    style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                <a href="{{ $r->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
+                            </div>
                         @endif
 
                         {{-- Lieferant/Tankstelle/Kundennummer: erkannt anzeigen, sonst vorbefülltes Anlege-Modal --}}
@@ -172,7 +183,11 @@
                                 · {{ $d->file_name }}
                             </div>
                             @if ($d->preview_url)
-                                <a href="{{ $d->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
+                                <div style="display:flex;gap:.7rem;align-items:center;">
+                                    <button type="button" @click="show(@js($d->preview_url), @js('NEU: ' . ($d->invoice_number ?: ('Beleg #' . $d->id))))"
+                                        style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                    <a href="{{ $d->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
+                                </div>
                             @endif
                         </div>
                         {{-- Original --}}
@@ -186,7 +201,11 @@
                                     {{ $d->duplicateOf->file_name }}
                                 </div>
                                 @if ($d->duplicateOf->preview_url)
-                                    <a href="{{ $d->duplicateOf->preview_url }}" target="_blank" style="font-size:.78rem;color:#059669;">Vorschau öffnen ↗</a>
+                                    <div style="display:flex;gap:.7rem;align-items:center;">
+                                        <button type="button" @click="show(@js($d->duplicateOf->preview_url), @js('ORIGINAL: ' . ($d->duplicateOf->invoice_number ?: ('Beleg #' . $d->duplicateOf->id))))"
+                                            style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                        <a href="{{ $d->duplicateOf->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
+                                    </div>
                                 @endif
                             @else
                                 <span style="opacity:.5;">Original nicht mehr vorhanden</span>
@@ -206,7 +225,46 @@
             </x-filament::section>
         @endif
 
+        {{-- Rechte Vorschau-Schublade: zeigt den gewählten Beleg inline (PDF/Bild
+             im iframe). Fest am rechten Rand, volle Höhe, mit Kopfzeile. --}}
+        <div x-show="open" x-cloak x-transition.opacity
+            style="position:fixed;top:0;right:0;width:480px;height:100vh;z-index:40;background:#fff;border-left:1px solid rgba(120,120,120,.25);box-shadow:-6px 0 20px rgba(0,0,0,.12);display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.55rem .7rem;border-bottom:1px solid rgba(120,120,120,.2);background:#f9fafb;">
+                <span style="font-weight:600;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="title"></span>
+                <span style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
+                    <a :href="url" target="_blank" title="In neuem Tab öffnen"
+                        style="display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);text-decoration:none;color:inherit;">↗</a>
+                    <button type="button" @click="close()" title="Schließen"
+                        style="display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1.1rem;line-height:1;">✕</button>
+                </span>
+            </div>
+            {{-- :src erst setzen, wenn geöffnet – spart das Laden im Hintergrund. --}}
+            <iframe x-ref="frame" :src="open ? url : ''" title="Belegvorschau"
+                style="flex:1;width:100%;border:0;background:#525659;"></iframe>
+        </div>
+
     </div>
 
     <x-filament-actions::modals />
+
+    @script
+        <script>
+            // Rechte Belegvorschau: hält die aktuell gewählte Datei-URL + Titel und
+            // steuert die Sichtbarkeit der Schublade.
+            Alpine.data('belegVorschau', () => ({
+                open: false,
+                url: '',
+                title: '',
+                show(url, title) {
+                    this.url = url;
+                    this.title = title || 'Beleg';
+                    this.open = true;
+                },
+                close() {
+                    this.open = false;
+                    this.url = '';
+                },
+            }));
+        </script>
+    @endscript
 </x-filament-panels::page>
