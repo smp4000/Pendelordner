@@ -127,6 +127,38 @@
         </table>
     @endif
 </div>
+
+{{-- Direkt nach der Zusammenfassung: alle Umsätze mit einem Steuerbüro-Hinweis
+     (accountant_note) tabellarisch auf eigener Seite – nur wenn es Hinweise gibt. --}}
+@php
+    $hinweisRows = $transactions->filter(fn ($t) => trim((string) $t->accountant_note) !== '')->values();
+@endphp
+@if ($hinweisRows->isNotEmpty())
+<h3 style="page-break-before: always;">Hinweise zu einzelnen Umsätzen</h3>
+<table>
+    <thead>
+        <tr>
+            <th style="width:70px;">Datum</th>
+            <th>Umsatz</th>
+            <th class="num" style="width:80px;">Betrag</th>
+            <th style="width:42%;">Hinweis</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($hinweisRows as $t)
+            <tr>
+                <td>{{ $t->booking_date?->format('d.m.Y') }}</td>
+                <td>
+                    <strong>{{ $t->counterparty ?: '—' }}</strong>
+                    @if ($t->clean_purpose !== '')<br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->clean_purpose, 70) }}</span>@endif
+                </td>
+                <td class="num {{ $t->amount < 0 ? 'neg' : 'pos' }}">{{ $money($t->amount) }}</td>
+                <td><div class="memo" style="margin-top:0;">{{ $t->accountant_note }}</div></td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+@endif
 @endif
 
 @if ($section !== 'intro')
@@ -224,36 +256,6 @@
     </tbody>
 </table>
 
-@php
-    // Alle Umsätze mit einem Hinweis für das Steuerbüro (accountant_note).
-    $hinweisRows = $transactions->filter(fn ($t) => trim((string) $t->accountant_note) !== '')->values();
-@endphp
-@if ($hinweisRows->isNotEmpty())
-<h3 style="page-break-before: always;">Hinweise zu einzelnen Umsätzen</h3>
-<table>
-    <thead>
-        <tr>
-            <th style="width:70px;">Datum</th>
-            <th>Umsatz</th>
-            <th class="num" style="width:80px;">Betrag</th>
-            <th style="width:42%;">Hinweis</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach ($hinweisRows as $t)
-            <tr>
-                <td>{{ $t->booking_date?->format('d.m.Y') }}</td>
-                <td>
-                    <strong>{{ $t->counterparty ?: '—' }}</strong>
-                    @if ($t->clean_purpose !== '')<br><span class="receipts">{{ \Illuminate\Support\Str::limit($t->clean_purpose, 70) }}</span>@endif
-                </td>
-                <td class="num {{ $t->amount < 0 ? 'neg' : 'pos' }}">{{ $money($t->amount) }}</td>
-                <td><div class="memo" style="margin-top:0;">{{ $t->accountant_note }}</div></td>
-            </tr>
-        @endforeach
-    </tbody>
-</table>
-@endif
 @endif
 
 </body>

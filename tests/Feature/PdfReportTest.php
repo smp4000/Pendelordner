@@ -130,11 +130,14 @@ class PdfReportTest extends TestCase
             'purpose' => 'Archivierung', 'accountant_note' => 'Betrifft die Archivierung der Rechnungen',
         ]);
 
-        // Das Berichts-Template im Abschnitt „list" muss die Hinweis-Seite zeigen.
+        // Die Hinweis-Seite steht im Abschnitt „intro" (direkt nach der Zusammenfassung).
         $html = view('pdf.steuerberater', [
-            'business' => Business::first(), 'account' => $account, 'section' => 'list',
+            'business' => Business::first(), 'account' => $account, 'section' => 'intro',
             'periodLabel' => 'Juni 2026', 'generatedAt' => '11.07.2026',
-            'transactions' => collect([$t]), 'stats' => [], 'receiptNumbers' => [],
+            'transactions' => collect([$t]),
+            'stats' => ['count' => 1, 'income' => 0, 'expense' => -5.83, 'receipts' => 0,
+                'appendedFiles' => 0, 'withoutReceipt' => 1, 'unreviewed' => 0],
+            'receiptNumbers' => [],
             'steuerNumbers' => [], 'steuerDocs' => collect(), 'reportNotes' => collect(),
             'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
         ])->render();
