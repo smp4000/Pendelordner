@@ -23,7 +23,7 @@ class PdfReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_bericht_sortiert_chronologisch_nach_buchung_und_wertdatum(): void
+    public function test_bericht_reihenfolge_wie_kontoauszug(): void
     {
         Storage::fake('belege');
         Storage::fake('local');
@@ -31,23 +31,25 @@ class PdfReportTest extends TestCase
 
         $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
 
-        // Gleicher Buchungstag, unterschiedliches Wertdatum – wie im Kontoauszug
-        // müssen die mit früherem Wertdatum zuerst kommen.
+        // Bank-Export/CSV: je Buchungstag die ZULETZT gebuchten Umsätze zuerst
+        // (auch mit späterem Wertdatum). Der Kontoauszug zeigt sie umgekehrt –
+        // zuerst gebucht zuerst. Deshalb sortiert der Bericht id absteigend.
         $rows = (new CsvBankParser())->parse(
             "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;Betrag\n"
-            . "15.06.2026;15.06.2026;Firma C;x;-1,00\n"
-            . "15.06.2026;13.06.2026;Firma A;x;-2,00\n"
+            . "15.06.2026;15.06.2026;Firma C;x;-1,00\n"   // zuletzt gebucht
             . "15.06.2026;14.06.2026;Firma B;x;-3,00\n"
+            . "15.06.2026;13.06.2026;Firma A;x;-2,00\n"   // zuerst gebucht
         );
         (new BankImportService())->import($account, $rows, ImportSource::Csv);
 
-        // Dieselbe Sortier-Reihenfolge wie im Bericht (PdfReportService).
+        // Dieselbe Sortierung wie im Bericht (PdfReportService): Buchungstag
+        // aufsteigend, dann umgekehrte Import-Reihenfolge.
         $order = BankTransaction::where('bank_account_id', $account->id)
             ->orderBy('booking_date')
-            ->orderByRaw('COALESCE(value_date, booking_date) asc')
-            ->orderBy('id')
+            ->orderByDesc('id')
             ->pluck('counterparty')->all();
 
+        // Wie im Kontoauszug: zuerst gebucht (Firma A) zuerst.
         $this->assertSame(['Firma A', 'Firma B', 'Firma C'], $order);
     }
 

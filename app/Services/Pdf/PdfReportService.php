@@ -64,13 +64,15 @@ class PdfReportService
             ->when($account, fn ($q) => $q->where('bank_account_id', $account->id))
             ->when(! $account && $business, fn ($q) => $q->where('business_id', $business->id))
             ->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()])
-            // Chronologisch wie im Kontoauszug: Buchungstag, dann Wertstellung
-            // (Valuta) aufsteigend – innerhalb eines Buchungstags ordnet die Bank
-            // nach dem Wertdatum (z. B. Buchung 15.06. mit Wert 13.06./14.06.
-            // zuerst). Fehlt das Wertdatum, gilt der Buchungstag.
+            // 1:1 wie der Kontoauszug: Buchungstag aufsteigend, und innerhalb
+            // eines Tages in der Buchungsreihenfolge der Bank. Die CSV/der Export
+            // listet je Tag die zuletzt gebuchten Umsätze zuerst (auch Abschluss/
+            // MwSt mit Wert im Folgemonat), der Import legt sie in dieser
+            // Reihenfolge an. Die echte Reihenfolge ist daher die UMGEKEHRTE
+            // Import-Reihenfolge -> id absteigend. (Über die Saldo-Kette der CSV
+            // verifiziert; das Wertdatum als Sortierschlüssel wäre falsch.)
             ->orderBy('booking_date')
-            ->orderByRaw('COALESCE(value_date, booking_date) asc')
-            ->orderBy('id')
+            ->orderByDesc('id')
             ->get();
 
         $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
