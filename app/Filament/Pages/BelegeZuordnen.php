@@ -56,6 +56,27 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
 
     public string $uploadType = 'incoming_invoice';
 
+    /** Aktuell rechts in der Vorschau angezeigter Beleg (null = keine). */
+    public ?int $previewReceiptId = null;
+
+    /** Beleg rechts in der Vorschau anzeigen. */
+    public function preview(int $id): void
+    {
+        $this->previewReceiptId = $id;
+    }
+
+    /** Vorschau schließen. */
+    public function closePreview(): void
+    {
+        $this->previewReceiptId = null;
+    }
+
+    /** Der aktuell in der Vorschau gewählte Beleg (für den Viewer rechts). */
+    public function getPreviewReceiptProperty(): ?Receipt
+    {
+        return $this->previewReceiptId ? Receipt::find($this->previewReceiptId) : null;
+    }
+
     public function getMaxContentWidth(): Width
     {
         return Width::Full;

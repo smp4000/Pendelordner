@@ -22,8 +22,8 @@ class BelegeZuordnenTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         // Ein offener Beleg mit Datei -> hat eine preview_url und damit den
-        // Vorschau-Button; die Vorschau-Schublade (belegVorschau) muss da sein.
-        Receipt::create([
+        // Vorschau-Button; der Inline-Viewer (receiptViewer) ist eingebunden.
+        $receipt = Receipt::create([
             'type' => 'incoming_invoice',
             'file_path' => '2026/07/test.pdf',
             'file_name' => 'test.pdf',
@@ -34,7 +34,11 @@ class BelegeZuordnenTest extends TestCase
 
         Livewire::test(BelegeZuordnen::class)
             ->assertOk()
-            ->assertSee('belegVorschau', false)
-            ->assertSee('Vorschau ▸');
+            ->assertSee('Vorschau ▸')
+            // Vorschau öffnen -> Inline-Viewer für genau diesen Beleg wird gerendert.
+            ->call('preview', $receipt->id)
+            ->assertSet('previewReceiptId', $receipt->id)
+            ->assertSee('preview-' . $receipt->id, false)
+            ->assertSee('receiptViewer(', false);
     }
 }

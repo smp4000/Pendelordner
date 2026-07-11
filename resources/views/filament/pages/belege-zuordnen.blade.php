@@ -3,14 +3,12 @@
         $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' €';
     @endphp
 
-    <style>[x-cloak]{display:none!important;}</style>
+    @php $previewReceipt = $this->previewReceipt; @endphp
 
-    {{-- x-data: rechte Belegvorschau (iframe). Ist sie offen, wird der Inhalt
-         links per padding-right weggeschoben, damit die Vorschau ihn nicht
+    {{-- Ist rechts eine Belegvorschau offen, wird der Inhalt links per
+         padding-right weggeschoben, damit die feste Vorschau ihn nicht
          verdeckt. --}}
-    <div x-data="belegVorschau()"
-        :style="open ? 'padding-right:480px;' : ''"
-        style="display:flex;flex-direction:column;gap:1.25rem;transition:padding .2s ease;">
+    <div style="display:flex;flex-direction:column;gap:1.25rem;transition:padding .2s ease;{{ $previewReceipt ? 'padding-right:520px;' : '' }}">
 
         {{-- Upload --}}
         <x-filament::section>
@@ -75,8 +73,8 @@
                         </div>
                         @if ($r->preview_url)
                             <div style="display:flex;gap:.7rem;align-items:center;">
-                                <button type="button" @click="show(@js($r->preview_url), @js($r->invoice_number ?: ('Beleg #' . $r->id)))"
-                                    style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                <button type="button" wire:click="preview({{ $r->id }})"
+                                    style="font-size:.78rem;color:{{ $previewReceipt?->id === $r->id ? '#047857' : '#059669' }};font-weight:{{ $previewReceipt?->id === $r->id ? '700' : '400' }};background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
                                 <a href="{{ $r->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
                             </div>
                         @endif
@@ -184,8 +182,8 @@
                             </div>
                             @if ($d->preview_url)
                                 <div style="display:flex;gap:.7rem;align-items:center;">
-                                    <button type="button" @click="show(@js($d->preview_url), @js('NEU: ' . ($d->invoice_number ?: ('Beleg #' . $d->id))))"
-                                        style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                    <button type="button" wire:click="preview({{ $d->id }})"
+                                        style="font-size:.78rem;color:{{ $previewReceipt?->id === $d->id ? '#047857' : '#059669' }};font-weight:{{ $previewReceipt?->id === $d->id ? '700' : '400' }};background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
                                     <a href="{{ $d->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
                                 </div>
                             @endif
@@ -202,8 +200,8 @@
                                 </div>
                                 @if ($d->duplicateOf->preview_url)
                                     <div style="display:flex;gap:.7rem;align-items:center;">
-                                        <button type="button" @click="show(@js($d->duplicateOf->preview_url), @js('ORIGINAL: ' . ($d->duplicateOf->invoice_number ?: ('Beleg #' . $d->duplicateOf->id))))"
-                                            style="font-size:.78rem;color:#059669;background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
+                                        <button type="button" wire:click="preview({{ $d->duplicateOf->id }})"
+                                            style="font-size:.78rem;color:{{ $previewReceipt?->id === $d->duplicateOf->id ? '#047857' : '#059669' }};font-weight:{{ $previewReceipt?->id === $d->duplicateOf->id ? '700' : '400' }};background:none;border:0;cursor:pointer;padding:0;text-decoration:underline;">Vorschau ▸</button>
                                         <a href="{{ $d->duplicateOf->preview_url }}" target="_blank" title="In neuem Tab öffnen" style="font-size:.78rem;color:#059669;opacity:.65;">↗</a>
                                     </div>
                                 @endif
@@ -225,46 +223,209 @@
             </x-filament::section>
         @endif
 
-        {{-- Rechte Vorschau-Schublade: zeigt den gewählten Beleg inline (PDF/Bild
-             im iframe). Fest am rechten Rand, volle Höhe, mit Kopfzeile. --}}
-        <div x-show="open" x-cloak x-transition.opacity
-            style="position:fixed;top:0;right:0;width:480px;height:100vh;z-index:40;background:#fff;border-left:1px solid rgba(120,120,120,.25);box-shadow:-6px 0 20px rgba(0,0,0,.12);display:flex;flex-direction:column;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.55rem .7rem;border-bottom:1px solid rgba(120,120,120,.2);background:#f9fafb;">
-                <span style="font-weight:600;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="title"></span>
-                <span style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
-                    <a :href="url" target="_blank" title="In neuem Tab öffnen"
-                        style="display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);text-decoration:none;color:inherit;">↗</a>
-                    <button type="button" @click="close()" title="Schließen"
-                        style="display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1.1rem;line-height:1;">✕</button>
-                </span>
+        {{-- Rechte Belegvorschau (gleicher Inline-Viewer wie in den
+             Kontoumsatzdetails: PDF via PDF.js, Zoom, Lupe, Drucken). Fest am
+             rechten Rand, volle Höhe. Der Inhalt links wird per padding-right
+             weggeschoben. --}}
+        @if ($previewReceipt && $previewReceipt->preview_url)
+            @php
+                $btn = 'display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;border:1px solid rgba(120,120,120,.3);background:transparent;cursor:pointer;font-size:1rem;line-height:1;text-decoration:none;color:inherit;';
+                $vorschauLabel = $previewReceipt->invoice_number ?: ($previewReceipt->file_name ?: ('Beleg #' . $previewReceipt->id));
+            @endphp
+            <div class="beleg-scroll"
+                style="position:fixed;top:0;right:0;width:500px;height:100vh;z-index:40;overflow:auto;background:var(--fi-color-white,#fff);border-left:1px solid rgba(120,120,120,.25);box-shadow:-6px 0 20px rgba(0,0,0,.12);">
+                <div wire:key="preview-{{ $previewReceipt->id }}"
+                    x-data="receiptViewer(@js($previewReceipt->preview_url), {{ $previewReceipt->is_pdf ? 'true' : 'false' }})" x-init="load()">
+
+                    {{-- Kopfleiste (bleibt beim Scrollen oben): Titel + Zoom/Lupe/
+                         Drucken/Neuer Tab/Schließen. --}}
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid rgba(120,120,120,.2);position:sticky;top:0;background:var(--fi-color-white,#fff);z-index:3;">
+                        <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $vorschauLabel }}</span>
+                        <span style="display:flex;align-items:center;gap:.3rem;flex-shrink:0;">
+                            <button type="button" @click="zoomOut()" title="Verkleinern" style="{{ $btn }}">−</button>
+                            <span x-text="Math.round(zoom*100)+' %'" style="min-width:3rem;text-align:center;font-size:.78rem;opacity:.75;"></span>
+                            <button type="button" @click="zoomIn()" title="Vergrößern" style="{{ $btn }}">+</button>
+                            <button type="button" @click="reset()" title="Originalgröße" style="{{ $btn }}">⟲</button>
+                            <button type="button" @click="lens = !lens" title="Lupe (beim Drüberfahren vergrößern)"
+                                :style="'{{ $btn }}' + (lens ? 'background:#0ea5e9;color:#fff;border-color:#0ea5e9;' : '')">🔍</button>
+                            <button type="button" @click="printReceipt()" title="Drucken" style="{{ $btn }}">🖨</button>
+                            <a :href="url" target="_blank" title="In neuem Tab öffnen" style="{{ $btn }}">↗</a>
+                            <button type="button" wire:click="closePreview" title="Schließen" style="{{ $btn }}">✕</button>
+                        </span>
+                    </div>
+
+                    <div style="padding:.5rem;position:relative;">
+                        @if ($previewReceipt->is_pdf)
+                            {{-- Inline-PDF (PDF.js), alle Seiten untereinander. --}}
+                            <div class="beleg-scroll" style="overflow-x:auto;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                :style="lens ? 'cursor:none;' : ''"
+                                @mousemove="magnify($event)" @mouseleave="lensVisible=false">
+                                <div wire:ignore x-ref="pages" style="padding:10px;text-align:center;"></div>
+                                <template x-if="error">
+                                    <div style="color:#374151;padding:1rem;text-align:center;">
+                                        Inline-Vorschau nicht möglich.
+                                        <a :href="url" target="_blank" style="color:#059669;text-decoration:underline;">Im neuen Tab öffnen</a>
+                                    </div>
+                                </template>
+                            </div>
+                        @else
+                            <div class="beleg-scroll" style="overflow-x:auto;text-align:center;background:#fff;border:1px solid rgba(120,120,120,.2);border-radius:.5rem;"
+                                :style="lens ? 'cursor:none;' : ''"
+                                @mousemove="magnify($event)" @mouseleave="lensVisible=false">
+                                <img :src="url" alt="Beleg" :style="`width:${Math.round(zoom*100)}%;max-width:none;object-fit:contain;`"
+                                    style="border-radius:.5rem;">
+                            </div>
+                        @endif
+
+                        {{-- Lupe: folgt dem Cursor. --}}
+                        <canvas x-ref="lens" x-show="lens && lensVisible" width="240" height="180"
+                            style="position:fixed;pointer-events:none;z-index:9999;width:240px;height:180px;border:2px solid #0ea5e9;border-radius:10px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);"></canvas>
+                    </div>
+                </div>
             </div>
-            {{-- :src erst setzen, wenn geöffnet – spart das Laden im Hintergrund. --}}
-            <iframe x-ref="frame" :src="open ? url : ''" title="Belegvorschau"
-                style="flex:1;width:100%;border:0;background:#525659;"></iframe>
-        </div>
+        @endif
 
     </div>
 
     <x-filament-actions::modals />
 
+    {{-- PDF.js einmalig laden (für die Inline-Vorschau). --}}
+    @assets
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    @endassets
+
+    {{-- Immer sichtbarer Scrollbalken für die Vorschau. --}}
+    <style>
+        .beleg-scroll { scrollbar-width: thin; scrollbar-color: #9ca3af transparent; }
+        .beleg-scroll::-webkit-scrollbar { width: 14px; height: 14px; }
+        .beleg-scroll::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 8px; border: 3px solid #fff; }
+        .beleg-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .beleg-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
+    </style>
+
+    {{-- Inline-PDF-Viewer (identisch zu den Kontoumsatzdetails). --}}
     @script
         <script>
-            // Rechte Belegvorschau: hält die aktuell gewählte Datei-URL + Titel und
-            // steuert die Sichtbarkeit der Schublade.
-            Alpine.data('belegVorschau', () => ({
-                open: false,
-                url: '',
-                title: '',
-                show(url, title) {
-                    this.url = url;
-                    this.title = title || 'Beleg';
-                    this.open = true;
-                },
-                close() {
-                    this.open = false;
-                    this.url = '';
-                },
-            }));
+            Alpine.data('receiptViewer', (url, isPdf) => {
+                // pdf.js-Dokument NICHT reaktiv halten (Alpine-Proxy bricht private Felder).
+                let pdfDoc = null;
+                let renderRun = 0;
+
+                return {
+                    url: url,
+                    isPdf: isPdf,
+                    error: false,
+                    zoom: 1,
+                    baseScale: 1.4,
+                    loadStarted: false,
+                    lens: false,
+                    lensVisible: false,
+                    lensZoom: 2.6,
+                    init() {
+                        if (this.isPdf) { this.load(); }
+                    },
+                    async load() {
+                        if (!this.isPdf || this.loadStarted) { return; }
+                        this.loadStarted = true;
+                        try {
+                            let tries = 0;
+                            while (!window.pdfjsLib && tries < 160) {
+                                await new Promise((r) => setTimeout(r, 50));
+                                tries++;
+                            }
+                            if (!window.pdfjsLib) { this.error = true; return; }
+
+                            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                            pdfDoc = await window.pdfjsLib.getDocument(this.url).promise;
+                            await this.renderPdf();
+                        } catch (e) {
+                            console.error(e);
+                            this.error = true;
+                        }
+                    },
+                    async renderPdf() {
+                        if (!pdfDoc) { return; }
+                        const container = this.$refs.pages;
+                        if (!container) { return; }
+                        const run = ++renderRun;
+                        container.innerHTML = '';
+                        const scale = this.baseScale * this.zoom;
+                        for (let i = 1; i <= pdfDoc.numPages; i++) {
+                            if (run !== renderRun) { return; }
+                            const page = await pdfDoc.getPage(i);
+                            const viewport = page.getViewport({ scale: scale });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            canvas.style.display = 'block';
+                            canvas.style.margin = '10px auto';
+                            canvas.style.maxWidth = this.zoom <= 1 ? '100%' : 'none';
+                            canvas.style.background = '#fff';
+                            canvas.style.boxShadow = '0 1px 4px rgba(0,0,0,.35)';
+                            if (run !== renderRun) { return; }
+                            container.appendChild(canvas);
+                            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                        }
+                    },
+                    zoomIn() {
+                        this.zoom = Math.min(4, +(this.zoom + 0.2).toFixed(2));
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    zoomOut() {
+                        this.zoom = Math.max(0.4, +(this.zoom - 0.2).toFixed(2));
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    reset() {
+                        this.zoom = 1;
+                        if (this.isPdf) { this.renderPdf(); }
+                    },
+                    printReceipt() {
+                        const w = window.open(this.url, '_blank');
+                        if (w) {
+                            try { w.addEventListener('load', () => w.print()); } catch (e) { /* Popup evtl. blockiert */ }
+                        }
+                    },
+                    magnify(e) {
+                        if (!this.lens) { this.lensVisible = false; return; }
+                        const src = e.target;
+                        if (!src || (src.tagName !== 'CANVAS' && src.tagName !== 'IMG')) {
+                            this.lensVisible = false;
+                            return;
+                        }
+                        const lensEl = this.$refs.lens;
+                        if (!lensEl) { return; }
+
+                        const rect = src.getBoundingClientRect();
+                        const srcW = src.tagName === 'IMG' ? (src.naturalWidth || rect.width) : src.width;
+                        const srcH = src.tagName === 'IMG' ? (src.naturalHeight || rect.height) : src.height;
+
+                        const fx = (e.clientX - rect.left) / rect.width;
+                        const fy = (e.clientY - rect.top) / rect.height;
+                        const cx = fx * srcW;
+                        const cy = fy * srcH;
+
+                        const lw = lensEl.width, lh = lensEl.height;
+                        const regionW = (lw / this.lensZoom) * (srcW / rect.width);
+                        const regionH = (lh / this.lensZoom) * (srcH / rect.height);
+
+                        const ctx = lensEl.getContext('2d');
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(0, 0, lw, lh);
+                        try {
+                            ctx.drawImage(src, cx - regionW / 2, cy - regionH / 2, regionW, regionH, 0, 0, lw, lh);
+                        } catch (err) { return; }
+
+                        let px = e.clientX + 18, py = e.clientY + 18;
+                        if (px + lw > window.innerWidth) { px = e.clientX - lw - 18; }
+                        if (py + lh > window.innerHeight) { py = e.clientY - lh - 18; }
+                        lensEl.style.left = px + 'px';
+                        lensEl.style.top = py + 'px';
+                        this.lensVisible = true;
+                    },
+                };
+            });
         </script>
     @endscript
 </x-filament-panels::page>
