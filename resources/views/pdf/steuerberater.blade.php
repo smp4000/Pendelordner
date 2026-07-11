@@ -43,6 +43,9 @@
 </head>
 <body>
 
+@php $section = $section ?? 'all'; @endphp
+
+@if ($section !== 'list')
 {{-- Seite 1: Deckblatt --}}
 <div class="cover page-break">
     <h2>{{ $business?->name ?? 'Alle Betriebe' }}</h2>
@@ -122,7 +125,9 @@
         </table>
     @endif
 </div>
+@endif
 
+@if ($section !== 'intro')
 {{-- Seite 3 ff.: Umsatzliste (Zeitraum + Konto in der Überschrift) --}}
 <h3>Umsätze {{ $periodLabel }}@if (! empty($account)) · Konto {{ $account->label }}@if ($account->iban) ({{ $account->iban }})@endif @endif</h3>
 <table>
@@ -216,6 +221,7 @@
         @endforeach
     </tbody>
 </table>
+@endif
 
 </body>
 </html>

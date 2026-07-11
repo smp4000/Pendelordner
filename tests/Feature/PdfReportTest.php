@@ -66,7 +66,8 @@ class PdfReportTest extends TestCase
         );
         (new BankImportService())->import($account, $rows, ImportSource::Csv);
 
-        // Kontoauszug-Dokument (echtes PDF, Druck an) -> muss VOR die Übersicht.
+        // Kontoauszug-Dokument (echtes PDF, Druck an) -> kommt zwischen die
+        // beiden Berichtsseiten (Deckblatt/Zusammenfassung) und die Umsatzliste.
         Storage::disk('belege')->put('2026/06/ka.pdf', DomPdf::loadHTML('<h1>Original Kontoauszug</h1>')->output());
         SteuerDocument::create([
             'bank_account_id' => $account->id, 'period' => '2026-06-01', 'category' => 'Kontoauszug',

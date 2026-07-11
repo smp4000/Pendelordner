@@ -312,8 +312,11 @@ class PdfReportService
                 ->get()
             : collect();
 
-        // 1.–3. Vorspann (Deckblatt, Zusammenfassung, Umsatzliste)
-        $frontMatter = DomPdf::loadView('pdf.steuerberater', [
+        // Vorspann wird in ZWEI Teile gerendert, damit der Original-Kontoauszug
+        // GENAU zwischen die beiden Berichtsseiten und die Umsatzliste passt:
+        //   „intro" = Deckblatt + Zusammenfassung (die beiden festen Seiten),
+        //   „list"  = die chronologische Umsatzliste.
+        $viewData = [
             'business' => $business,
             'account' => $account,
             'periodLabel' => $this->periodLabel($from, $to),
@@ -325,10 +328,15 @@ class PdfReportService
             'steuerDocs' => $steuerDocs,
             'reportNotes' => $reportNotes,
             'money' => $this->money,
-        ])->setPaper('a4')->output();
-        // Kontoauszüge (Kategorie „Kontoauszug", mit Druck) kommen VOR die
-        // Übersicht: der Steuerberater sieht zuerst den Originalauszug, danach
-        // die Umsatzliste mit den Belegen.
+        ];
+        $intro = DomPdf::loadView('pdf.steuerberater', $viewData + ['section' => 'intro'])->setPaper('a4')->output();
+        $list = DomPdf::loadView('pdf.steuerberater', $viewData + ['section' => 'list'])->setPaper('a4')->output();
+
+        // 1. Immer zuerst: Deckblatt + Zusammenfassung (die beiden Berichtsseiten).
+        $this->importPdfString($pdf, $intro);
+
+        // 2. Direkt danach der Original-Kontoauszug (Kategorie „Kontoauszug",
+        //    mit Druckhaken) – aber nur, wenn Belege/Anhänge gedruckt werden.
         if ($withReceipts) {
             foreach ($months as $bucket) {
                 foreach ($bucket['docs'] ?? [] as $doc) {
@@ -339,7 +347,8 @@ class PdfReportService
             }
         }
 
-        $this->importPdfString($pdf, $frontMatter);
+        // 3. Danach die chronologische Umsatzliste.
+        $this->importPdfString($pdf, $list);
 
         // 4. Anhänge je Monat: erst die übrigen Steuerbüro-Dateien (Nr. 1…), dann
         //    Belege. Kontoauszüge sind schon vorne. Bei der reinen Übersicht
