@@ -57,6 +57,37 @@ class SteuerDocumentTest extends TestCase
         $this->assertSame(1, SteuerDocument::count());
     }
 
+    public function test_haeppchen_upload_zeigt_eine_sammelmeldung(): void
+    {
+        Storage::fake('belege');
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+
+        // Ablauf wie beim Häppchen-Upload: startUpload, dann zwei Portionen, dann finishUpload.
+        $comp = Livewire::test(SteuerbueroHinweise::class)
+            ->set('docAccount', $account->id)->set('docYear', 2026)->set('docMonth', 6)
+            ->call('startUpload')
+            // Unterschiedlicher Inhalt -> unterschiedlicher Hash (keine Dubletten).
+            ->set('docUploads', [
+                UploadedFile::fake()->createWithContent('a.pdf', 'AAA'),
+                UploadedFile::fake()->createWithContent('b.pdf', 'BBB'),
+            ])
+            ->call('uploadDocuments')
+            ->set('docUploads', [UploadedFile::fake()->createWithContent('c.pdf', 'CCC')])
+            ->call('uploadDocuments');
+
+        // Zähler summieren über beide Portionen (3 Dateien), noch keine Meldung.
+        $this->assertSame(3, $comp->instance()->uploadedCount);
+        $this->assertSame(3, SteuerDocument::count());
+
+        // Abschluss zeigt EINE zusammenfassende Meldung.
+        $comp->call('finishUpload')
+            ->assertNotified('3 Datei(en) hochgeladen');
+    }
+
     public function test_steuerdokumente_ohne_druckhaken_kommen_in_die_zip_sicherung(): void
     {
         Storage::fake('belege');

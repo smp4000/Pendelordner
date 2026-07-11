@@ -91,6 +91,58 @@ class PdfReportTest extends TestCase
         );
     }
 
+    public function test_kontoauszug_bekommt_keine_laufende_nummer(): void
+    {
+        Storage::fake('belege');
+        $this->seed(MasterDataSeeder::class);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        Storage::disk('belege')->put('2026/06/ka.pdf', 'A');
+        Storage::disk('belege')->put('2026/06/rg.pdf', 'B');
+
+        // Kontoauszug (zuerst einsortiert) und eine Monatsrechnung im selben Monat.
+        SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-06-01',
+            'category' => 'Kontoauszug', 'file_path' => '2026/06/ka.pdf', 'file_name' => 'ka.pdf',
+            'include_in_report' => true, 'sort_order' => 1]);
+        SteuerDocument::create(['bank_account_id' => $account->id, 'period' => '2026-06-01',
+            'category' => 'Monatsrechnung', 'file_path' => '2026/06/rg.pdf', 'file_name' => 'rg.pdf',
+            'include_in_report' => true, 'sort_order' => 2]);
+
+        $service = new PdfReportService();
+        $files = $service->attachmentFiles(Carbon::parse('2026-06-01'), Carbon::parse('2026-06-30'), null, $account);
+
+        $names = array_column($files, 'name');
+        // Kontoauszug ohne laufende Nummer (nur Monat + Kategorie).
+        $this->assertContains('2026-06_Kontoauszug.pdf', $names);
+        // Die Monatsrechnung ist trotzdem Nr. 1 (Kontoauszug wird nicht mitgezählt).
+        $this->assertContains('2026-06-01_Monatsrechnung.pdf', $names);
+    }
+
+    public function test_hinweis_uebersichtsseite_listet_umsaetze_mit_hinweis(): void
+    {
+        $this->seed(MasterDataSeeder::class);
+
+        $account = BankAccount::create(['label' => 'K', 'business_id' => Business::first()->id, 'currency' => 'EUR']);
+        // Nicht-gespeichertes Modell reicht für das reine Rendern der View.
+        $t = new BankTransaction([
+            'bank_account_id' => $account->id, 'business_id' => Business::first()->id,
+            'booking_date' => '2026-06-15', 'amount' => -5.83, 'counterparty' => 'eurodata AG',
+            'purpose' => 'Archivierung', 'accountant_note' => 'Betrifft die Archivierung der Rechnungen',
+        ]);
+
+        // Das Berichts-Template im Abschnitt „list" muss die Hinweis-Seite zeigen.
+        $html = view('pdf.steuerberater', [
+            'business' => Business::first(), 'account' => $account, 'section' => 'list',
+            'periodLabel' => 'Juni 2026', 'generatedAt' => '11.07.2026',
+            'transactions' => collect([$t]), 'stats' => [], 'receiptNumbers' => [],
+            'steuerNumbers' => [], 'steuerDocs' => collect(), 'reportNotes' => collect(),
+            'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
+        ])->render();
+
+        $this->assertStringContainsString('Hinweise zu einzelnen Umsätzen', $html);
+        $this->assertStringContainsString('Betrifft die Archivierung der Rechnungen', $html);
+    }
+
     public function test_steuerberater_bericht_wird_erzeugt_und_belege_angehaengt(): void
     {
         Storage::fake('belege');

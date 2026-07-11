@@ -104,11 +104,16 @@ class PdfReportService
 
         // Nummerierung je Monat ab 1: erst Steuerbüro-Dateien, dann Belege.
         // Dieselbe Beleg-Nummer steht in der Umsatzliste und wird angehängt gestempelt.
+        // Der Kontoauszug steht als Original vorne im Bericht und bekommt KEINE
+        // laufende Nummer (wird übersprungen, nicht mitgezählt).
         $receiptNumbers = [];
         $steuerNumbers = [];
         foreach ($months as $bucket) {
             $n = 0;
             foreach ($bucket['docs'] ?? [] as $doc) {
+                if ($this->isKontoauszug($doc)) {
+                    continue;
+                }
                 $steuerNumbers[$doc->id] = ++$n;
             }
             foreach ($bucket['receipts'] ?? [] as $receipt) {
@@ -144,9 +149,13 @@ class PdfReportService
                 // Kategorie ans Dateiname anhängen, z. B. "2026-06-01_Kontoauszug".
                 $raw = trim((string) $doc->category);
                 $label = $raw !== '' ? '_' . $this->sanitizeFileName($raw) : '';
+                // Kontoauszug hat keine laufende Nummer -> nur Monat + Kategorie.
+                $num = $d['steuerNumbers'][$doc->id] ?? null;
+                $prefix = $num !== null
+                    ? $key . '-' . str_pad((string) $num, 2, '0', STR_PAD_LEFT)
+                    : $key;
                 $out[] = [
-                    'name' => $key . '-' . str_pad((string) $d['steuerNumbers'][$doc->id], 2, '0', STR_PAD_LEFT)
-                        . $label . '.' . $this->fileExtension($doc->file_path),
+                    'name' => $prefix . $label . '.' . $this->fileExtension($doc->file_path),
                     'absolute' => $d['disk']->path($doc->file_path),
                 ];
             }
@@ -341,7 +350,8 @@ class PdfReportService
             foreach ($months as $bucket) {
                 foreach ($bucket['docs'] ?? [] as $doc) {
                     if ($this->isKontoauszug($doc)) {
-                        $this->appendSteuerDocument($pdf, $doc, $steuerNumbers[$doc->id]);
+                        // Original-Kontoauszug ohne Beleg-Nummer (nur eingefügt).
+                        $this->appendSteuerDocument($pdf, $doc, null);
                     }
                 }
             }
@@ -460,7 +470,7 @@ class PdfReportService
     }
 
     /** Hängt eine Steuerbüro-Datei an (gleiche Logik wie ein Beleg). */
-    private function appendSteuerDocument(ReportPdf $pdf, \App\Models\SteuerDocument $doc, int $number): void
+    private function appendSteuerDocument(ReportPdf $pdf, \App\Models\SteuerDocument $doc, ?int $number): void
     {
         $disk = Storage::disk(config('pendelordner.belege_disk', 'belege'));
         if (! $doc->file_path || ! $disk->exists($doc->file_path)) {

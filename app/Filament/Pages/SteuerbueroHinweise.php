@@ -56,6 +56,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     /** @var array<int, mixed> Hochzuladende Dateien */
     public array $docUploads = [];
 
+    // Laufende Zähler über alle Häppchen eines Uploads (für EINE Sammel-Meldung).
+    public int $uploadedCount = 0;
+
+    public int $uploadedSkipped = 0;
+
     public string $docCategory = 'Monatsrechnung';
 
     public string $docNote = '';
@@ -352,6 +357,22 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
     }
 
     /** PDF-Dateien hochladen – alle bekommen die eingestellten Kriterien. */
+    /** Vor dem ersten Häppchen: Zähler für die Sammel-Meldung zurücksetzen. */
+    public function startUpload(): void
+    {
+        $this->uploadedCount = 0;
+        $this->uploadedSkipped = 0;
+    }
+
+    /** Nach dem letzten Häppchen: EINE zusammenfassende Meldung anzeigen. */
+    public function finishUpload(): void
+    {
+        Notification::make()
+            ->title($this->uploadedCount . ' Datei(en) hochgeladen')
+            ->body($this->uploadedSkipped > 0 ? $this->uploadedSkipped . ' Dublette(n) übersprungen.' : '')
+            ->success()->send();
+    }
+
     public function uploadDocuments(): void
     {
         $accId = $this->docAccount;
@@ -427,10 +448,11 @@ class SteuerbueroHinweise extends Page implements HasActions, HasForms
         $this->filterMonth = $this->docMonth;
         $this->filterYear = $this->docYear;
 
-        Notification::make()
-            ->title($count . ' Datei(en) hochgeladen')
-            ->body($skipped > 0 ? $skipped . ' Dublette(n) übersprungen.' : '')
-            ->success()->send();
+        // Ergebnis in die laufenden Zähler summieren – die zusammenfassende
+        // Meldung kommt erst am Ende über finishUpload() (ein Toast statt eines
+        // je 15er-Häppchen).
+        $this->uploadedCount += $count;
+        $this->uploadedSkipped += $skipped;
     }
 
     /** Notiz/Hinweis eines Dokuments speichern (erscheint als Info-Box im Bericht). */

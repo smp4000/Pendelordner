@@ -282,11 +282,14 @@
                     this.done = 0;
                     const CHUNK = 15;
                     try {
+                        // Zähler serverseitig zurücksetzen -> am Ende EINE Sammel-Meldung.
+                        await this.$wire.startUpload();
                         for (let i = 0; i < all.length; i += CHUNK) {
                             const chunk = all.slice(i, i + CHUNK);
                             await this.uploadChunk(chunk);
                             this.done += chunk.length;
                         }
+                        await this.$wire.finishUpload();
                     } catch (e) {
                         console.error(e);
                     }

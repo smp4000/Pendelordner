@@ -1231,7 +1231,7 @@ class Kontoumsatzdetails extends Page
         if (! empty($this->navIds)) {
             return BankTransaction::query()
                 ->whereIn('id', $this->navIds)
-                ->orderBy('booking_date')->orderBy('id');
+                ->orderBy('booking_date')->orderByDesc('id');
         }
 
         if ($this->hasFilterContext()) {
@@ -1251,13 +1251,14 @@ class Kontoumsatzdetails extends Page
                 ->when($this->filterWithoutReceipt !== null, fn ($q) => $this->filterWithoutReceipt === '1'
                     ? $q->whereDoesntHave('receipts')
                     : $q->whereHas('receipts'))
-                // id als stabiles zweites Sortierkriterium -> feste Reihenfolge.
-                ->orderBy('booking_date')->orderBy('id');
+                // 1:1 wie der Kontoauszug: Buchungstag aufsteigend, innerhalb
+                // eines Tages id absteigend (umgekehrte Import-Reihenfolge).
+                ->orderBy('booking_date')->orderByDesc('id');
         }
 
         // In der Bearbeitung werden vorrangig ungeprüfte Umsätze angezeigt.
         $offene = BankTransaction::query()->where('reviewed', false)
-            ->orderBy('booking_date')->orderBy('id');
+            ->orderBy('booking_date')->orderByDesc('id');
 
         // Sind alle Umsätze bereits geprüft, wäre die Seite leer – dann zur
         // besseren Übersicht alle Umsätze (neueste zuerst) anzeigen.
@@ -1351,9 +1352,9 @@ class Kontoumsatzdetails extends Page
         // "geprüft" aus der Standardliste fiele), damit die Position stimmt.
         if ($this->selectedTransactionId && ! $list->contains('id', $this->selectedTransactionId)) {
             if ($sel = BankTransaction::with('receipts')->find($this->selectedTransactionId)) {
-                // Stabil nach Datum + id einsortieren (gleiche Ordnung wie die Query).
+                // Gleiche Ordnung wie die Query: Buchungstag aufsteigend, id absteigend.
                 $list = $list->push($sel)
-                    ->sortBy(fn (BankTransaction $t) => sprintf('%s-%012d', $t->booking_date?->format('Y-m-d'), $t->id))
+                    ->sortBy([['booking_date', 'asc'], ['id', 'desc']])
                     ->values();
             }
         }
