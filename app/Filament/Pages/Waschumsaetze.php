@@ -81,7 +81,7 @@ class Waschumsaetze extends Page
             ->map(fn ($n, $name) => "$name: $n")->implode(', ');
 
         Notification::make()
-            ->title($stats['imported'] . ' Zahlung(en) importiert (' . strtoupper($this->uploadMethod) . ')')
+            ->title($stats['imported'] . ' Zahlung(en) importiert')
             ->body(trim(
                 ($stationInfo ? $stationInfo . '. ' : '')
                 . ($stats['unassigned'] > 0 ? $stats['unassigned'] . ' Abo(s) ohne Station – bitte unten zuordnen. ' : '')

@@ -11,15 +11,9 @@
         {{-- Upload --}}
         <x-filament::section>
             <x-slot name="heading">Zahlungs-Export importieren</x-slot>
-            <x-slot name="description">Karten- oder PayPal-Export hochladen. Fulda und Petersberg werden automatisch getrennt; Abos ohne Station ordnest du unten manuell zu.</x-slot>
+            <x-slot name="description">Karten- und PayPal-Export einfach hochladen (beide zusammen möglich). Fulda und Petersberg werden automatisch getrennt; doppelte Vorgänge werden übersprungen; Abos ohne Station ordnest du unten manuell zu.</x-slot>
 
             <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;">
-                <div style="display:flex;gap:.25rem;">
-                    @foreach (['card' => 'Karte', 'paypal' => 'PayPal'] as $val => $lbl)
-                        <button type="button" wire:click="$set('uploadMethod','{{ $val }}')"
-                            style="padding:.4rem .9rem;border:1px solid rgba(120,120,120,.3);border-radius:.4rem;cursor:pointer;font-size:.85rem;{{ $uploadMethod === $val ? 'background:#10b981;color:#fff;border-color:#10b981;' : 'background:transparent;' }}">{{ $lbl }}</button>
-                    @endforeach
-                </div>
                 <input type="file" wire:model="uploadFile" accept=".csv,text/csv"
                     style="font-size:.85rem;">
                 <x-filament::button wire:click="importUpload" wire:loading.attr="disabled" wire:target="importUpload,uploadFile" icon="heroicon-o-arrow-up-tray">
@@ -158,7 +152,7 @@
                 <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
                     <thead>
                         <tr style="text-align:left;border-bottom:2px solid rgba(120,120,120,.25);">
-                            <th style="padding:.4rem;">Datum</th><th style="padding:.4rem;">Zahlart</th>
+                            <th style="padding:.4rem;">Datum</th>
                             <th style="padding:.4rem;">Kunde</th><th style="padding:.4rem;">Programm</th>
                             <th style="padding:.4rem;">Kennzeichen</th><th style="padding:.4rem;text-align:right;">Betrag</th>
                             <th style="padding:.4rem;">State</th><th style="padding:.4rem;">Station</th>
@@ -168,7 +162,6 @@
                         @foreach ($this->payments as $p)
                             <tr style="border-bottom:1px solid rgba(120,120,120,.1);{{ $p->is_free ? 'opacity:.7;' : '' }}">
                                 <td style="padding:.35rem .4rem;">{{ $p->payment_date?->format('d.m.Y') }}</td>
-                                <td style="padding:.35rem .4rem;">{{ strtoupper($p->payment_method) }}</td>
                                 <td style="padding:.35rem .4rem;">{{ $p->customer_name ?: '—' }}</td>
                                 <td style="padding:.35rem .4rem;">{{ $p->program ?: '—' }}@if ($p->is_subscription) <span style="font-size:.7rem;opacity:.6;">(Abo)</span>@endif</td>
                                 <td style="padding:.35rem .4rem;">{{ $p->plate ?: '—' }}</td>
