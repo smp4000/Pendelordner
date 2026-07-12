@@ -69,7 +69,15 @@
                                     <td style="padding:.4rem;">{{ $line['name'] }}
                                         @if (! $line['ean'])<span style="color:#b45309;font-size:.72rem;"> · EAN fehlt</span>@endif
                                     </td>
-                                    <td style="padding:.4rem;font-family:monospace;">{{ $line['ean'] ?: '—' }}</td>
+                                    <td style="padding:.4rem;">
+                                        @php $bc = \App\Services\Wash\BarcodeGenerator::ean13DataUri($line['ean']); @endphp
+                                        @if ($bc)
+                                            <img src="{{ $bc }}" alt="{{ $line['ean'] }}" style="height:34px;display:block;">
+                                            <span style="font-family:monospace;font-size:.72rem;letter-spacing:.5px;">{{ $line['ean'] }}</span>
+                                        @else
+                                            <span style="font-family:monospace;">{{ $line['ean'] ?: '—' }}</span>
+                                        @endif
+                                    </td>
                                     <td style="padding:.4rem;text-align:right;">{{ $line['vk'] !== null ? $money($line['vk']) : '—' }}</td>
                                     <td style="padding:.4rem;text-align:right;">{{ $money($line['zwischensumme']) }}</td>
                                 </tr>

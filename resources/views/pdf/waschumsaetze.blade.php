@@ -33,9 +33,9 @@
             <tr>
                 <th style="width:50px;">Menge</th>
                 <th>Artikel</th>
-                <th style="width:120px;">EAN</th>
-                <th class="num" style="width:70px;">Einzel (VK)</th>
-                <th class="num" style="width:80px;">Gesamt</th>
+                <th style="width:185px;">EAN</th>
+                <th class="num" style="width:65px;">Einzel (VK)</th>
+                <th class="num" style="width:75px;">Gesamt</th>
             </tr>
         </thead>
         <tbody>
@@ -43,7 +43,14 @@
                 <tr>
                     <td><strong>{{ $line['qty'] }} ×</strong></td>
                     <td>{{ $line['name'] }}</td>
-                    <td class="mono">{{ $line['ean'] ?: '—' }}</td>
+                    <td class="mono">
+                        @php $bc = \App\Services\Wash\BarcodeGenerator::ean13DataUri($line['ean'], 2, 34); @endphp
+                        @if ($bc)
+                            <img src="{{ $bc }}" style="height:26px;"><br>{{ $line['ean'] }}
+                        @else
+                            {{ $line['ean'] ?: '—' }}
+                        @endif
+                    </td>
                     <td class="num">{{ $line['vk'] !== null ? $money($line['vk']) : '—' }}</td>
                     <td class="num">{{ $money($line['zwischensumme']) }}</td>
                 </tr>
