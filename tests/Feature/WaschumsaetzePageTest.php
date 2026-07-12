@@ -55,4 +55,21 @@ class WaschumsaetzePageTest extends TestCase
         $comp->call('assignStation', $abo->id, $fulda->id);
         $this->assertSame($fulda->id, $abo->fresh()->business_id);
     }
+
+    public function test_kassenliste_als_pdf_herunterladen(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->actingAs(User::firstOrFail());
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $csv = "sep=;\n"
+            . "Id;Created;Payment date;Customer name;Currency;Subtotal;Total;Tax;Discount;Application fee;Surcharge;State;Description\n"
+            . "20;2026-06-22T18:50:41+00:00;2026-06-22;Wetzel;eur;16.95;16.95;2.71;;0.00;;7;Christian Welle Fulda: Hochglanz (FD TL 18481)\n";
+        (new \App\Services\Wash\WashPaymentImporter())->import($csv, 'card');
+
+        Livewire::test(Waschumsaetze::class)
+            ->set('filterYear', 2026)->set('filterMonth', 6)
+            ->call('downloadPdf')
+            ->assertFileDownloaded();
+    }
 }

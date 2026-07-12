@@ -8,6 +8,7 @@ use App\Models\WashPayment;
 use App\Models\WashPaymentState;
 use App\Services\Wash\WashPaymentImporter;
 use BackedEnum;
+use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
@@ -93,6 +94,34 @@ class Waschumsaetze extends Page
     public function assignStation(int $paymentId, ?int $businessId): void
     {
         WashPayment::whereKey($paymentId)->update(['business_id' => $businessId ?: null]);
+    }
+
+    /** Beschriftung des gewählten Zeitraums. */
+    public function periodLabel(): string
+    {
+        $monate = [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni',
+            7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
+
+        return ($this->filterMonth >= 1 && $this->filterMonth <= 12 ? $monate[$this->filterMonth] . ' ' : 'Jahr ')
+            . $this->filterYear;
+    }
+
+    /** Kassen-Liste + Auswertung als PDF herunterladen. */
+    public function downloadPdf()
+    {
+        $pdf = DomPdf::loadView('pdf.waschumsaetze', [
+            'kassenListe' => $this->kassenListe,
+            'freeDoc' => $this->freeDoc,
+            'periodLabel' => $this->periodLabel(),
+            'generatedAt' => now()->format('d.m.Y'),
+            'money' => fn ($v) => number_format((float) $v, 2, ',', '.') . ' €',
+        ])->setPaper('a4');
+
+        $name = 'Waschumsaetze_' . $this->filterYear
+            . ($this->filterMonth >= 1 && $this->filterMonth <= 12 ? '-' . str_pad((string) $this->filterMonth, 2, '0', STR_PAD_LEFT) : '')
+            . '.pdf';
+
+        return response()->streamDownload(fn () => print ($pdf->output()), $name);
     }
 
     /** Betriebe für Filter/Zuordnung. */

@@ -39,6 +39,10 @@
                 @endforeach
             </select>
             <input type="number" wire:model.live="filterYear" style="width:6rem;padding:.35rem .5rem;border:1px solid rgba(120,120,120,.3);border-radius:.4rem;">
+            <span style="flex:1;"></span>
+            <x-filament::button wire:click="downloadPdf" color="gray" size="sm" icon="heroicon-o-arrow-down-tray">
+                Kassen-Liste als PDF
+            </x-filament::button>
         </div>
 
         {{-- Kassen-Liste je Station --}}
