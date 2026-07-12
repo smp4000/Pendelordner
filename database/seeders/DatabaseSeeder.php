@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             BankPresetSeeder::class,
             LedgerAccountSeeder::class,
+            WashSeeder::class,
         ]);
     }
 }
