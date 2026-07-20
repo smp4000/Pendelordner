@@ -181,41 +181,71 @@ class BankTransaction extends Model
         return hash('sha256', implode('|', $parts));
     }
 
+    /** SEPA-/TAN-Feldmarker, an denen der „Kern"-Verwendungszweck endet. */
+    private const PURPOSE_MARKERS = 'EREF|MREF|CRED|SVWZ|KREF|ABWA|ABWE|COAM|DEBT|IBAN|BIC|TAN';
+
     /**
-     * Eindeutige SEPA-Referenz (End-to-End) eines Umsatzes: aus dem Referenzfeld
-     * (FinTS) oder – falls dort leer – aus dem Verwendungszweck geparst (CSV führt
-     * die EREF meist im Text, z. B. „EREF: 0207702277"). Null, wenn keine vorhanden.
+     * Eindeutige SEPA-Referenz (End-to-End) eines Umsatzes – quellenunabhängig
+     * auf Alphanumerik normalisiert. Reihenfolge:
+     *   1. Referenzfeld (FinTS liefert die EREF dort),
+     *   2. „EREF: …" im Verwendungszweck (bis zum nächsten Marker),
+     *   3. „/ADV/<nummer>" (Aral-/DK-Sammelreferenz im Zweck).
+     * Null, wenn keine Referenz vorhanden.
      */
     public static function extractRef(array $data): ?string
     {
+        $norm = fn (string $s) => mb_strtolower((string) preg_replace('/[^A-Za-z0-9]/u', '', $s));
+
         $ref = trim((string) ($data['bank_reference'] ?? ''));
         if ($ref !== '') {
-            return mb_strtolower($ref);
+            $n = $norm($ref);
+
+            return $n !== '' ? $n : null;
         }
 
-        if (preg_match('/\bEREF[:\s]+([A-Za-z0-9]+)/iu', (string) ($data['purpose'] ?? ''), $m)) {
-            return mb_strtolower($m[1]);
+        $purpose = (string) ($data['purpose'] ?? '');
+
+        if (preg_match('/\bEREF\s*[:+]\s*(.*?)(?=\b(?:' . self::PURPOSE_MARKERS . ')\s*[:+]|$)/isu', $purpose, $m)) {
+            $n = $norm($m[1]);
+            if ($n !== '') {
+                return $n;
+            }
+        }
+
+        if (preg_match('#/ADV/([0-9]+)#u', $purpose, $m)) {
+            return $norm($m[1]);
         }
 
         return null;
     }
 
     /**
+     * Kern-Verwendungszweck ohne quellenabhängige Anhänge: alles ab dem ersten
+     * SEPA-/TAN-Marker (MREF/IBAN/BIC/TAN …) wird abgeschnitten, dann normalisiert.
+     */
+    private static function corePurpose(string $purpose): string
+    {
+        $core = preg_split('/\b(?:' . self::PURPOSE_MARKERS . ')\s*[:+]/isu', $purpose, 2)[0];
+
+        return mb_strtolower((string) preg_replace('/\s+/u', '', $core));
+    }
+
+    /**
      * Quellenübergreifender Match-Schlüssel: Konto + Datum + Betrag + eindeutige
-     * SEPA-Referenz (falls vorhanden) bzw. sonst normalisierter Verwendungszweck.
-     * So gilt derselbe Umsatz aus CSV und FinTS als gleich, während zwei echt
-     * verschiedene Buchungen (unterschiedliche EREF) getrennt bleiben.
+     * SEPA-Referenz (falls vorhanden) bzw. sonst der Kern-Verwendungszweck. So
+     * gilt derselbe Umsatz aus CSV und FinTS als gleich – trotz abweichender
+     * Textanhänge –, während zwei echt verschiedene Buchungen (andere EREF)
+     * getrennt bleiben.
      */
     public static function matchKey(array $data): string
     {
-        $norm = fn (string $s) => mb_strtolower((string) preg_replace('/\s+/u', '', $s));
         $ref = self::extractRef($data);
 
         return implode('|', [
             (string) ($data['bank_account_id'] ?? ''),
             (string) ($data['booking_date'] ?? ''),
             number_format((float) ($data['amount'] ?? 0), 2, '.', ''),
-            $ref !== null ? 'R:' . $ref : 'P:' . $norm((string) ($data['purpose'] ?? '')),
+            $ref !== null ? 'R:' . $ref : 'P:' . self::corePurpose((string) ($data['purpose'] ?? '')),
         ]);
     }
 

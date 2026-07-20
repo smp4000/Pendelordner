@@ -145,6 +145,54 @@ class ServicesTest extends TestCase
     }
 
     /**
+     * FinTS führt die Referenz im Referenzfeld, CSV nur als „/ADV/<nr>" im Zweck
+     * -> dennoch als Dublette erkannt.
+     */
+    public function test_dublette_ueber_adv_referenz(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $csv = [
+            'booking_date' => '2026-07-20', 'amount' => -2892.50,
+            'counterparty' => 'CHRISTIAN WELLE',
+            'purpose' => '/ADV/0207709430 20260720/0050360859 BIC: BN',
+        ];
+        $service->import($account, [$csv], ImportSource::Csv, applyRules: false);
+
+        $fints = $csv;
+        $fints['bank_reference'] = '0207709430';
+        $log = $service->import($account, [$fints], ImportSource::Fints, applyRules: false);
+
+        $this->assertSame(0, $log->new_count);
+        $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+    }
+
+    /**
+     * Referenzlose Umbuchung: CSV hängt SEPA-/TAN-Felder an den Zweck an, FinTS
+     * nicht -> über den Kern-Zweck dennoch als Dublette erkannt.
+     */
+    public function test_dublette_trotz_zweck_anhang(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $csv = [
+            'booking_date' => '2026-07-18', 'amount' => -330.00,
+            'counterparty' => 'Welle',
+            'purpose' => 'WP 2026 Wohngeld Whg. 07-13 WEG Bertholdstr. 11 u. 13 07.2026 MREF: 106Mandat IBAN: DE00',
+        ];
+        $service->import($account, [$csv], ImportSource::Csv, applyRules: false);
+
+        $fints = $csv;
+        $fints['purpose'] = 'WP 2026 Wohngeld Whg. 07-13 WEG Bertholdstr. 11 u. 13 07.2026';
+        $log = $service->import($account, [$fints], ImportSource::Fints, applyRules: false);
+
+        $this->assertSame(0, $log->new_count);
+        $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+    }
+
+    /**
      * Zwei echt verschiedene Buchungen am selben Tag mit gleichem Betrag, aber
      * unterschiedlicher EREF, dürfen NICHT verschmolzen werden.
      */
