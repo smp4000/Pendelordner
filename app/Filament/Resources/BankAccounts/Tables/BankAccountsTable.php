@@ -16,6 +16,7 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -23,6 +24,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -128,19 +130,36 @@ class BankAccountsTable
             });
     }
 
-    /** FinTS-Direktabruf der letzten 90 Tage. */
+    /** FinTS-Direktabruf ab einem wählbaren Startdatum (Standard: letzte 90 Tage). */
     private static function fintsAction(): Action
     {
+        $defaultDays = (int) config('pendelordner.fints.default_days', 90);
+
         return Action::make('fints')
             ->label('FinTS abrufen')
             ->icon('heroicon-o-arrow-path')
             ->color('gray')
             ->visible(fn (BankAccount $record): bool => $record->fints_enabled && $record->fints_connection_id)
-            ->requiresConfirmation()
-            ->modalDescription('Umsätze der letzten 90 Tage per FinTS abrufen?')
-            ->action(function (BankAccount $record): void {
+            ->modalHeading('Umsätze per FinTS abrufen')
+            ->modalDescription('Zeitraum wählen. Bereits vorhandene Umsätze werden als Dublette erkannt – deine Kontierung bleibt erhalten.')
+            ->schema([
+                DatePicker::make('from')
+                    ->label('Ab Datum')
+                    ->default(now()->subDays($defaultDays))
+                    ->maxDate(now())
+                    ->required()
+                    ->helperText('Die Bank liefert je nach Institut meist die letzten ~90 Tage; sehr weit zurückliegende Daten können abgelehnt werden.'),
+                DatePicker::make('to')
+                    ->label('Bis Datum')
+                    ->default(now())
+                    ->maxDate(now()),
+            ])
+            ->action(function (array $data, BankAccount $record): void {
                 try {
-                    $log = (new FinTsService())->fetchAccount($record);
+                    $from = ! empty($data['from']) ? Carbon::parse($data['from']) : null;
+                    $to = ! empty($data['to']) ? Carbon::parse($data['to']) : null;
+
+                    $log = (new FinTsService())->fetchAccount($record, $from, $to);
                     Notification::make()
                         ->title('FinTS-Abruf abgeschlossen')
                         ->body("{$log->new_count} neu, {$log->duplicate_count} Dubletten.")
