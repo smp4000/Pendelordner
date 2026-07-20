@@ -35,6 +35,11 @@
                     Konten abrufen
                     <span wire:loading wire:target="discover">…</span>
                 </x-filament::button>
+
+                <x-filament::button wire:click="diagnose" color="gray" icon="heroicon-o-information-circle"
+                    :disabled="! $connectionId" class="ml-2">
+                    Diagnose (was wird gesendet?)
+                </x-filament::button>
             </div>
 
             @if ($this->connections->isEmpty())

@@ -83,6 +83,41 @@ class FintsKonten extends Page
         return BankAccount::where('fints_connection_id', $this->connectionId)->orderBy('label')->get();
     }
 
+    /**
+     * Diagnose: zeigt, welche Werte (v. a. die Produktbezeichnung/
+     * FinTS-Registriernummer) die App an die Bank sendet – ohne die PIN
+     * preiszugeben. Hilft, den Fehler 9078 einzugrenzen.
+     */
+    public function diagnose(): void
+    {
+        $c = FintsConnection::find($this->connectionId);
+        if (! $c) {
+            $this->notifyError('Bitte zuerst einen FinTS-Zugang wählen.');
+
+            return;
+        }
+
+        // Exakt dieselbe Logik wie im FinTsService (makeClient).
+        $productName = $c->product_id ?: (config('pendelordner.fints.product_id') ?: 'PENDELORDNER');
+        $version = $c->product_version ?: (config('pendelordner.fints.product_version') ?: '1.0');
+        $len = mb_strlen($productName);
+        $pinSet = filled($c->pin) || filled($this->pin);
+
+        $body = 'Produktbezeichnung (geht an die Bank): <strong>' . e($productName) . '</strong><br>'
+            . 'Länge: ' . $len . ' Zeichen ' . ($len === 25 ? '✓ (gültige Registriernummer)' : '⚠ sollte 25 sein – Nummer fehlt/falsch!') . '<br>'
+            . 'Produktversion: ' . e($version) . '<br>'
+            . 'BLZ: ' . e($c->bank_code ?: '—') . '<br>'
+            . 'FinTS-URL: ' . e($c->fints_url ?: '—') . '<br>'
+            . 'Benutzerkennung: ' . ($c->username ? 'gesetzt ✓' : '<strong>FEHLT</strong>') . '<br>'
+            . 'PIN: ' . ($pinSet ? 'gesetzt ✓' : '<strong>FEHLT</strong>') . '<br>'
+            . 'TAN-Verfahren: ' . ($c->tan_method ? e($c->tan_method) : 'automatisch');
+
+        Notification::make()
+            ->title('FinTS-Diagnose: ' . $c->label)
+            ->body(new \Illuminate\Support\HtmlString($body))
+            ->info()->persistent()->send();
+    }
+
     /** Konten beim Zugang abrufen. */
     public function discover(): void
     {
