@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /** Bankkonto (Modul 1/2). */
 class BankAccount extends Model
@@ -57,5 +58,22 @@ class BankAccount extends Model
     public function getDisplayNameAttribute(): string
     {
         return $this->label . ($this->iban ? ' (' . $this->iban . ')' : '');
+    }
+
+    /**
+     * Startdatum für den inkrementellen FinTS-Abruf: ab dem letzten Abruf minus
+     * Sicherheitsüberlappung (nachträglich gebuchte Umsätze werden so mitgenommen;
+     * Dubletten filtert der Import). Null, wenn noch nie abgerufen wurde – dann
+     * gilt beim Abruf der Standardzeitraum (fints.default_days).
+     */
+    public function fintsFetchFrom(): ?Carbon
+    {
+        if (! $this->last_fetched_at) {
+            return null;
+        }
+
+        $overlap = (int) config('pendelordner.fints.overlap_days', 7);
+
+        return $this->last_fetched_at->copy()->subDays($overlap)->startOfDay();
     }
 }

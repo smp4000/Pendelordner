@@ -94,8 +94,12 @@ return [
         // Leerer .env-Wert würde den Default überschreiben -> mit ?: absichern.
         'product_id' => env('FINTS_PRODUCT_REGISTRATION') ?: 'PENDELORDNER',
         'product_version' => env('FINTS_PRODUCT_VERSION') ?: '1.0',
-        // Standard-Abrufzeitraum in Tagen.
+        // Standard-Abrufzeitraum in Tagen (wenn noch nie abgerufen wurde).
         'default_days' => 90,
+        // Sicherheitsüberlappung beim inkrementellen Abruf: es wird ab
+        // (letzter Abruf − overlap_days) geholt, damit nachträglich gebuchte
+        // Umsätze nicht verloren gehen. Dubletten werden ohnehin gefiltert.
+        'overlap_days' => 7,
     ],
 
     /*

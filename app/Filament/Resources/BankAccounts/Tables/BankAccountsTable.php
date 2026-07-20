@@ -130,11 +130,9 @@ class BankAccountsTable
             });
     }
 
-    /** FinTS-Direktabruf ab einem wählbaren Startdatum (Standard: letzte 90 Tage). */
+    /** FinTS-Direktabruf ab einem wählbaren Startdatum (Standard: ab letztem Abruf). */
     private static function fintsAction(): Action
     {
-        $defaultDays = (int) config('pendelordner.fints.default_days', 90);
-
         return Action::make('fints')
             ->label('FinTS abrufen')
             ->icon('heroicon-o-arrow-path')
@@ -142,16 +140,21 @@ class BankAccountsTable
             ->visible(fn (BankAccount $record): bool => $record->fints_enabled && $record->fints_connection_id)
             ->modalHeading('Umsätze per FinTS abrufen')
             ->modalDescription('Zeitraum wählen. Bereits vorhandene Umsätze werden als Dublette erkannt – deine Kontierung bleibt erhalten.')
+            // „Ab Datum" auf den letzten Abruf (minus Überlappung) vorbelegen,
+            // damit standardmäßig nur der neue Stand geholt wird.
+            ->fillForm(fn (BankAccount $record): array => [
+                'from' => $record->fintsFetchFrom()
+                    ?? now()->subDays((int) config('pendelordner.fints.default_days', 90)),
+                'to' => now(),
+            ])
             ->schema([
                 DatePicker::make('from')
                     ->label('Ab Datum')
-                    ->default(now()->subDays($defaultDays))
                     ->maxDate(now())
                     ->required()
-                    ->helperText('Die Bank liefert je nach Institut meist die letzten ~90 Tage; sehr weit zurückliegende Daten können abgelehnt werden.'),
+                    ->helperText('Standard: ab dem letzten Abruf. Hinweis: Banken liefern je nach Institut meist nur die letzten ~90 Tage.'),
                 DatePicker::make('to')
                     ->label('Bis Datum')
-                    ->default(now())
                     ->maxDate(now()),
             ])
             ->action(function (array $data, BankAccount $record): void {

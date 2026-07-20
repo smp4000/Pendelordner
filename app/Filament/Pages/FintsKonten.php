@@ -139,7 +139,11 @@ class FintsKonten extends Page
         }
     }
 
-    /** Umsätze eines gespeicherten Kontos abrufen. */
+    /**
+     * Umsätze eines gespeicherten Kontos abrufen – inkrementell ab dem letzten
+     * Abruf (mit Sicherheitsüberlappung). So wird immer nur der neue Stand
+     * geholt; beim allerersten Abruf gilt der Standardzeitraum (default_days).
+     */
     public function fetch(int $accountId): void
     {
         $account = BankAccount::find($accountId);
@@ -148,7 +152,9 @@ class FintsKonten extends Page
         }
 
         try {
-            $log = (new FinTsService())->fetchAccount($account, null, null, $this->pin ?: null);
+            // Inkrementell ab dem letzten Abruf (Modell-Methode); beim ersten
+            // Abruf null -> der Service nimmt den Standardzeitraum.
+            $log = (new FinTsService())->fetchAccount($account, $account->fintsFetchFrom(), null, $this->pin ?: null);
             $this->notifyImport($log);
         } catch (FinTsTanRequiredException $e) {
             $this->requestTan($e);
