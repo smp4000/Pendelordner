@@ -62,12 +62,17 @@ class BankImportService
                 // gleichem Schlüssel. So werden CSV- und FinTS-Buchungen, die sich
                 // nur in Textformatierung unterscheiden, dennoch erkannt.
                 $key = BankTransaction::matchKey($data);
-                $existing = BankTransaction::withTrashed()
+                $candidates = BankTransaction::withTrashed()
                     ->where('bank_account_id', $account->id)
                     ->whereDate('booking_date', $data['booking_date'])
                     ->where('amount', round((float) ($data['amount'] ?? 0), 2))
-                    ->get()
-                    ->first(fn (BankTransaction $c) => $c->matchKeyValue() === $key);
+                    ->get();
+
+                // Aktiven Treffer bevorzugen: ein bewusst entfernter (soft-
+                // gelöschter) Doppelgänger wird NICHT wiederhergestellt, solange
+                // ein aktiver Umsatz mit gleichem Schlüssel existiert.
+                $existing = $candidates->first(fn (BankTransaction $c) => ! $c->trashed() && $c->matchKeyValue() === $key)
+                    ?? $candidates->first(fn (BankTransaction $c) => $c->matchKeyValue() === $key);
 
                 if ($existing) {
                     if ($existing->trashed()) {
@@ -81,13 +86,20 @@ class BankImportService
                     // Verwendungszweck nach Parser-Verbesserung). Manuelle
                     // Zuordnungen (Kategorie/Kostenstelle/Konto/Mitteilung/
                     // Status) bleiben unberührt.
-                    $existing->fill([
+                    $fill = [
                         'purpose' => $data['purpose'],
                         'counterparty' => $data['counterparty'],
                         'booking_text' => $data['booking_text'],
                         'counterparty_iban' => $data['counterparty_iban'],
                         'counterparty_bic' => $data['counterparty_bic'],
-                    ])->saveQuietly();
+                    ];
+                    // Bankreferenz (EREF) nachtragen, wenn der Bestandssatz keine
+                    // hat und die neue Quelle eine liefert -> hält den Match-
+                    // Schlüssel stabil, damit künftige Abrufe sicher matchen.
+                    if (empty($existing->bank_reference) && ! empty($data['bank_reference'])) {
+                        $fill['bank_reference'] = $data['bank_reference'];
+                    }
+                    $existing->fill($fill)->saveQuietly();
 
                     continue;
                 }

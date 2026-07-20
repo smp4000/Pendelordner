@@ -77,6 +77,47 @@ class ServicesTest extends TestCase
     }
 
     /**
+     * Nach der Bereinigung (Doppelgänger soft-gelöscht) bringt ein erneuter
+     * FinTS-Abruf den Umsatz NICHT zurück – der aktive Satz gewinnt.
+     */
+    public function test_reimport_stellt_bereinigten_doppelgaenger_nicht_wieder_her(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        // Aktiver CSV-Umsatz (EREF im Zweck).
+        $csv = [
+            'booking_date' => '2026-06-15',
+            'counterparty' => 'ARAL Aktiengesellschaft',
+            'purpose' => '/ADV/0207702277 20260615 EREF: 0207702277 MREF: TP1',
+            'amount' => -119.00,
+        ];
+        $service->import($account, [$csv], ImportSource::Csv, applyRules: false);
+
+        // Soft-gelöschter FinTS-Doppelgänger (wie nach der Bereinigung).
+        $fintsData = [
+            'bank_account_id' => $account->id,
+            'booking_date' => '2026-06-15',
+            'counterparty' => 'ARAL AG',
+            'purpose' => '/ADV/0207702277 20260615 BIC: BN',
+            'amount' => -119.00,
+            'bank_reference' => '0207702277',
+        ];
+        $dupe = BankTransaction::create($fintsData + [
+            'business_id' => $account->business_id,
+            'dedup_hash' => BankTransaction::makeDedupHash($fintsData),
+        ]);
+        $dupe->delete();
+
+        // Erneuter FinTS-Abruf -> Dublette am aktiven Satz, keine Wiederherstellung.
+        $log = $service->import($account, [$fintsData], ImportSource::Fints, applyRules: false);
+
+        $this->assertSame(0, $log->new_count); // 0 = weder neu noch wiederhergestellt
+        $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+        $this->assertSoftDeleted('bank_transactions', ['id' => $dupe->id]);
+    }
+
+    /**
      * Interne Umbuchung ohne Referenz: gleicher Zweck, aber unterschiedliche
      * Empfänger-Schreibweise/IBAN in CSV vs. FinTS -> dennoch Dublette.
      */
