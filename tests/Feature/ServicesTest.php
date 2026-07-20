@@ -43,33 +43,83 @@ class ServicesTest extends TestCase
     }
 
     /**
-     * Ein zuvor per CSV (ohne Bankreferenz) importierter Umsatz wird beim
-     * späteren FinTS-Abruf (mit Bankreferenz) als Dublette erkannt – nicht neu
-     * angelegt.
+     * Derselbe Umsatz aus CSV (EREF im Zweck) und FinTS (EREF im Referenzfeld)
+     * wird über die SEPA-Referenz als Dublette erkannt – trotz abweichendem
+     * Empfänger-/Zweck-Text.
      */
-    public function test_fints_erkennt_per_csv_importierten_umsatz_als_dublette(): void
+    public function test_fints_dublette_ueber_eref_trotz_abweichendem_text(): void
     {
         $account = $this->account();
         $service = new BankImportService();
 
-        $row = [
+        // CSV: EREF steht im Verwendungszweck, kein Referenzfeld.
+        $csv = [
             'booking_date' => '2026-06-15',
-            'counterparty' => 'Lekkerland SE',
-            'counterparty_iban' => 'DE11222233334444555566',
-            'purpose' => 'Warenlieferung Rechnung 12345',
+            'counterparty' => 'ARAL Aktiengesellschaft',
+            'purpose' => '/ADV/0207702277 20260615 EREF: 0207702277 MREF: TP1',
             'amount' => -119.00,
         ];
-
-        // 1. CSV-Import ohne Bankreferenz
-        $log1 = $service->import($account, [$row], ImportSource::Csv, applyRules: false);
+        $log1 = $service->import($account, [$csv], ImportSource::Csv, applyRules: false);
         $this->assertSame(1, $log1->new_count);
 
-        // 2. Derselbe Umsatz per FinTS, diesmal MIT Bankreferenz -> Dublette
-        $log2 = $service->import($account, [$row + ['bank_reference' => 'E2E-987654']], ImportSource::Fints, applyRules: false);
+        // FinTS: gleicher Umsatz, anderer Text, EREF im Referenzfeld.
+        $fints = [
+            'booking_date' => '2026-06-15',
+            'counterparty' => 'ARAL AG',
+            'purpose' => '/ADV/0207702277 20260615 BIC: BN',
+            'amount' => -119.00,
+            'bank_reference' => '0207702277',
+        ];
+        $log2 = $service->import($account, [$fints], ImportSource::Fints, applyRules: false);
         $this->assertSame(0, $log2->new_count);
         $this->assertSame(1, $log2->duplicate_count);
-
         $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+    }
+
+    /**
+     * Interne Umbuchung ohne Referenz: gleicher Zweck, aber unterschiedliche
+     * Empfänger-Schreibweise/IBAN in CSV vs. FinTS -> dennoch Dublette.
+     */
+    public function test_referenzlose_umbuchung_ist_dublette_ueber_zweck(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $csv = [
+            'booking_date' => '2026-06-16', 'amount' => 753.91,
+            'counterparty' => 'Christian Welle', 'counterparty_iban' => 'DE40530601800200250503',
+            'purpose' => 'Ausgleich Argenturkonto',
+        ];
+        $service->import($account, [$csv], ImportSource::Csv, applyRules: false);
+
+        $fints = [
+            'booking_date' => '2026-06-16', 'amount' => 753.91,
+            'counterparty' => 'Welle Christian', 'counterparty_iban' => 'DE75530601800500250503',
+            'purpose' => 'Ausgleich Argenturkonto',
+        ];
+        $log = $service->import($account, [$fints], ImportSource::Fints, applyRules: false);
+
+        $this->assertSame(0, $log->new_count);
+        $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+    }
+
+    /**
+     * Zwei echt verschiedene Buchungen am selben Tag mit gleichem Betrag, aber
+     * unterschiedlicher EREF, dürfen NICHT verschmolzen werden.
+     */
+    public function test_unterschiedliche_eref_bleibt_getrennt(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $rows = [
+            ['booking_date' => '2026-06-17', 'amount' => -50.00, 'counterparty' => 'ARAL', 'purpose' => 'Sprit', 'bank_reference' => '111'],
+            ['booking_date' => '2026-06-17', 'amount' => -50.00, 'counterparty' => 'ARAL', 'purpose' => 'Sprit', 'bank_reference' => '222'],
+        ];
+        $log = $service->import($account, $rows, ImportSource::Fints, applyRules: false);
+
+        $this->assertSame(2, $log->new_count);
+        $this->assertSame(2, BankTransaction::where('bank_account_id', $account->id)->count());
     }
 
     public function test_csv_import_mit_dublettenpruefung_und_regeln(): void

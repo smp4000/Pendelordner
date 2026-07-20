@@ -27,29 +27,30 @@ class DedupeCrossSourceTest extends TestCase
             'currency' => 'EUR',
         ]);
 
-        $row = [
+        // 1. CSV-Umsatz (EREF im Zweck) anlegen und kontieren.
+        $csvRow = [
             'booking_date' => '2026-06-15',
-            'counterparty' => 'Lekkerland SE',
-            'purpose' => 'Warenlieferung 12345',
+            'counterparty' => 'ARAL Aktiengesellschaft',
+            'purpose' => '/ADV/0207702277 20260615 EREF: 0207702277 MREF: TP1',
             'amount' => -119.00,
         ];
-
-        // 1. CSV-Umsatz (ohne Referenz) anlegen und kontieren.
-        (new BankImportService())->import($account, [$row], ImportSource::Csv, applyRules: false);
+        (new BankImportService())->import($account, [$csvRow], ImportSource::Csv, applyRules: false);
         $csv = BankTransaction::where('bank_account_id', $account->id)->firstOrFail();
         $csv->update(['category_id' => Category::firstOrCreate(['name' => 'Shop'], ['active' => true])->id]);
 
-        // 2. Vorhandenen FinTS-Doppelgänger (mit Referenz) simulieren – so, wie er
-        //    vor dem Dedup-Fix entstanden ist (direkt angelegt, nicht importiert).
-        $fints = BankTransaction::create([
+        // 2. Vorhandenen FinTS-Doppelgänger (EREF im Referenzfeld, anderer Text)
+        //    simulieren – so, wie er vor dem Dedup-Fix entstanden ist.
+        $fintsData = [
             'bank_account_id' => $account->id,
-            'business_id' => $account->business_id,
             'booking_date' => '2026-06-15',
-            'counterparty' => 'Lekkerland SE',
-            'purpose' => 'Warenlieferung 12345',
+            'counterparty' => 'ARAL AG',
+            'purpose' => '/ADV/0207702277 20260615 BIC: BN',
             'amount' => -119.00,
-            'bank_reference' => 'E2E-987654',
-            'dedup_hash' => BankTransaction::makeDedupHash($row + ['bank_reference' => 'E2E-987654']),
+            'bank_reference' => '0207702277',
+        ];
+        $fints = BankTransaction::create($fintsData + [
+            'business_id' => $account->business_id,
+            'dedup_hash' => BankTransaction::makeDedupHash($fintsData),
         ]);
 
         $this->assertSame(2, BankTransaction::where('bank_account_id', $account->id)->count());

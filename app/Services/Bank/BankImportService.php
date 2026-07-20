@@ -52,40 +52,22 @@ class BankImportService
         foreach ($transactions as $row) {
             try {
                 $data = $this->normalize($row, $account, $source);
+                $data['bank_account_id'] = $account->id;
                 $hash = BankTransaction::makeDedupHash($data);
-                $reference = trim((string) ($data['bank_reference'] ?? ''));
 
-                // Referenzloser Hash (bank_reference bewusst leer): CSV-Importe
-                // tragen keine Bankreferenz, ein späterer FinTS-Abruf schon.
-                // Beide ergeben denselben referenzlosen Hash, wenn Datum/Betrag/
-                // Verwendungszweck/Empfänger übereinstimmen.
-                $softHash = BankTransaction::makeDedupHash(array_merge($data, ['bank_reference' => '']));
-
-                // Dublettenprüfung inkl. gelöschter Umsätze (withTrashed, da der
-                // Unique-Index Soft-Deletes nicht berücksichtigt):
-                //   1. exakter dedup_hash  -> erneuter Import derselben Quelle
-                //   2. Bankreferenz + Datum + Betrag -> dieselbe Buchung aus
-                //      anderem Format, sofern beide eine Referenz tragen
-                //   3. referenzloser Hash gegen einen referenzlosen (z. B. per
-                //      CSV importierten) Bestandsumsatz -> erkennt denselben
-                //      Umsatz, wenn nur eine Seite eine Bankreferenz hat.
+                // Quellenübergreifende Dublettenprüfung über den Match-Schlüssel
+                // (Konto + Datum + Betrag + EREF bzw. sonst Verwendungszweck).
+                // Kandidaten sind alle Umsätze desselben Kontos an diesem Tag mit
+                // diesem Betrag (inkl. gelöschter – withTrashed); daraus der mit
+                // gleichem Schlüssel. So werden CSV- und FinTS-Buchungen, die sich
+                // nur in Textformatierung unterscheiden, dennoch erkannt.
+                $key = BankTransaction::matchKey($data);
                 $existing = BankTransaction::withTrashed()
                     ->where('bank_account_id', $account->id)
-                    ->where(function ($q) use ($hash, $softHash, $reference, $data) {
-                        $q->where('dedup_hash', $hash);
-
-                        if ($reference !== '') {
-                            $q->orWhere(fn ($q2) => $q2
-                                ->where('bank_reference', $reference)
-                                ->whereDate('booking_date', $data['booking_date'])
-                                ->where('amount', round((float) ($data['amount'] ?? 0), 2)));
-                        }
-
-                        $q->orWhere(fn ($q3) => $q3
-                            ->where('dedup_hash', $softHash)
-                            ->where(fn ($q4) => $q4->whereNull('bank_reference')->orWhere('bank_reference', '')));
-                    })
-                    ->first();
+                    ->whereDate('booking_date', $data['booking_date'])
+                    ->where('amount', round((float) ($data['amount'] ?? 0), 2))
+                    ->get()
+                    ->first(fn (BankTransaction $c) => $c->matchKeyValue() === $key);
 
                 if ($existing) {
                     if ($existing->trashed()) {

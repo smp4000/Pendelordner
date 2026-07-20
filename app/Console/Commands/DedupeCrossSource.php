@@ -52,14 +52,8 @@ class DedupeCrossSource extends Command
                 ->orderBy('id')
                 ->get();
 
-            // Nach referenzlosem Hash gruppieren.
-            $groups = $rows->groupBy(fn (BankTransaction $t) => BankTransaction::makeDedupHash([
-                'bank_reference' => '',
-                'booking_date' => $t->booking_date?->format('Y-m-d'),
-                'amount' => $t->amount,
-                'purpose' => $t->purpose,
-                'counterparty' => $t->counterparty,
-            ]));
+            // Nach Match-Schlüssel gruppieren (Konto + Datum + Betrag + EREF/Zweck).
+            $groups = $rows->groupBy(fn (BankTransaction $t) => $t->matchKeyValue());
 
             $accountRemoved = 0;
 

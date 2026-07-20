@@ -181,6 +181,56 @@ class BankTransaction extends Model
         return hash('sha256', implode('|', $parts));
     }
 
+    /**
+     * Eindeutige SEPA-Referenz (End-to-End) eines Umsatzes: aus dem Referenzfeld
+     * (FinTS) oder – falls dort leer – aus dem Verwendungszweck geparst (CSV führt
+     * die EREF meist im Text, z. B. „EREF: 0207702277"). Null, wenn keine vorhanden.
+     */
+    public static function extractRef(array $data): ?string
+    {
+        $ref = trim((string) ($data['bank_reference'] ?? ''));
+        if ($ref !== '') {
+            return mb_strtolower($ref);
+        }
+
+        if (preg_match('/\bEREF[:\s]+([A-Za-z0-9]+)/iu', (string) ($data['purpose'] ?? ''), $m)) {
+            return mb_strtolower($m[1]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Quellenübergreifender Match-Schlüssel: Konto + Datum + Betrag + eindeutige
+     * SEPA-Referenz (falls vorhanden) bzw. sonst normalisierter Verwendungszweck.
+     * So gilt derselbe Umsatz aus CSV und FinTS als gleich, während zwei echt
+     * verschiedene Buchungen (unterschiedliche EREF) getrennt bleiben.
+     */
+    public static function matchKey(array $data): string
+    {
+        $norm = fn (string $s) => mb_strtolower((string) preg_replace('/\s+/u', '', $s));
+        $ref = self::extractRef($data);
+
+        return implode('|', [
+            (string) ($data['bank_account_id'] ?? ''),
+            (string) ($data['booking_date'] ?? ''),
+            number_format((float) ($data['amount'] ?? 0), 2, '.', ''),
+            $ref !== null ? 'R:' . $ref : 'P:' . $norm((string) ($data['purpose'] ?? '')),
+        ]);
+    }
+
+    /** Match-Schlüssel aus den eigenen Attributen (für Import/Bereinigung). */
+    public function matchKeyValue(): string
+    {
+        return self::matchKey([
+            'bank_account_id' => $this->bank_account_id,
+            'booking_date' => $this->booking_date?->format('Y-m-d'),
+            'amount' => $this->amount,
+            'bank_reference' => $this->bank_reference,
+            'purpose' => $this->purpose,
+        ]);
+    }
+
     // ---- Status-Workflow ---------------------------------------------------
 
     /** Status anhand der aktuellen Belegzuordnung neu berechnen. */
