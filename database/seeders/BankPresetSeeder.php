@@ -18,6 +18,16 @@ class BankPresetSeeder extends Seeder
 
         $presets = [
             [
+                // Bankspezifische Vorlage: setzt BLZ + FinTS-URL automatisch.
+                'name' => 'VR Bank Fulda',
+                'bank_code' => '53060180',
+                'fints_url' => 'https://fints2.atruvia.de/cgi-bin/hbciservlet',
+                'login_hint' => 'VR-NetKey (nicht die E-Mail/Alias)',
+                'customer_id_hint' => '(leer)',
+                'account_hint' => null,
+                'note' => 'TAN-Verfahren leer lassen (SecureGo-plus-Direktfreigabe). Produkt-ID = deine 25-stellige FinTS-Registriernummer. Falls der Abruf die URL nicht annimmt: exakte FinTS-Adresse für BLZ 53060180 aus der FinTS-Bankenliste prüfen (fints1 statt fints2 möglich).',
+            ],
+            [
                 'name' => 'Commerzbank',
                 'fints_url' => 'https://fints.commerzbank.de/fints',
                 'login_hint' => 'Original-Teilnehmernummer (kein Alias-Anmeldename!)',

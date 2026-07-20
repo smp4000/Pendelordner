@@ -32,6 +32,10 @@ class FintsConnectionForm
                                 }
                                 $set('fints_url', $preset->fints_url);
                                 $set('hbci_version', $preset->hbci_version);
+                                // Bankspezifische Vorlage (z. B. VR Bank Fulda): BLZ mitsetzen.
+                                if ($preset->bank_code && blank($get('bank_code'))) {
+                                    $set('bank_code', $preset->bank_code);
+                                }
                                 if (blank($get('label'))) {
                                     $set('label', $preset->name);
                                 }
