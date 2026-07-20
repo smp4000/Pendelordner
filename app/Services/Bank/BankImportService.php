@@ -55,15 +55,23 @@ class BankImportService
                 $hash = BankTransaction::makeDedupHash($data);
                 $reference = trim((string) ($data['bank_reference'] ?? ''));
 
+                // Referenzloser Hash (bank_reference bewusst leer): CSV-Importe
+                // tragen keine Bankreferenz, ein späterer FinTS-Abruf schon.
+                // Beide ergeben denselben referenzlosen Hash, wenn Datum/Betrag/
+                // Verwendungszweck/Empfänger übereinstimmen.
+                $softHash = BankTransaction::makeDedupHash(array_merge($data, ['bank_reference' => '']));
+
                 // Dublettenprüfung inkl. gelöschter Umsätze (withTrashed, da der
                 // Unique-Index Soft-Deletes nicht berücksichtigt):
-                //   1. exakter dedup_hash  -> erkennt erneuten Import derselben Datei
-                //   2. Bankreferenz + Datum + Betrag -> erkennt dieselbe Buchung
-                //      auch aus einem anderen Format (CSV/MT940/CAMT), da die
-                //      Referenz eindeutig und formatstabil ist.
+                //   1. exakter dedup_hash  -> erneuter Import derselben Quelle
+                //   2. Bankreferenz + Datum + Betrag -> dieselbe Buchung aus
+                //      anderem Format, sofern beide eine Referenz tragen
+                //   3. referenzloser Hash gegen einen referenzlosen (z. B. per
+                //      CSV importierten) Bestandsumsatz -> erkennt denselben
+                //      Umsatz, wenn nur eine Seite eine Bankreferenz hat.
                 $existing = BankTransaction::withTrashed()
                     ->where('bank_account_id', $account->id)
-                    ->where(function ($q) use ($hash, $reference, $data) {
+                    ->where(function ($q) use ($hash, $softHash, $reference, $data) {
                         $q->where('dedup_hash', $hash);
 
                         if ($reference !== '') {
@@ -72,6 +80,10 @@ class BankImportService
                                 ->whereDate('booking_date', $data['booking_date'])
                                 ->where('amount', round((float) ($data['amount'] ?? 0), 2)));
                         }
+
+                        $q->orWhere(fn ($q3) => $q3
+                            ->where('dedup_hash', $softHash)
+                            ->where(fn ($q4) => $q4->whereNull('bank_reference')->orWhere('bank_reference', '')));
                     })
                     ->first();
 

@@ -42,6 +42,36 @@ class ServicesTest extends TestCase
         ]);
     }
 
+    /**
+     * Ein zuvor per CSV (ohne Bankreferenz) importierter Umsatz wird beim
+     * späteren FinTS-Abruf (mit Bankreferenz) als Dublette erkannt – nicht neu
+     * angelegt.
+     */
+    public function test_fints_erkennt_per_csv_importierten_umsatz_als_dublette(): void
+    {
+        $account = $this->account();
+        $service = new BankImportService();
+
+        $row = [
+            'booking_date' => '2026-06-15',
+            'counterparty' => 'Lekkerland SE',
+            'counterparty_iban' => 'DE11222233334444555566',
+            'purpose' => 'Warenlieferung Rechnung 12345',
+            'amount' => -119.00,
+        ];
+
+        // 1. CSV-Import ohne Bankreferenz
+        $log1 = $service->import($account, [$row], ImportSource::Csv, applyRules: false);
+        $this->assertSame(1, $log1->new_count);
+
+        // 2. Derselbe Umsatz per FinTS, diesmal MIT Bankreferenz -> Dublette
+        $log2 = $service->import($account, [$row + ['bank_reference' => 'E2E-987654']], ImportSource::Fints, applyRules: false);
+        $this->assertSame(0, $log2->new_count);
+        $this->assertSame(1, $log2->duplicate_count);
+
+        $this->assertSame(1, BankTransaction::where('bank_account_id', $account->id)->count());
+    }
+
     public function test_csv_import_mit_dublettenpruefung_und_regeln(): void
     {
         $csv = "Buchungstag;Valutadatum;Name Zahlungsbeteiligter;Verwendungszweck;IBAN Zahlungsbeteiligter;Betrag;Waehrung\n"
