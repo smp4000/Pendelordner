@@ -21,7 +21,8 @@
                 <div>
                     <label class="mb-1 block text-sm font-medium">PIN</label>
                     <x-filament::input.wrapper>
-                        <x-filament::input type="password" wire:model="pin" placeholder="PIN eingeben" autocomplete="off" />
+                        <x-filament::input type="password" wire:model="pin" placeholder="PIN eingeben"
+                            autocomplete="new-password" data-1p-ignore data-lpignore="true" />
                     </x-filament::input.wrapper>
                     <p class="mt-1 text-xs text-gray-500">
                         Wird nur für den Abruf verwendet, nicht gespeichert. Leer lassen, wenn im Zugang hinterlegt.
@@ -141,6 +142,15 @@
         @if ($connectionId && $this->savedAccounts->isNotEmpty())
             <x-filament::section>
                 <x-slot name="heading">Gespeicherte Konten dieses Zugangs</x-slot>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem;">
+                    <span style="font-size:.8rem;opacity:.7;">Alle Konten inkrementell ab dem letzten Abruf holen.</span>
+                    <x-filament::button wire:click="fetchAll" wire:loading.attr="disabled" wire:target="fetchAll"
+                        size="sm" color="success" icon="heroicon-o-arrow-down-tray">
+                        Alle Konten abrufen
+                        <span wire:loading wire:target="fetchAll">…</span>
+                    </x-filament::button>
+                </div>
 
                 <div class="divide-y divide-gray-100 dark:divide-white/5">
                     @foreach ($this->savedAccounts as $account)

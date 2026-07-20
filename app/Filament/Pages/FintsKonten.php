@@ -164,6 +164,49 @@ class FintsKonten extends Page
         }
     }
 
+    /**
+     * Alle gespeicherten Konten dieses Zugangs nacheinander inkrementell
+     * abrufen. Fehler/TAN-Bedarf je Konto werden gesammelt, der Rest läuft
+     * weiter; am Ende gibt es eine zusammengefasste Meldung.
+     */
+    public function fetchAll(): void
+    {
+        $accounts = $this->savedAccounts;
+        if ($accounts->isEmpty()) {
+            $this->notifyError('Keine gespeicherten Konten für diesen Zugang.');
+
+            return;
+        }
+
+        $new = $duplicates = $errors = $done = 0;
+        $tanNeeded = [];
+
+        foreach ($accounts as $account) {
+            try {
+                $log = (new FinTsService())->fetchAccount($account, $account->fintsFetchFrom(), null, $this->pin ?: null);
+                $new += (int) $log->new_count;
+                $duplicates += (int) $log->duplicate_count;
+                $errors += (int) $log->error_count;
+                $done++;
+            } catch (FinTsTanRequiredException $e) {
+                $tanNeeded[] = $account->label;
+            } catch (Throwable $e) {
+                report($e);
+                $errors++;
+            }
+        }
+
+        $body = "{$done}/{$accounts->count()} Konten · {$new} neu, {$duplicates} Dubletten"
+            . ($errors ? ", {$errors} Fehler" : '')
+            . (! empty($tanNeeded) ? ' · TAN nötig (einzeln abrufen): ' . implode(', ', $tanNeeded) : '');
+
+        Notification::make()
+            ->title('Alle Konten abgerufen')
+            ->body($body)
+            ->{$errors > 0 || ! empty($tanNeeded) ? 'warning' : 'success'}()
+            ->send();
+    }
+
     /** Eingegebene TAN absenden und Vorgang fortsetzen. */
     public function submitTan(): void
     {
