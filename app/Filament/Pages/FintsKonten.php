@@ -227,6 +227,22 @@ class FintsKonten extends Page
     }
 
     /** Ausgewählte Konten als Bankkonten speichern. */
+    /** Alle gefundenen Konten (mit IBAN) auswählen. */
+    public function selectAllAccounts(): void
+    {
+        $this->selected = collect($this->discovered)
+            ->pluck('iban')
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /** Auswahl leeren. */
+    public function clearAccounts(): void
+    {
+        $this->selected = [];
+    }
+
     public function saveAccounts(): void
     {
         $connection = FintsConnection::find($this->connectionId);

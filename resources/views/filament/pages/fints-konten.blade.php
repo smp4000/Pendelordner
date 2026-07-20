@@ -90,21 +90,48 @@
         @if ($step === 'accounts' && count($discovered))
             <x-filament::section>
                 <x-slot name="heading">Gefundene Konten</x-slot>
+                <x-slot name="description">Konten auswählen, die als Bankkonten übernommen werden sollen.</x-slot>
 
-                <div class="space-y-2">
+                {{-- Kopfzeile: Zähler + Alle/Keine --}}
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+                    <div style="font-size:.85rem;opacity:.75;">
+                        <strong>{{ count($selected) }}</strong> von {{ count($discovered) }} ausgewählt
+                    </div>
+                    <div style="display:flex;gap:.4rem;">
+                        <button type="button" wire:click="selectAllAccounts"
+                            style="padding:.3rem .7rem;border:1px solid rgba(16,185,129,.5);color:#059669;background:transparent;border-radius:.4rem;cursor:pointer;font-size:.8rem;">Alle</button>
+                        <button type="button" wire:click="clearAccounts"
+                            style="padding:.3rem .7rem;border:1px solid rgba(120,120,120,.35);background:transparent;border-radius:.4rem;cursor:pointer;font-size:.8rem;">Keine</button>
+                    </div>
+                </div>
+
+                {{-- Karten-Raster: je Konto eine Kachel --}}
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.6rem;">
                     @foreach ($discovered as $acc)
-                        <label class="flex items-center gap-3 text-sm">
-                            <x-filament::input.checkbox wire:model="selected" value="{{ $acc['iban'] }}" />
-                            <span class="font-medium">{{ $acc['iban'] ?: $acc['account_number'] }}</span>
-                            @if (! empty($acc['bic']))<span class="text-gray-500">· {{ $acc['bic'] }}</span>@endif
-                            @if (! empty($acc['bank_code']))<span class="text-gray-400">· BLZ {{ $acc['bank_code'] }}</span>@endif
+                        @php
+                            $iban = $acc['iban'] ?? '';
+                            $ibanFmt = $iban !== '' ? trim(chunk_split($iban, 4, ' ')) : ($acc['account_number'] ?? '—');
+                            $isSel = in_array($iban, $selected, true);
+                        @endphp
+                        <label style="display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;border:1px solid {{ $isSel ? '#10b981' : 'rgba(120,120,120,.25)' }};border-radius:.6rem;cursor:pointer;transition:.15s;{{ $isSel ? 'background:rgba(16,185,129,.08);' : '' }}">
+                            <input type="checkbox" wire:model.live="selected" value="{{ $iban }}"
+                                style="width:1.05rem;height:1.05rem;accent-color:#10b981;flex:0 0 auto;cursor:pointer;">
+                            <div style="min-width:0;">
+                                <div style="font-weight:600;font-size:.88rem;font-variant-numeric:tabular-nums;letter-spacing:.01em;">{{ $ibanFmt }}</div>
+                                <div style="font-size:.74rem;opacity:.6;margin-top:.12rem;">
+                                    @if (! empty($acc['bic'])){{ $acc['bic'] }}@endif
+                                    @if (! empty($acc['bic']) && ! empty($acc['bank_code'])) · @endif
+                                    @if (! empty($acc['bank_code']))BLZ {{ $acc['bank_code'] }}@endif
+                                </div>
+                            </div>
                         </label>
                     @endforeach
                 </div>
 
-                <div class="mt-4">
-                    <x-filament::button wire:click="saveAccounts" icon="heroicon-o-check-circle" color="success">
-                        Auswahl als Bankkonten speichern
+                <div style="margin-top:1rem;">
+                    <x-filament::button wire:click="saveAccounts" icon="heroicon-o-check-circle" color="success"
+                        :disabled="count($selected) === 0">
+                        Auswahl als Bankkonten speichern ({{ count($selected) }})
                     </x-filament::button>
                 </div>
             </x-filament::section>
