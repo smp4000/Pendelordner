@@ -369,7 +369,7 @@ class FinTsService
                     'amount' => $amount,
                     'counterparty' => $t->getName() ?: null,
                     'counterparty_iban' => $t->getAccountNumber() ?: null,
-                    'purpose' => $t->getMainDescription() ?: null,
+                    'purpose' => $this->buildPurpose($t) ?: null,
                     'booking_text' => $t->getBookingText() ?: null,
                     'bank_reference' => $t->getEndToEndID() ?: null,
                 ];
@@ -377,6 +377,51 @@ class FinTsService
         }
 
         return $rows;
+    }
+
+    /**
+     * Vollständigen Verwendungszweck zusammensetzen wie im CSV-Export der Bank:
+     * SVWZ (Haupt-Verwendungszweck) + die strukturierten Teilfelder
+     * (EREF/MREF/CRED/…) + Gegenkonto-IBAN/BIC. getMainDescription() liefert nur
+     * das SVWZ-Feld, weshalb bei FinTS bisher EREF/MREF/CRED/IBAN/BIC fehlten.
+     */
+    private function buildPurpose(Transaction $t): string
+    {
+        // Typed Properties der Library haben keine Defaults – defensiv zugreifen,
+        // damit ein fehlendes Feld den Import nie abbricht.
+        $sd = $this->safeGet(fn () => $t->getStructuredDescription()) ?: [];
+
+        $parts = [];
+        if (! empty($sd['SVWZ'])) {
+            $parts[] = trim($sd['SVWZ']);
+        }
+        // Referenzen in der Reihenfolge des Bank-Exports anhängen.
+        foreach (['EREF', 'KREF', 'MREF', 'CRED', 'DBET', 'DEBT', 'COAM', 'ABWA', 'ABWE'] as $key) {
+            if (! empty($sd[$key])) {
+                $parts[] = $key . ': ' . trim($sd[$key]);
+            }
+        }
+        // Gegenkonto (IBAN/BIC) ans Ende – nur wenn nicht schon enthalten.
+        $iban = (string) $this->safeGet(fn () => $t->getAccountNumber());
+        $bic = (string) $this->safeGet(fn () => $t->getBankCode());
+        if ($iban !== '' && ! str_contains(implode(' ', $parts), $iban)) {
+            $parts[] = 'IBAN: ' . $iban;
+        }
+        if ($bic !== '' && ! str_contains(implode(' ', $parts), $bic)) {
+            $parts[] = 'BIC: ' . $bic;
+        }
+
+        return trim(implode(' ', $parts));
+    }
+
+    /** Library-Getter sicher aufrufen (uninitialisierte Typed Property -> null). */
+    private function safeGet(callable $fn): mixed
+    {
+        try {
+            return $fn();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function normalizeIban(?string $iban): string
