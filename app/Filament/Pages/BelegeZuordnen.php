@@ -94,10 +94,42 @@ class BelegeZuordnen extends Page implements HasActions, HasForms
             ->get();
     }
 
-    /** Bester Umsatzvorschlag je Beleg (für die Anzeige). */
-    public function suggestionFor(Receipt $receipt): ?array
+    /**
+     * Bester Umsatzvorschlag je Beleg – EINMAL für alle offenen Belege berechnet
+     * und pro Beleg-Menge kurz gecacht. So werden die (teuren) Matching-Läufe
+     * nicht bei jedem Livewire-Render (z. B. Checkbox/Vorschau-Klick) erneut
+     * ausgeführt, sondern nur wenn sich die offenen Belege ändern.
+     *
+     * @return array<int, array{transaction_id:int,label:string,date:?string,amount:float,score:float}>
+     */
+    public function getSuggestionsProperty(): array
     {
-        return (new MatchingEngine())->suggestTransactions($receipt, 1)->first();
+        $receipts = $this->unassignedReceipts;
+        if ($receipts->isEmpty()) {
+            return [];
+        }
+
+        $key = 'belegzuord.sug.' . md5($receipts->pluck('id')->sort()->implode(','));
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 60, function () use ($receipts) {
+            $engine = new MatchingEngine();
+            $out = [];
+            foreach ($receipts as $r) {
+                $s = $engine->suggestTransactions($r, 1)->first();
+                if ($s) {
+                    $t = $s['transaction'];
+                    $out[$r->id] = [
+                        'transaction_id' => $t->id,
+                        'label' => $t->counterparty ?: ('Umsatz #' . $t->id),
+                        'date' => $t->booking_date?->format('d.m.Y'),
+                        'amount' => (float) $t->amount,
+                        'score' => $s['score'],
+                    ];
+                }
+            }
+
+            return $out;
+        });
     }
 
     /** Isolierte mögliche Dubletten (gleiche Rechnung, andere Datei). */

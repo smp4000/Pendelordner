@@ -60,8 +60,9 @@
                 <div>Beleg</div><div>Vorgeschlagener Umsatz</div><div></div>
             </div>
 
+            @php $suggestions = $this->suggestions; @endphp
             @forelse ($this->unassignedReceipts as $r)
-                @php $sug = $this->suggestionFor($r); @endphp
+                @php $sug = $suggestions[$r->id] ?? null; @endphp
                 <div style="display:grid;grid-template-columns:1.4fr 1.6fr auto;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid rgba(120,120,120,.12);">
                     {{-- Beleg --}}
                     <div>
@@ -111,10 +112,10 @@
                     {{-- Vorschlag --}}
                     <div>
                         @if ($sug)
-                            <div>{{ $sug['transaction']->counterparty ?: 'Umsatz #' . $sug['transaction']->id }}</div>
+                            <div>{{ $sug['label'] }}</div>
                             <div style="font-size:.8rem;opacity:.65;">
-                                {{ $sug['transaction']->booking_date?->format('d.m.Y') }} ·
-                                <span style="color:{{ $sug['transaction']->amount < 0 ? '#dc2626' : '#059669' }};">{{ $money($sug['transaction']->amount) }}</span>
+                                {{ $sug['date'] }} ·
+                                <span style="color:{{ $sug['amount'] < 0 ? '#dc2626' : '#059669' }};">{{ $money($sug['amount']) }}</span>
                                 <span style="margin-left:.3rem;padding:.05rem .4rem;border-radius:.3rem;background:rgba(16,185,129,.15);color:#059669;font-size:.72rem;">{{ $sug['score'] }} %</span>
                             </div>
                         @else
@@ -125,7 +126,7 @@
                     {{-- Aktion --}}
                     <div style="text-align:right;">
                         @if ($sug)
-                            <x-filament::button wire:click="assign({{ $r->id }}, {{ $sug['transaction']->id }})" size="sm" color="primary">
+                            <x-filament::button wire:click="assign({{ $r->id }}, {{ $sug['transaction_id'] }})" size="sm" color="primary">
                                 Zuordnen
                             </x-filament::button>
                         @endif

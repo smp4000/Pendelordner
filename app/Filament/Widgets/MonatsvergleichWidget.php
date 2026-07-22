@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\BankTransaction;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /** Monatsvergleich Einnahmen/Ausgaben der letzten 12 Monate (Modul 10). */
 class MonatsvergleichWidget extends ChartWidget
@@ -16,6 +17,12 @@ class MonatsvergleichWidget extends ChartWidget
     protected int|string|array $columnSpan = 1;
 
     protected function getData(): array
+    {
+        // 24 Summen-Queries -> 5 Minuten cachen, damit das Dashboard schnell lädt.
+        return Cache::remember('widget.monatsvergleich', 300, fn () => $this->computeData());
+    }
+
+    private function computeData(): array
     {
         $labels = [];
         $income = [];

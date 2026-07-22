@@ -2,11 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Receipt;
+use App\Models\SteuerDocument;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -21,7 +22,7 @@ class SpeicherplatzWidget extends StatsOverviewWidget
     protected function getStats(): array
     {
         [$dbBytes, $dbTables] = Cache::remember('speicher.db', 300, fn () => $this->databaseSize());
-        [$belegBytes, $belegCount] = Cache::remember('speicher.belege', 300, fn () => $this->diskSize(config('pendelordner.belege_disk', 'belege')));
+        [$belegBytes, $belegCount] = Cache::remember('speicher.belege', 300, fn () => $this->belegeSize());
 
         return [
             Stat::make('Datenbank', $this->human($dbBytes))
@@ -74,22 +75,20 @@ class SpeicherplatzWidget extends StatsOverviewWidget
         return [0, 0];
     }
 
-    /** @return array{0:int,1:int} [Bytes, Dateianzahl] */
-    private function diskSize(string $disk): array
+    /**
+     * Größe des Beleg-Ordners aus der DB summieren (die Tabellen führen je Datei
+     * die Bytegröße) – eine Aggregat-Query statt tausender Datei-Zugriffe.
+     *
+     * @return array{0:int,1:int} [Bytes, Dateianzahl]
+     */
+    private function belegeSize(): array
     {
         try {
-            $d = Storage::disk($disk);
-            $files = $d->allFiles();
-            $bytes = 0;
-            foreach ($files as $file) {
-                try {
-                    $bytes += $d->size($file);
-                } catch (Throwable) {
-                    // einzelne Datei nicht lesbar -> überspringen
-                }
-            }
+            $bytes = (int) Receipt::sum('file_size') + (int) SteuerDocument::sum('file_size');
+            $count = (int) Receipt::whereNotNull('file_path')->count()
+                + (int) SteuerDocument::whereNotNull('file_path')->count();
 
-            return [$bytes, count($files)];
+            return [$bytes, $count];
         } catch (Throwable) {
             return [0, 0];
         }

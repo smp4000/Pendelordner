@@ -19,8 +19,13 @@ class WashAnalytics
     {
         $excluded = WashPaymentState::where('counts_as_revenue', false)->pluck('code')->all();
 
+        // whereBetween statt whereYear() – so kann der Index auf payment_date
+        // genutzt werden (YEAR(spalte) verhindert jede Indexnutzung).
+        $from = \Illuminate\Support\Carbon::create($this->year, 1, 1)->toDateString();
+        $to = \Illuminate\Support\Carbon::create($this->year, 12, 31)->toDateString();
+
         $base = WashPayment::query()
-            ->whereYear('payment_date', $this->year)
+            ->whereBetween('payment_date', [$from, $to])
             ->when($this->businessId, fn ($q) => $q->where('business_id', $this->businessId))
             ->when($excluded, fn ($q) => $q->whereNotIn('state_code', $excluded));
 

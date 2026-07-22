@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\BankTransaction;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /** Kosten je Kategorie im laufenden Jahr (Modul 10). */
 class KostenJeKategorieWidget extends ChartWidget
@@ -16,6 +17,12 @@ class KostenJeKategorieWidget extends ChartWidget
     protected int|string|array $columnSpan = 1;
 
     protected function getData(): array
+    {
+        // Lädt alle Jahresumsätze und aggregiert in PHP -> 5 Minuten cachen.
+        return Cache::remember('widget.kosten-je-kategorie', 300, fn () => $this->computeData());
+    }
+
+    private function computeData(): array
     {
         // Aufgeteilte Umsätze (Kategorie-Split) fließen positionsweise je
         // Kategorie ein; nicht aufgeteilte Ausgaben zählen wie bisher mit ihrer

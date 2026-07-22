@@ -3,11 +3,10 @@
 namespace Tests\Feature;
 
 use App\Filament\Widgets\SpeicherplatzWidget;
+use App\Models\Receipt;
 use App\Models\User;
-use Database\Seeders\DatabaseSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -17,12 +16,17 @@ class SpeicherplatzWidgetTest extends TestCase
 
     public function test_zeigt_db_und_beleg_groesse(): void
     {
-        Storage::fake('belege');
-        $this->seed(DatabaseSeeder::class);
-        $this->actingAs(User::firstOrFail());
+        $this->actingAs(User::factory()->create());
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        Storage::disk('belege')->put('2026/07/a.pdf', 'hallo welt');
+        // Beleg-Größe kommt aus der DB-Spalte file_size (kein Datei-Scan mehr).
+        Receipt::create([
+            'type' => 'incoming_invoice',
+            'file_path' => '2026/07/a.pdf',
+            'file_name' => 'a.pdf',
+            'file_size' => 2048,
+            'status' => 'new',
+        ]);
 
         Livewire::test(SpeicherplatzWidget::class)
             ->assertOk()
