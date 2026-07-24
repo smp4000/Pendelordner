@@ -43,4 +43,29 @@ class FintsPurposeTest extends TestCase
 
         $this->assertSame('Nur ein Text', $m->invoke(new FinTsService(), $t));
     }
+
+    public function test_auftraggeber_bevorzugt_abwa(): void
+    {
+        $t = new Transaction();
+        $t->setStructuredDescription(['SVWZ' => 'x', 'ABWA' => 'Echter Kunde GmbH']);
+        $t->setName('ARAL STATION CHRISTIAN WELLE');
+
+        $m = new ReflectionMethod(FinTsService::class, 'buildCounterparty');
+        $m->setAccessible(true);
+
+        // ABWA (tatsächlicher Auftraggeber) hat Vorrang vor dem Kontonamen.
+        $this->assertSame('Echter Kunde GmbH', $m->invoke(new FinTsService(), $t));
+    }
+
+    public function test_auftraggeber_faellt_auf_namen_zurueck(): void
+    {
+        $t = new Transaction();
+        $t->setStructuredDescription(['SVWZ' => 'x']);
+        $t->setName('ARAL STATION CHRISTIAN WELLE');
+
+        $m = new ReflectionMethod(FinTsService::class, 'buildCounterparty');
+        $m->setAccessible(true);
+
+        $this->assertSame('ARAL STATION CHRISTIAN WELLE', $m->invoke(new FinTsService(), $t));
+    }
 }

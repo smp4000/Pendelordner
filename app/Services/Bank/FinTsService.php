@@ -367,7 +367,7 @@ class FinTsService
                     'booking_date' => $t->getBookingDate()?->format('Y-m-d'),
                     'value_date' => $t->getValutaDate()?->format('Y-m-d'),
                     'amount' => $amount,
-                    'counterparty' => $t->getName() ?: null,
+                    'counterparty' => $this->buildCounterparty($t),
                     'counterparty_iban' => $t->getAccountNumber() ?: null,
                     'purpose' => $this->buildPurpose($t) ?: null,
                     'booking_text' => $t->getBookingText() ?: null,
@@ -412,6 +412,25 @@ class FinTsService
         }
 
         return trim(implode(' ', $parts));
+    }
+
+    /**
+     * Auftraggeber/Empfänger bestimmen. Bei SEPA ist der tatsächliche Beteiligte
+     * oft im Feld ABWA („abweichender Auftraggeber") bzw. ABWE („abweichender
+     * Empfänger") – dieser hat Vorrang vor dem Namen aus ?32/?33 (der bei
+     * eingereichten Lastschriften den Einreicher/Kontoinhaber zeigt). Fällt beides
+     * weg, wird der Name aus ?32/?33 genommen.
+     */
+    private function buildCounterparty(Transaction $t): ?string
+    {
+        $sd = $this->safeGet(fn () => $t->getStructuredDescription()) ?: [];
+
+        $name = trim((string) ($sd['ABWA'] ?? $sd['ABWE'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) $this->safeGet(fn () => $t->getName()));
+        }
+
+        return $name !== '' ? $name : null;
     }
 
     /** Library-Getter sicher aufrufen (uninitialisierte Typed Property -> null). */
